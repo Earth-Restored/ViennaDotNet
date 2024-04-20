@@ -1,0 +1,163 @@
+09:57:28.682 [DBG] Hosting starting
+09:57:28.897 [INF] User profile is available. Using 'C:\Users\Bitcoder\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest.
+09:57:28.993 [DBG] Reading data from file 'C:\Users\Bitcoder\AppData\Local\ASP.NET\DataProtection-Keys\key-6a35a11f-cb95-4a15-a9b3-300ffcd3a04f.xml'.
+09:57:29.021 [DBG] Reading data from file 'C:\Users\Bitcoder\AppData\Local\ASP.NET\DataProtection-Keys\key-6b9237b7-90df-485b-960f-62b46b5822a7.xml'.
+09:57:29.040 [DBG] Found key {6a35a11f-cb95-4a15-a9b3-300ffcd3a04f}.
+09:57:29.050 [DBG] Found key {6b9237b7-90df-485b-960f-62b46b5822a7}.
+09:57:29.057 [DBG] Considering key {6b9237b7-90df-485b-960f-62b46b5822a7} with expiration date 2024-05-14 14:51:13Z as default key.
+09:57:29.060 [DBG] Forwarded activator type request from Microsoft.AspNetCore.DataProtection.XmlEncryption.DpapiXmlDecryptor, Microsoft.AspNetCore.DataProtection, Version=5.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60 to Microsoft.AspNetCore.DataProtection.XmlEncryption.DpapiXmlDecryptor, Microsoft.AspNetCore.DataProtection, Culture=neutral, PublicKeyToken=adb9793829ddae60
+09:57:29.062 [DBG] Decrypting secret element using Windows DPAPI.
+09:57:29.064 [DBG] Forwarded activator type request from Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption.ConfigurationModel.AuthenticatedEncryptorDescriptorDeserializer, Microsoft.AspNetCore.DataProtection, Version=5.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60 to Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption.ConfigurationModel.AuthenticatedEncryptorDescriptorDeserializer, Microsoft.AspNetCore.DataProtection, Culture=neutral, PublicKeyToken=adb9793829ddae60
+09:57:29.068 [DBG] Opening CNG algorithm 'AES' from provider 'null' with chaining mode CBC.
+09:57:29.072 [DBG] Opening CNG algorithm 'SHA256' from provider 'null' with HMAC.
+09:57:29.074 [DBG] Using key {6b9237b7-90df-485b-960f-62b46b5822a7} as the default key.
+09:57:29.077 [DBG] Key ring with default key {6b9237b7-90df-485b-960f-62b46b5822a7} was loaded during application startup.
+09:57:31.788 [DBG] Registered model binder providers, in the following order: ["Microsoft.AspNetCore.Mvc.ModelBinding.Binders.BinderTypeModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.ServicesModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.BodyModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.HeaderModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.FloatingPointTypeModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.EnumTypeModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.DateTimeModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.SimpleTypeModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.TryParseModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.CancellationTokenModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.ByteArrayModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.FormFileModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.FormCollectionModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.KeyValuePairModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.DictionaryModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.ArrayModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.CollectionModelBinderProvider","Microsoft.AspNetCore.Mvc.ModelBinding.Binders.ComplexObjectModelBinderProvider"]
+09:57:31.891 [WRN] The WebRootPath was not found: C:\dev\VSProjects\ViennaDotNet\wwwroot. Static files may be unavailable.
+09:57:32.084 [INF] Now listening on: http://[::]:80
+09:57:32.086 [DBG] Loaded hosting startup assembly ViennaDotNet
+09:57:32.087 [DBG] Loaded hosting startup assembly Microsoft.WebTools.ApiEndpointDiscovery
+09:57:32.088 [DBG] Loaded hosting startup assembly Microsoft.AspNetCore.Watch.BrowserRefresh
+09:57:32.089 [DBG] Loaded hosting startup assembly Microsoft.WebTools.BrowserLink.Net
+09:57:32.130 [INF] Application started. Press Ctrl+C to shut down.
+09:57:32.136 [INF] Hosting environment: Development
+09:57:32.137 [INF] Content root path: C:\dev\VSProjects\ViennaDotNet
+09:57:32.138 [DBG] Hosting started
+09:57:36.378 [DBG] Connection id "0HN311U5FJ15U" accepted.
+09:57:36.381 [DBG] Connection id "0HN311U5FJ15U" started.
+09:57:36.425 [INF] Request starting HTTP/1.1 GET http://mce.com:80/player/environment?buildNumber=2020.1217.02 - null null
+09:57:36.452 [DBG] Wildcard detected, all requests with hosts will be allowed.
+09:57:36.473 [DBG] 1 candidate(s) found for the request path '/player/environment'
+09:57:36.476 [DBG] Endpoint 'ViennaDotNet.Controllers.LocatorController.Get (ViennaDotNet)' with route pattern 'player/environment' is valid for the request path '/player/environment'
+09:57:36.477 [DBG] Request matched endpoint 'ViennaDotNet.Controllers.LocatorController.Get (ViennaDotNet)'
+09:57:36.478 [DBG] Static files was skipped as the request already matched an endpoint.
+09:57:36.480 [INF] Executing endpoint 'ViennaDotNet.Controllers.LocatorController.Get (ViennaDotNet)'
+09:57:36.496 [INF] Route matched with {action = "Get", controller = "Locator"}. Executing controller action with signature Microsoft.AspNetCore.Mvc.ContentResult Get() on controller ViennaDotNet.Controllers.LocatorController (ViennaDotNet).
+09:57:36.499 [DBG] Execution plan of authorization filters (in the following order): ["None"]
+09:57:36.501 [DBG] Execution plan of resource filters (in the following order): ["None"]
+09:57:36.502 [DBG] Execution plan of action filters (in the following order): ["Microsoft.AspNetCore.Mvc.ModelBinding.UnsupportedContentTypeFilter (Order: -3000)","Microsoft.AspNetCore.Mvc.Infrastructure.ModelStateInvalidFilter (Order: -2000)"]
+09:57:36.503 [DBG] Execution plan of exception filters (in the following order): ["None"]
+09:57:36.504 [DBG] Execution plan of result filters (in the following order): ["Microsoft.AspNetCore.Mvc.Infrastructure.ClientErrorResultFilter (Order: -2000)"]
+09:57:36.506 [DBG] Executing controller factory for controller ViennaDotNet.Controllers.LocatorController (ViennaDotNet)
+09:57:36.507 [DBG] Executed controller factory for controller ViennaDotNet.Controllers.LocatorController (ViennaDotNet)
+09:57:36.522 [INF] ::ffff:192.168.1.109 has issued locator, replying with http://mce.com:80
+09:57:36.685 [INF] Executing ContentResult with HTTP Response ContentType of application/json
+09:57:36.716 [INF] Executed action ViennaDotNet.Controllers.LocatorController.Get (ViennaDotNet) in 209.3153ms
+09:57:36.718 [INF] Executed endpoint 'ViennaDotNet.Controllers.LocatorController.Get (ViennaDotNet)'
+09:57:36.719 [DBG] Connection id "0HN311U5FJ15U" completed keep alive response.
+09:57:36.721 [INF] Request finished HTTP/1.1 GET http://mce.com:80/player/environment?buildNumber=2020.1217.02 - 200 286 application/json 299.0684ms
+09:57:36.721 [DBG] Connection id "0HN311U5FJ15U" received FIN.
+09:57:36.729 [DBG] Connection id "0HN311U5FJ15U" sending FIN because: "The Socket transport's send loop completed gracefully."
+09:57:36.732 [DBG] Connection id "0HN311U5FJ15U" disconnecting.
+09:57:36.733 [DBG] Connection id "0HN311U5FJ15U" stopped.
+09:57:36.899 [DBG] Connection id "0HN311U5FJ15V" accepted.
+09:57:36.901 [DBG] Connection id "0HN311U5FJ15V" started.
+09:57:36.903 [INF] Request starting HTTP/1.1 GET http://mce.com:80/api/v1.1/resourcepacks/2020.1217.02/default - null null
+09:57:36.907 [DBG] 1 candidate(s) found for the request path '/api/v1.1/resourcepacks/2020.1217.02/default'
+09:57:36.909 [DBG] Endpoint 'ViennaDotNet.Controllers.ResourcePackController.Get (ViennaDotNet)' with route pattern 'api/v{version:apiVersion}/resourcepacks/2020.1217.02/default' is valid for the request path '/api/v1.1/resourcepacks/2020.1217.02/default'
+09:57:36.911 [DBG] Request matched endpoint 'ViennaDotNet.Controllers.ResourcePackController.Get (ViennaDotNet)'
+09:57:36.913 [DBG] Static files was skipped as the request already matched an endpoint.
+09:57:36.913 [INF] Executing endpoint 'ViennaDotNet.Controllers.ResourcePackController.Get (ViennaDotNet)'
+09:57:36.915 [INF] Route matched with {action = "Get", controller = "ResourcePack"}. Executing controller action with signature Microsoft.AspNetCore.Mvc.ContentResult Get() on controller ViennaDotNet.Controllers.ResourcePackController (ViennaDotNet).
+09:57:36.917 [DBG] Execution plan of authorization filters (in the following order): ["None"]
+09:57:36.918 [DBG] Execution plan of resource filters (in the following order): ["None"]
+09:57:36.919 [DBG] Execution plan of action filters (in the following order): ["Microsoft.AspNetCore.Mvc.ModelBinding.UnsupportedContentTypeFilter (Order: -3000)"]
+09:57:36.920 [DBG] Execution plan of exception filters (in the following order): ["None"]
+09:57:36.922 [DBG] Execution plan of result filters (in the following order): ["None"]
+09:57:36.923 [DBG] Executing controller factory for controller ViennaDotNet.Controllers.ResourcePackController (ViennaDotNet)
+09:57:36.926 [DBG] Executed controller factory for controller ViennaDotNet.Controllers.ResourcePackController (ViennaDotNet)
+09:57:36.929 [INF] Executing ContentResult with HTTP Response ContentType of application/json
+09:57:36.930 [INF] Executed action ViennaDotNet.Controllers.ResourcePackController.Get (ViennaDotNet) in 7.593ms
+09:57:36.932 [INF] Executed endpoint 'ViennaDotNet.Controllers.ResourcePackController.Get (ViennaDotNet)'
+09:57:36.933 [DBG] Connection id "0HN311U5FJ15V" completed keep alive response.
+09:57:36.933 [INF] Request finished HTTP/1.1 GET http://mce.com:80/api/v1.1/resourcepacks/2020.1217.02/default - 200 346 application/json 30.2575ms
+09:57:36.935 [DBG] Connection id "0HN311U5FJ15V" received FIN.
+09:57:36.937 [DBG] Connection id "0HN311U5FJ15V" sending FIN because: "The Socket transport's send loop completed gracefully."
+09:57:36.939 [DBG] Connection id "0HN311U5FJ15V" disconnecting.
+09:57:36.940 [DBG] Connection id "0HN311U5FJ15V" stopped.
+09:57:58.726 [DBG] Connection id "0HN311U5FJ160" accepted.
+09:57:58.731 [DBG] Connection id "0HN311U5FJ160" started.
+09:57:58.733 [INF] Request starting HTTP/1.1 POST http://mce.com:80/api/v1.1/player/profile/signin - application/json 642
+09:57:58.735 [DBG] 1 candidate(s) found for the request path '/api/v1.1/player/profile/signin'
+09:57:58.736 [DBG] Endpoint 'ViennaDotNet.Controllers.SigninController.Post (ViennaDotNet)' with route pattern 'api/v{version:apiVersion}/player/profile/signin' is valid for the request path '/api/v1.1/player/profile/signin'
+09:57:58.737 [DBG] Request matched endpoint 'ViennaDotNet.Controllers.SigninController.Post (ViennaDotNet)'
+09:57:58.738 [DBG] Static files was skipped as the request already matched an endpoint.
+09:57:58.739 [INF] Executing endpoint 'ViennaDotNet.Controllers.SigninController.Post (ViennaDotNet)'
+09:57:58.743 [INF] Route matched with {action = "Post", controller = "Signin"}. Executing controller action with signature System.Threading.Tasks.Task`1[Microsoft.AspNetCore.Mvc.IActionResult] Post() on controller ViennaDotNet.Controllers.SigninController (ViennaDotNet).
+09:57:58.744 [DBG] Execution plan of authorization filters (in the following order): ["None"]
+09:57:58.745 [DBG] Execution plan of resource filters (in the following order): ["None"]
+09:57:58.746 [DBG] Execution plan of action filters (in the following order): ["Microsoft.AspNetCore.Mvc.ModelBinding.UnsupportedContentTypeFilter (Order: -3000)"]
+09:57:58.747 [DBG] Execution plan of exception filters (in the following order): ["None"]
+09:57:58.749 [DBG] Execution plan of result filters (in the following order): ["None"]
+09:57:58.750 [DBG] Executing controller factory for controller ViennaDotNet.Controllers.SigninController (ViennaDotNet)
+09:57:58.751 [DBG] Executed controller factory for controller ViennaDotNet.Controllers.SigninController (ViennaDotNet)
+09:57:58.755 [DBG] Connection id "0HN311U5FJ160", Request id "0HN311U5FJ160:00000001": started reading request body.
+09:57:58.774 [DBG] Connection id "0HN311U5FJ160", Request id "0HN311U5FJ160:00000001": done reading request body.
+09:57:58.800 [INF] Executing ContentResult with HTTP Response ContentType of application/json
+09:57:58.802 [INF] Executed action ViennaDotNet.Controllers.SigninController.Post (ViennaDotNet) in 51.8629ms
+09:57:58.803 [INF] Executed endpoint 'ViennaDotNet.Controllers.SigninController.Post (ViennaDotNet)'
+09:57:58.804 [DBG] Connection id "0HN311U5FJ160" completed keep alive response.
+09:57:58.805 [INF] Request finished HTTP/1.1 POST http://mce.com:80/api/v1.1/player/profile/signin - 200 179 application/json 72.0548ms
+09:57:58.806 [DBG] Connection id "0HN311U5FJ160" received FIN.
+09:57:58.812 [DBG] Connection id "0HN311U5FJ160" sending FIN because: "The Socket transport's send loop completed gracefully."
+09:57:58.813 [DBG] Connection id "0HN311U5FJ160" disconnecting.
+09:57:58.813 [DBG] Connection id "0HN311U5FJ160" stopped.
+09:57:58.940 [DBG] Connection id "0HN311U5FJ161" accepted.
+09:57:58.941 [DBG] Connection id "0HN311U5FJ161" started.
+09:57:58.942 [INF] Request starting HTTP/1.1 GET http://mce.com:80/1/api/v1.1/player/tokens - null null
+09:57:58.944 [DBG] 1 candidate(s) found for the request path '/1/api/v1.1/player/tokens'
+09:57:58.945 [DBG] Endpoint 'ViennaDotNet.Controllers.TokensController.Get (ViennaDotNet)' with route pattern '1/api/v{version:apiVersion}/player/tokens' is valid for the request path '/1/api/v1.1/player/tokens'
+09:57:58.946 [DBG] Request matched endpoint 'ViennaDotNet.Controllers.TokensController.Get (ViennaDotNet)'
+09:57:58.947 [DBG] Static files was skipped as the request already matched an endpoint.
+09:57:58.949 [DBG] Policy authentication schemes  did not succeed
+09:57:58.951 [INF] Authorization failed. These requirements were not met:
+DenyAnonymousAuthorizationRequirement: Requires an authenticated user.
+09:57:58.955 [INF] AuthenticationScheme: GenoaAuth was challenged.
+09:57:58.956 [DBG] Connection id "0HN311U5FJ161" completed keep alive response.
+09:57:58.957 [INF] Request finished HTTP/1.1 GET http://mce.com:80/1/api/v1.1/player/tokens - 401 0 null 14.4995ms
+09:57:58.961 [DBG] Connection id "0HN311U5FJ161" received FIN.
+09:57:58.962 [DBG] Connection id "0HN311U5FJ161" disconnecting.
+09:57:58.963 [DBG] Connection id "0HN311U5FJ161" sending FIN because: "The Socket transport's send loop completed gracefully."
+09:57:58.967 [DBG] Connection id "0HN311U5FJ161" stopped.
+09:57:59.005 [DBG] Connection id "0HN311U5FJ162" accepted.
+09:57:59.006 [DBG] Connection id "0HN311U5FJ162" started.
+09:57:59.007 [INF] Request starting HTTP/1.1 GET http://mce.com:80/1/api/v1.1/player/rubies - null null
+09:57:59.009 [DBG] No candidates found for the request path '/1/api/v1.1/player/rubies'
+09:57:59.010 [DBG] Request did not match any endpoints
+09:57:59.011 [DBG] The request path /1/api/v1.1/player/rubies does not match a supported file type
+09:57:59.012 [DBG] Connection id "0HN311U5FJ162" completed keep alive response.
+09:57:59.012 [INF] Request finished HTTP/1.1 GET http://mce.com:80/1/api/v1.1/player/rubies - 404 0 null 4.9199ms
+09:57:59.014 [INF] Request reached the end of the middleware pipeline without being handled by application code. Request path: GET http://mce.com:80/1/api/v1.1/player/rubies, Response status code: 404
+09:57:59.017 [DBG] Connection id "0HN311U5FJ162" received FIN.
+09:57:59.018 [DBG] Connection id "0HN311U5FJ162" disconnecting.
+09:57:59.019 [DBG] Connection id "0HN311U5FJ162" sending FIN because: "The Socket transport's send loop completed gracefully."
+09:57:59.022 [DBG] Connection id "0HN311U5FJ162" stopped.
+09:57:59.117 [DBG] Connection id "0HN311U5FJ163" accepted.
+09:57:59.119 [DBG] Connection id "0HN311U5FJ163" started.
+09:57:59.120 [INF] Request starting HTTP/1.1 GET http://mce.com:80/1/api/v1.1/features - null null
+09:57:59.122 [DBG] No candidates found for the request path '/1/api/v1.1/features'
+09:57:59.123 [DBG] Request did not match any endpoints
+09:57:59.125 [DBG] The request path /1/api/v1.1/features does not match a supported file type
+09:57:59.126 [DBG] Connection id "0HN311U5FJ163" completed keep alive response.
+09:57:59.127 [INF] Request finished HTTP/1.1 GET http://mce.com:80/1/api/v1.1/features - 404 0 null 6.6467ms
+09:57:59.130 [INF] Request reached the end of the middleware pipeline without being handled by application code. Request path: GET http://mce.com:80/1/api/v1.1/features, Response status code: 404
+09:57:59.131 [DBG] Connection id "0HN311U5FJ163" received FIN.
+09:57:59.134 [DBG] Connection id "0HN311U5FJ163" sending FIN because: "The Socket transport's send loop completed gracefully."
+09:57:59.135 [DBG] Connection id "0HN311U5FJ163" disconnecting.
+09:57:59.136 [DBG] Connection id "0HN311U5FJ163" stopped.
+09:58:00.261 [DBG] Connection id "0HN311U5FJ164" accepted.
+09:58:00.262 [DBG] Connection id "0HN311U5FJ164" started.
+09:58:00.263 [INF] Request starting HTTP/1.1 POST http://mce.com:80/1/api/v1.1/player/profile/signin - application/json 642
+09:58:00.265 [DBG] No candidates found for the request path '/1/api/v1.1/player/profile/signin'
+09:58:00.267 [DBG] Request did not match any endpoints
+09:58:00.268 [DBG] POST requests are not supported
+09:58:00.269 [DBG] Connection id "0HN311U5FJ164" completed keep alive response.
+09:58:00.269 [INF] Request finished HTTP/1.1 POST http://mce.com:80/1/api/v1.1/player/profile/signin - 404 0 null 6.013ms
+09:58:00.272 [INF] Request reached the end of the middleware pipeline without being handled by application code. Request path: POST http://mce.com:80/1/api/v1.1/player/profile/signin, Response status code: 404
+09:58:00.273 [DBG] Connection id "0HN311U5FJ164", Request id "0HN311U5FJ164:00000001": started reading request body.
+09:58:00.274 [INF] Connection id "0HN311U5FJ164", Request id "0HN311U5FJ164:00000001": the application completed without reading the entire request body.
+09:58:00.281 [DBG] Connection id "0HN311U5FJ164" received FIN.
+09:58:00.282 [DBG] Connection id "0HN311U5FJ164", Request id "0HN311U5FJ164:00000001": done reading request body.
+09:58:00.282 [DBG] Connection id "0HN311U5FJ164" sending FIN because: "The Socket transport's send loop completed gracefully."
+09:58:00.285 [DBG] Connection id "0HN311U5FJ164" disconnecting.
+09:58:00.286 [DBG] Connection id "0HN311U5FJ164" stopped.
