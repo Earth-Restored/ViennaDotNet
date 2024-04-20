@@ -23,7 +23,7 @@ namespace ViennaDotNet.ApiServer.Types.Catalog
         public record Effect(
             string type,
             string? duration,
-            int? value,
+            double? value,
             string unit,
             string targets,
             string[] items,

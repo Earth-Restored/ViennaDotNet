@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ViennaDotNet.DB")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a0df1574c82756fe7173af676a462dfb74e02aa4")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+3a1fbe8eedd948253210f3145e369fb11cbb9940")]
 [assembly: System.Reflection.AssemblyProductAttribute("ViennaDotNet.DB")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ViennaDotNet.DB")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

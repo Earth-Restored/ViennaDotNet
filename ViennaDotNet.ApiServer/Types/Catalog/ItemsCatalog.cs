@@ -32,12 +32,12 @@ namespace ViennaDotNet.ApiServer.Types.Catalog
                 int? aux,
                 string type,
                 string useType,
-                int? tapSpeed,
-                int? heal,
-                int? nutrition,
-                int? mobDamage,
-                int? blockDamage,
-                int? health,
+                double? tapSpeed,
+                double? heal,
+                double? nutrition,
+                double? mobDamage,
+                double? blockDamage,
+                double? health,
                 BlockMetadata? blockMetadata,
                 ItemMetadata? itemMetadata,
                 BoostMetadata? boostMetadata,
@@ -47,7 +47,7 @@ namespace ViennaDotNet.ApiServer.Types.Catalog
             )
             {
                 public record BlockMetadata(
-                    int? health,
+                    double? health,
                     string? efficiencyCategory
                 )
                 {
@@ -56,13 +56,13 @@ namespace ViennaDotNet.ApiServer.Types.Catalog
                 public record ItemMetadata(
                     string useType,
                     string alternativeUseType,
-                    int? mobDamage,
-                    int? blockDamage,
-                    int? weakDamage,
-                    int? nutrition,
-                    int? heal,
+                    double? mobDamage,
+                    double? blockDamage,
+                    double? weakDamage,
+                    double? nutrition,
+                    double? heal,
                     string? efficiencyType,
-                    int? maxHealth
+                    double? maxHealth
                 )
                 {
                 }

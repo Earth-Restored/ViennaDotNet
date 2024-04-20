@@ -8,9 +8,10 @@ using ViennaDotNet.DB;
 
 namespace ViennaDotNet.ApiServer
 {
-    public class Program
+    public static class Program
     {
-        public static EarthDB db;
+        internal static EarthDB DB;
+        internal static Catalog Catalog;
 
         public static void Main(string[] args)
         {
@@ -35,7 +36,9 @@ namespace ViennaDotNet.ApiServer
 
             Log.Logger = log;
 
-            db = EarthDB.Open("mydb.db");
+            DB = EarthDB.Open("mydb.db");
+
+            Catalog = new Catalog();
 
             CreateHostBuilder(args).Build().Run();
 

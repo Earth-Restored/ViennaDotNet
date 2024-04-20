@@ -18,7 +18,7 @@ namespace ViennaDotNet.ApiServer.Controllers
     [Route("1/api/v{version:apiVersion}/player/tokens")]
     public class TokensController : ControllerBase
     {
-        private static EarthDB earthDB => Program.db;
+        private static EarthDB earthDB => Program.DB;
 
         [HttpGet]
         public IActionResult Get()

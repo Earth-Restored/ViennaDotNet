@@ -36,10 +36,9 @@ namespace ViennaDotNet.ApiServer
 
                 itemsCatalog = new ItemsCatalog(items.ToArray(), efficiencyCategories);
 
-                // TODO: why the file records
-                recipesCatalog = JsonConvert.DeserializeObject<RecipesCatalog/*File*/>(File.ReadAllText(Path.Combine(catalogDataDir, "recipes.json")))!;
-                journalCatalog = JsonConvert.DeserializeObject<JournalCatalog/*File*/>(File.ReadAllText(Path.Combine(catalogDataDir, "journalCatalog.json")))!;
-                nfcBoostsCatalog = JsonConvert.DeserializeObject<NFCBoost[]/*NFCBoostsCatalogFile*/>(File.ReadAllText(Path.Combine(catalogDataDir, "productCatalog.json")))!;
+                recipesCatalog = JsonConvert.DeserializeObject<RecipesCatalogFile>(File.ReadAllText(Path.Combine(catalogDataDir, "recipes.json")))!.result;
+                journalCatalog = JsonConvert.DeserializeObject<JournalCatalogFile>(File.ReadAllText(Path.Combine(catalogDataDir, "journalCatalog.json")))!.result;
+                nfcBoostsCatalog = JsonConvert.DeserializeObject<NFCBoostsCatalogFile>(File.ReadAllText(Path.Combine(catalogDataDir, "productCatalog.json")))!.result;
             }
             catch (Exception exception)
             {

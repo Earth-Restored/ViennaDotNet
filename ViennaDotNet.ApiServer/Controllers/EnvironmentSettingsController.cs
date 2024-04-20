@@ -93,7 +93,7 @@ namespace ViennaDotNet.ApiServer.Controllers
                 new JProperty("maximumpersonalcontinuouschallenges", 3)
             );
 
-            return Content(JsonConvert.SerializeObject(resp, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore }), "application/json");
+            return Content(JsonConvert.SerializeObject(new EarthApiResponse(resp), new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore }), "application/json");
         }
     }
 }
