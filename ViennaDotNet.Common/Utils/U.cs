@@ -13,5 +13,8 @@ namespace ViennaDotNet.Common.Utils
 
         public static Uuid RandomUuid()
             => uuidGenerator.NewUuid();
+
+        public static long CurrentTimeMillis()
+            => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
     }
 }

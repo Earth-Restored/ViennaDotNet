@@ -9,7 +9,16 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ViennaDotNet.DB", "ViennaDo
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ViennaDotNet.Common", "ViennaDotNet.Common\ViennaDotNet.Common.csproj", "{06EE9F84-9B80-44FA-A4FC-D37919466F53}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ViennaDotNet.EventBus", "ViennaDotNet.EventBus\ViennaDotNet.EventBus.csproj", "{F2DEC19C-36DE-4271-B881-8B2422ECE3BA}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ViennaDotNet.TappablesGenerator", "ViennaDotNet.TappablesGenerator\ViennaDotNet.TappablesGenerator.csproj", "{BC475148-E8BF-4674-8844-213947699313}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ViennaDotNet.EventBus.Server", "ViennaDotNet.EventBus.Server\ViennaDotNet.EventBus.Server.csproj", "{5C185CE6-6AA9-410F-A38E-4539696F512C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ViennaDotNet.EventBus.Client", "ViennaDotNet.EventBus.Client\ViennaDotNet.EventBus.Client.csproj", "{EB42AFA2-5851-4E0C-B706-FBEB3C329E16}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{854E103D-7A5F-48F7-A33A-360DA013E46E}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -29,10 +38,18 @@ Global
 		{06EE9F84-9B80-44FA-A4FC-D37919466F53}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{06EE9F84-9B80-44FA-A4FC-D37919466F53}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{06EE9F84-9B80-44FA-A4FC-D37919466F53}.Release|Any CPU.Build.0 = Release|Any CPU
-		{F2DEC19C-36DE-4271-B881-8B2422ECE3BA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{F2DEC19C-36DE-4271-B881-8B2422ECE3BA}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{F2DEC19C-36DE-4271-B881-8B2422ECE3BA}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{F2DEC19C-36DE-4271-B881-8B2422ECE3BA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BC475148-E8BF-4674-8844-213947699313}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BC475148-E8BF-4674-8844-213947699313}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BC475148-E8BF-4674-8844-213947699313}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BC475148-E8BF-4674-8844-213947699313}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5C185CE6-6AA9-410F-A38E-4539696F512C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5C185CE6-6AA9-410F-A38E-4539696F512C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5C185CE6-6AA9-410F-A38E-4539696F512C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5C185CE6-6AA9-410F-A38E-4539696F512C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EB42AFA2-5851-4E0C-B706-FBEB3C329E16}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EB42AFA2-5851-4E0C-B706-FBEB3C329E16}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EB42AFA2-5851-4E0C-B706-FBEB3C329E16}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EB42AFA2-5851-4E0C-B706-FBEB3C329E16}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

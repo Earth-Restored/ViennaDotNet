@@ -59,7 +59,7 @@ namespace ViennaDotNet.ApiServer
             Log.Information("Connecting to event bus");
             try
             {
-                eventBus = EventBusClient.create("localhost:5532"/*eventBusConnectionString*/); // tappablesgenerator is the server
+                eventBus = EventBusClient.create("localhost:5532"/*eventBusConnectionString*/);
             }
             catch (EventBusClientException ex)
             {

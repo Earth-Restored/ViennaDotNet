@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ViennaDotNet.Common")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+984c0a6bcbae6b6234d34c8a3390b103e1e802bf")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+5a4f1eada7c0b7bdbaf2ee5effd4936c7634a6db")]
 [assembly: System.Reflection.AssemblyProductAttribute("ViennaDotNet.Common")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ViennaDotNet.Common")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

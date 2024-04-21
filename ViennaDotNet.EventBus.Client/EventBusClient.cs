@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Serilog;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -8,7 +9,6 @@ using System.Text;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using ViennaDotNet.Common.Utils;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace ViennaDotNet.EventBus.Client
 {
@@ -61,7 +61,7 @@ namespace ViennaDotNet.EventBus.Client
         private readonly BlockingCollection<string> outgoingMessageQueue = new();
         private Thread outgoingThread;
         private Thread incomingThread;
-        private readonly ReaderWriterLockSlim lockObj = new ReaderWriterLockSlim();
+        private readonly ReaderWriterLockSlim lockObj = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
 
         private bool closed = false;
         private bool error = false;
@@ -80,12 +80,15 @@ namespace ViennaDotNet.EventBus.Client
                 try
                 {
                     while (true)
-                        foreach (string message in outgoingMessageQueue)
+                    {
+                        if (outgoingMessageQueue.Count > 0)
                         {
+                            string message = outgoingMessageQueue.Take();
                             byte[] bytes = Encoding.ASCII.GetBytes(message);
                             socket.Send(bytes);
-                            Thread.Sleep(0);
                         }
+                        Thread.Sleep(0);
+                    }
                 }
                 catch (ThreadAbortException)
                 {
@@ -124,6 +127,8 @@ namespace ViennaDotNet.EventBus.Client
                                 {
                                     byteArrayOutputStream.Write(readBuffer, startOffset, offset - startOffset);
                                     string message = Encoding.ASCII.GetString(byteArrayOutputStream.ToArray());
+
+                                    Log.Debug($"REC MSG: {message}");
 
                                     lockObj.EnterReadLock();
                                     bool suppress = closed || error;
@@ -195,7 +200,7 @@ namespace ViennaDotNet.EventBus.Client
                     outgoingThread.Join();
                     break;
                 }
-                catch (ThreadAbortException exception)
+                catch (ThreadAbortException)
                 {
                     // empty
                 }
@@ -227,9 +232,9 @@ namespace ViennaDotNet.EventBus.Client
         public Publisher addPublisher()
         {
             lockObj.EnterWriteLock();
-            int channelId = this.getUnusedChannelId();
+            int channelId = getUnusedChannelId();
             Publisher publisher = new Publisher(this, channelId);
-            if (this.sendMessage(channelId, "PUB"))
+            if (sendMessage(channelId, "PUB"))
                 publishers[channelId] = publisher;
             else
                 publisher.closed();
@@ -242,9 +247,9 @@ namespace ViennaDotNet.EventBus.Client
         public Subscriber addSubscriber(string queueName, Subscriber.ISubscriberListener listener)
         {
             lockObj.EnterWriteLock();
-            int channelId = this.getUnusedChannelId();
+            int channelId = getUnusedChannelId();
             Subscriber subscriber = new Subscriber(this, channelId, queueName, listener);
-            if (this.sendMessage(channelId, "SUB " + queueName))
+            if (sendMessage(channelId, "SUB " + queueName))
                 subscribers[channelId] = subscriber;
             else
                 subscriber.error();
@@ -312,6 +317,7 @@ namespace ViennaDotNet.EventBus.Client
             {
                 try
                 {
+                    Log.Debug($"SEND CHID: {channelId}, MES: {message}");
                     outgoingMessageQueue.Add(channelId + " " + message + "\n");
                     break;
                 }
