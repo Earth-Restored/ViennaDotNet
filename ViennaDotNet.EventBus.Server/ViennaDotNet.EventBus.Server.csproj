@@ -17,4 +17,10 @@
     <ProjectReference Include="..\ViennaDotNet.Common\ViennaDotNet.Common.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Reference Include="CliUtils">
+      <HintPath>..\CliUtils.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
 </Project>

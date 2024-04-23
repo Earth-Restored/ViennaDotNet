@@ -1,5 +1,7 @@
 ﻿using Serilog.Events;
 using Serilog;
+using CliUtils.Exceptions;
+using CliUtils;
 
 namespace ViennaDotNet.EventBus.Server
 {
@@ -15,7 +17,27 @@ namespace ViennaDotNet.EventBus.Server
 
             Log.Logger = log;
 
-            ushort port = 5532;
+            Options options = new Options();
+            options.addOption(Option.builder()
+                .Option("port")
+                .LongOpt("port")
+                .HasArg()
+                .ArgName("port")
+                .Desc("Port to listen on, defaults to 5532")
+                .Build());
+            CommandLine commandLine;
+            int port;
+            try
+            {
+                commandLine = new DefaultParser().parse(options, args);
+                port = commandLine.hasOption("port") ? commandLine.getParsedOptionValue<int>("port") : 5532;
+            }
+            catch (ParseException exception)
+            {
+                Log.Fatal(exception.ToString());
+                Environment.Exit(1);
+                return;
+            }
 
             NetworkServer server;
             try

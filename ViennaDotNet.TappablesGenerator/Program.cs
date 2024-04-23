@@ -1,4 +1,6 @@
-﻿using Serilog;
+﻿using CliUtils;
+using CliUtils.Exceptions;
+using Serilog;
 using ViennaDotNet.EventBus.Client;
 
 namespace ViennaDotNet.TappablesGenerator
@@ -15,7 +17,27 @@ namespace ViennaDotNet.TappablesGenerator
 
             Log.Logger = log;
 
-            string eventBusConnectionString = "localhost:5532";
+            Options options = new Options();
+            options.addOption(Option.builder()
+                .Option("eventbus")
+                .LongOpt("eventbus")
+                .HasArg()
+                .ArgName("eventbus")
+                .Desc("Event bus address, defaults to localhost:5532")
+                .Build());
+            CommandLine commandLine;
+            string eventBusConnectionString;
+            try
+            {
+                commandLine = new DefaultParser().parse(options, args);
+                eventBusConnectionString = commandLine.hasOption("eventbus") ? commandLine.getOptionValue("eventbus")! : "localhost:5532";
+            }
+            catch (ParseException exception)
+            {
+                Log.Fatal(exception.ToString());
+                Environment.Exit(1);
+                return;
+            }
 
             Log.Information("Connecting to event bus");
             EventBusClient eventBusClient;
