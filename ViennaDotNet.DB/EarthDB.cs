@@ -323,6 +323,14 @@ namespace ViennaDotNet.DB
                     return value;
             }
 
+            public GenericResult<T> GetGeneric<T>(string name)
+            {
+                if (!getValues.TryGetValue(name, out Result? value) || value is null)
+                    throw new KeyNotFoundException();
+                else
+                    return new GenericResult<T>((T)value.Value, value.version);
+            }
+
             public Dictionary<string, int?> getUpdates()
             {
                 return new Dictionary<string, int?>(updates);
@@ -337,6 +345,10 @@ namespace ViennaDotNet.DB
             }
 
             public record Result(object Value, int version)
+            {
+            }
+            public record GenericResult<T>(T GValue, int version) 
+                : Result(GValue!, version)
             {
             }
         }

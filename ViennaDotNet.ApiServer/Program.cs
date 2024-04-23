@@ -22,22 +22,22 @@ namespace ViennaDotNet.ApiServer
         {
             TypeDescriptor.AddAttributes(typeof(Uuid), new TypeConverterAttribute(typeof(StringToUuidConv)));
 
+            //var log = new LoggerConfiguration()
+            //    .WriteTo.Console()
+            //    .WriteTo.File("logs/debug.txt", rollingInterval: RollingInterval.Day, rollOnFileSizeLimit: true, fileSizeLimitBytes: 8338607, outputTemplate: "{Timestamp:HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
+            //    .MinimumLevel.Debug()
+            //    .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
+            //    .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+            //    .MinimumLevel.Override("ProjectEarthServerAPI.Authentication", LogEventLevel.Warning)
+            //    .CreateLogger();
             var log = new LoggerConfiguration()
                 .WriteTo.Console()
                 .WriteTo.File("logs/debug.txt", rollingInterval: RollingInterval.Day, rollOnFileSizeLimit: true, fileSizeLimitBytes: 8338607, outputTemplate: "{Timestamp:HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
                 .MinimumLevel.Debug()
                 .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
-                .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
-                .MinimumLevel.Override("ProjectEarthServerAPI.Authentication", LogEventLevel.Warning)
+                .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Information)
+                .MinimumLevel.Override("ViennaDotNet.ApiServer.Authentication", LogEventLevel.Information)
                 .CreateLogger();
-            //var log = new LoggerConfiguration()
-            //    .WriteTo.Console()
-            //    .WriteTo.File("logs/debug.txt", rollingInterval: RollingInterval.Day, rollOnFileSizeLimit: true, fileSizeLimitBytes: 8338607, outputTemplate: "{Timestamp:HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
-            //    .MinimumLevel.Debug()
-            //    .MinimumLevel.Override("Microsoft", LogEventLevel.Debug)
-            //    .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Debug)
-            //    .MinimumLevel.Override("ViennaDotNet.ApiServer.Authentication", LogEventLevel.Debug)
-            //    .CreateLogger();
 
             Log.Logger = log;
 

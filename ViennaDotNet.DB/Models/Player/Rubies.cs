@@ -18,6 +18,12 @@ namespace ViennaDotNet.DB.Models.Player
             earned = 0;
         }
 
+        /// <summary>
+        /// Tries to spend <paramref name="amount"/> rubies
+        /// </summary>
+        /// <param name="amount">The amount of rubies to spend</param>
+        /// <returns>If there were enought rubies to spend <paramref name="amount"/></returns>
+        /// <exception cref="InvalidOperationException"></exception>
         public bool spend(int amount)
         {
             if (amount > purchased + earned)
