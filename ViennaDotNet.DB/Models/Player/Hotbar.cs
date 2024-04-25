@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -7,8 +8,10 @@ using Uma.Uuid;
 
 namespace ViennaDotNet.DB.Models.Player
 {
+    [JsonObject(MemberSerialization.OptIn)]
     public sealed class Hotbar
     {
+        [JsonProperty]
         public Item?[] items;
 
         public Hotbar()

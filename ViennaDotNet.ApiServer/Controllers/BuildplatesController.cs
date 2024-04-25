@@ -38,8 +38,8 @@ namespace ViennaDotNet.ApiServer.Controllers
             try
             {
                 EarthDB.Results results = new EarthDB.Query(false)
-                        .Get("buildplates", playerId, typeof(Buildplates))
-                        .Execute(earthDB);
+                    .Get("buildplates", playerId, typeof(Buildplates))
+                    .Execute(earthDB);
                 buildplatesModel = (Buildplates)results.Get("buildplates").Value;
             }
             catch (EarthDB.DatabaseException exception)

@@ -19,7 +19,8 @@
       },
       {
         "Name": "ViennaDotNet.ObjectStore.Server\\ViennaDotNet.ObjectStore.Server.csproj",
-        "Action": "Start"
+        "Action": "Start",
+        "DebugTarget": ""
       }
     ]
   }

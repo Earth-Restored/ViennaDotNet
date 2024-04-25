@@ -24,6 +24,7 @@ namespace ViennaDotNet.ApiServer
         internal static ObjectStoreClient objectStore;
         internal static TappablesManager tappablesManager;
         internal static BuildplateInstancesManager buildplateInstancesManager;
+        internal static BuildplatePreviewGenerator buildplatePreviewGenerator;
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
         public static void Main(string[] args)
@@ -156,6 +157,7 @@ namespace ViennaDotNet.ApiServer
 
             tappablesManager = new TappablesManager(eventBus);
             buildplateInstancesManager = new BuildplateInstancesManager(eventBus);
+            buildplatePreviewGenerator = new BuildplatePreviewGenerator(buildplatePreviewGeneratorCommand);
 
             CreateHostBuilder(args, httpPort).Build().Run();
 

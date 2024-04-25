@@ -10,6 +10,12 @@ namespace ViennaDotNet.Common.Utils
                 return JsonConvert.DeserializeObject<T>(await reader.ReadToEndAsync());
         }
 
+        public static async Task<string> ReadAsString(this Stream stream)
+        {
+            using (StreamReader reader = new StreamReader(stream))
+                return await reader.ReadToEndAsync();
+        }
+
         public static U? Map<T, U>(this T? value, Func<T, U> mapper)
         {
             if (value is null) return default;

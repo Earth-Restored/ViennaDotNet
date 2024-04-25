@@ -40,6 +40,6 @@ namespace ViennaDotNet.ApiServer.Controllers
             }));
 #pragma warning restore CS8625 // Cannot convert null literal to non-nullable reference type.
             return Content(resp, "application/json");
+        }
     }
-}
 }
