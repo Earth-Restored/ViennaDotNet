@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "ViennaDotNet.Buildplate": {
-      "commandName": "Project",
-      "commandLineArgs": "--publicAddress=192.168.0.119 --bridgeJar=C:\\Users\\Bitcoder\\Desktop\\Fountain\\fountain-0.0.1-SNAPSHOT-jar-with-dependencies.jar --serverTemplateDir=C:\\Users\\Bitcoder\\Desktop\\Fountain\\MCEServer --fabricJarName=fabric-server-mc.1.20.4-loader.0.15.7-launcher.1.0.0.jar --connectorPluginJar=C:\\dev\\java\\Vienna\\buildplate\\connector-plugin\\target\\buildplate-connector-plugin-0.0.1-SNAPSHOT-jar-with-dependencies.jar"
-    }
-  }
-}
