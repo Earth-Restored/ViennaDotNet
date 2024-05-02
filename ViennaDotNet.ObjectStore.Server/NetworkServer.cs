@@ -129,8 +129,7 @@ namespace ViennaDotNet.ObjectStore.Server
                             throw new InvalidOperationException();
                     }
                 }
-
-                catch (IOException exception)
+                catch (SocketException exception)
                 {
                     Log.Warning($"Exception while reading socket: {exception}");
                 }

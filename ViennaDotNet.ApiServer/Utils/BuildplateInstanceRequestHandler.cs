@@ -254,12 +254,16 @@ namespace ViennaDotNet.ApiServer.Utils
                 else
                 {
                     objectStoreClient.delete(serverDataObjectId);
+                    if (previewObjectId != null)
+                        objectStoreClient.delete(previewObjectId);
                     return false;
                 }
             }
             catch (EarthDB.DatabaseException)
             {
                 objectStoreClient.delete(serverDataObjectId);
+                if (previewObjectId != null)
+                    objectStoreClient.delete(previewObjectId);
 
                 throw;
             }

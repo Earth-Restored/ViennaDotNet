@@ -19,6 +19,7 @@ namespace ViennaDotNet.Buildplate.Launcher
             this.fountainJar = new FileInfo(fountainJar);
         }
 
+        // TODO: fuck this and port the preview generation from https://github.com/Project-Genoa/Fountain-bridge/blob/master/src/main/java/micheal65536/fountain/preview/PreviewGenerator.java
         public string? generatePreview(byte[] serverData, bool isNight)
         {
             // originally read as byte array, later converted to string, reading byte[] is harder, so I just read it as string
@@ -31,7 +32,8 @@ namespace ViennaDotNet.Buildplate.Launcher
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     RedirectStandardOutput = true,
-                    RedirectStandardInput = true
+                    RedirectStandardInput = true,
+                    RedirectStandardError = true,
                 };
 
                 // Start the process
@@ -41,19 +43,36 @@ namespace ViennaDotNet.Buildplate.Launcher
                 };
                 process.Start();
 
-                Log.Debug($"Started preview generator subprocess with PID {process.Id/*.pid()*/}");
-                process.StandardInput.BaseStream.Write(serverData);
-                process.StandardInput.BaseStream.Flush();
-                if (!process.HasExited)
+                Log.Debug($"Started preview generator subprocess with PID {process.Id}");
+                try
                 {
-                    Log.Warning("Preview generator subprocess is still running, waiting for it to exit");
+                    process.StandardInput.AutoFlush = false;
+                    process.StandardInput.Write(Encoding.UTF8.GetString(serverData));
+                    process.StandardInput.Flush();
+                } catch (Exception ex)
+                {
+                    string? @out;
+                    try
+                    {
+                        @out = process.StandardOutput.ReadToEnd();
+                    } catch { }
+                    string? error;
+                    try
+                    {
+                        error = process.StandardError.ReadToEnd();
+                    }
+                    catch { }
                 }
+                if (!process.HasExited)
+                    Log.Warning("Preview generator subprocess is still running, waiting for it to exit");
+
                 int exitCode;
                 for (; ; )
                 {
                     try
                     {
-                        process.WaitForExit();
+                        if (!process.WaitForExit(TimeSpan.FromSeconds(10.0)))
+                            process.Kill();
                         exitCode = process.ExitCode;
                         break;
                     }
@@ -64,10 +83,11 @@ namespace ViennaDotNet.Buildplate.Launcher
                 }
                 Log.Debug($"Preview generator subprocess finished with exit code {exitCode}");
                 // might not work, idk...
-                //previewBytes = process.StandardOutput.ReadToEnd();
                 StringBuilder builder = new StringBuilder();
                 while (process.StandardOutput.Peek() > -1)
                     builder.AppendLine(process.StandardOutput.ReadLine()); // maybe only Append?
+
+                previewBytes = process.StandardOutput.ReadToEnd();
 
                 previewBytes = builder.ToString();
             }

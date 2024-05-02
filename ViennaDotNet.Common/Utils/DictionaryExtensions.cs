@@ -14,6 +14,11 @@ namespace ViennaDotNet.Common.Utils
             dicToAdd.ForEach(x => dic[x.Key] = x.Value);
         }
 
+        public static TValue? GetOrDefault<TKey, TValue>(this IDictionary<TKey, TValue> dic, TKey key)
+        {
+            if (dic.TryGetValue(key, out TValue? value)) return value;
+            else return default;
+        }
         public static TValue? GetOrDefault<TKey, TValue>(this IDictionary<TKey, TValue> dic, TKey key, TValue? defaultValue)
         {
             if (dic.TryGetValue(key, out TValue? value)) return value;
