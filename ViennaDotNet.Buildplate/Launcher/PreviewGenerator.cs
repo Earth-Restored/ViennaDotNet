@@ -19,88 +19,23 @@ namespace ViennaDotNet.Buildplate.Launcher
             this.fountainJar = new FileInfo(fountainJar);
         }
 
-        // TODO: fuck this and port the preview generation from https://github.com/Project-Genoa/Fountain-bridge/blob/master/src/main/java/micheal65536/fountain/preview/PreviewGenerator.java
         public string? generatePreview(byte[] serverData, bool isNight)
         {
-            // originally read as byte array, later converted to string, reading byte[] is harder, so I just read it as string
-            /*byte[]*/
-            string previewBytes;
+            string previewString;
             try
             {
-                ProcessStartInfo processStartInfo = new ProcessStartInfo(javaCmd, new string[] { "-cp", fountainJar.FullName, "micheal65536.fountain.preview.PreviewGenerator" })
-                {
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    RedirectStandardOutput = true,
-                    RedirectStandardInput = true,
-                    RedirectStandardError = true,
-                };
-
-                // Start the process
-                Process process = new Process
-                {
-                    StartInfo = processStartInfo
-                };
-                process.Start();
-
-                Log.Debug($"Started preview generator subprocess with PID {process.Id}");
-                try
-                {
-                    process.StandardInput.AutoFlush = false;
-                    process.StandardInput.Write(Encoding.UTF8.GetString(serverData));
-                    process.StandardInput.Flush();
-                } catch (Exception ex)
-                {
-                    string? @out;
-                    try
-                    {
-                        @out = process.StandardOutput.ReadToEnd();
-                    } catch { }
-                    string? error;
-                    try
-                    {
-                        error = process.StandardError.ReadToEnd();
-                    }
-                    catch { }
-                }
-                if (!process.HasExited)
-                    Log.Warning("Preview generator subprocess is still running, waiting for it to exit");
-
-                int exitCode;
-                for (; ; )
-                {
-                    try
-                    {
-                        if (!process.WaitForExit(TimeSpan.FromSeconds(10.0)))
-                            process.Kill();
-                        exitCode = process.ExitCode;
-                        break;
-                    }
-                    catch (ThreadAbortException)
-                    {
-                        continue;
-                    }
-                }
-                Log.Debug($"Preview generator subprocess finished with exit code {exitCode}");
-                // might not work, idk...
-                StringBuilder builder = new StringBuilder();
-                while (process.StandardOutput.Peek() > -1)
-                    builder.AppendLine(process.StandardOutput.ReadLine()); // maybe only Append?
-
-                previewBytes = process.StandardOutput.ReadToEnd();
-
-                previewBytes = builder.ToString();
-            }
-            catch (IOException exception)
+                using (MemoryStream ms = new MemoryStream(serverData))
+                    previewString = ViennaDotNet.PreviewGenerator.Generator.Generate(ms);
+            } catch (Exception exception)
             {
-                Log.Error($"Error while running buildplate preview generator subprocess: {exception}");
+                Log.Error($"Error while generating buildplate preview: {exception}");
                 return null;
             }
 
             Dictionary<string, object> previewObject;
             try
             {
-                previewObject = JsonConvert.DeserializeObject<Dictionary<string, object>>(previewBytes)!;
+                previewObject = JsonConvert.DeserializeObject<Dictionary<string, object>>(previewString)!;
             }
             catch (Exception exception)
             {

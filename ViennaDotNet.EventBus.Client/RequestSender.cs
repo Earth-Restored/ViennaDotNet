@@ -134,10 +134,10 @@ namespace ViennaDotNet.EventBus.Client
 
             if (currentPendingResponse != null)
             {
-                currentPendingResponse.SetResult(null);
+                currentPendingResponse.TrySetResult(null);
                 currentPendingResponse = null;
             }
-            queuedRequestResponses.ForEach(completableFuture => completableFuture.SetResult(null));
+            queuedRequestResponses.ForEach(completableFuture => completableFuture.TrySetResult(null));
             queuedRequestResponses.Clear();
             queuedRequests.Clear();
             Monitor.Exit(lockObj);

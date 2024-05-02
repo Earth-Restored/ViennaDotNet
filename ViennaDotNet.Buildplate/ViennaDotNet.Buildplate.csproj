@@ -19,6 +19,7 @@
     <ProjectReference Include="..\ViennaDotNet.DB\ViennaDotNet.DB.csproj" />
     <ProjectReference Include="..\ViennaDotNet.EventBus.Client\ViennaDotNet.EventBus.Client.csproj" />
     <ProjectReference Include="..\ViennaDotNet.ObjectStore.Client\ViennaDotNet.ObjectStore.Client.csproj" />
+    <ProjectReference Include="..\ViennaDotNet.PreviewGenerator\ViennaDotNet.PreviewGenerator.csproj" />
   </ItemGroup>
 
   <ItemGroup>

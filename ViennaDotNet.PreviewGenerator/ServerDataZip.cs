@@ -30,7 +30,7 @@ namespace ViennaDotNet.PreviewGenerator
                 using (MemoryStream ms = new MemoryStream())
                 {
                     entryStream.CopyTo(ms);
-                    files.Add(entry.Name, ms.ToArray());
+                    files.Add(entry.FullName, ms.ToArray());
                 }
             }
         }
@@ -46,12 +46,12 @@ namespace ViennaDotNet.PreviewGenerator
             using MemoryStream ms = new MemoryStream(files[$"region/r.{regionX}.{regionZ}.mca"]);
             using BinaryReader reader = new BinaryReader(ms);
 
-            ms.Seek(chunkIndex * 4, SeekOrigin.Current);
-            int offset = (int)(reader.ReadUInt32() >> 8);
+            ms.Seek(chunkIndex * 4, SeekOrigin.Begin);
+            int offset = (int)(reader.ReadUInt32BE() >> 8);
 
             ms.Seek(offset * 4096, SeekOrigin.Begin);
 
-            int length = (int)reader.ReadUInt32();
+            int length = (int)reader.ReadUInt32BE();
             byte compressionType = reader.ReadByte();
             byte[] compressed = new byte[length];
             ms.Read(compressed);
@@ -68,7 +68,7 @@ namespace ViennaDotNet.PreviewGenerator
                     break;
                 case 2:
                     {
-                        using DeflateStream deflateStream = new DeflateStream(new MemoryStream(compressed), CompressionMode.Decompress, false);
+                        using ZLibStream deflateStream = new ZLibStream(new MemoryStream(compressed), CompressionMode.Decompress, false);
                         using MemoryStream resultStream = new MemoryStream();
                         deflateStream.CopyTo(resultStream);
                         uncompressed = resultStream.ToArray();
@@ -86,7 +86,7 @@ namespace ViennaDotNet.PreviewGenerator
             using (MemoryStream tagStream = new MemoryStream(uncompressed))
             using (TagReader tagReader = new TagReader(tagStream, FormatOptions.Java, false))
             {
-                CompoundTag tag = tagReader.ReadCompound();
+                CompoundTag tag = tagReader.ReadTag<CompoundTag>();
 
                 return tag;
             }

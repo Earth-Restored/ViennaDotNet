@@ -42,7 +42,7 @@ namespace ViennaDotNet.PreviewGenerator.Registry
                         BedrockMapping? bedrockMapping = readBedrockMapping((JObject)element["bedrock"]!, jArray);
                         if (bedrockMapping == null)
                         {
-                            Log.Debug("Ignoring Java block {}", name);
+                            Log.Debug($"Ignoring Java block {name}");
                             continue;
                         }
                         bedrockMap[id] = bedrockMapping;
@@ -107,7 +107,7 @@ namespace ViennaDotNet.PreviewGenerator.Registry
 
             string name = bedrockMappingObject["name"]!.ToObject<string>()!;
 
-            Dictionary<string, object> state = new();
+            SortedDictionary<string, object> state = new();
             if (bedrockMappingObject.TryGetValue("state", out JToken? stateToken))
             {
                 JObject stateObject = (JObject)stateToken;

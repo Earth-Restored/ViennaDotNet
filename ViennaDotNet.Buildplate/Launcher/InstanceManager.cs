@@ -135,7 +135,7 @@ namespace ViennaDotNet.Buildplate.Launcher
 
                         Log.Information("Generating buildplate preview");
 
-                        string preview = previewGenerator.generatePreview(serverData, previewRequest.night);
+                        string? preview = previewGenerator.generatePreview(serverData, previewRequest.night);
                         if (preview == null)
                             Log.Warning("Could not generate preview for buildplate");
 

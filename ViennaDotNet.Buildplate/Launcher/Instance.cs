@@ -830,7 +830,7 @@ namespace ViennaDotNet.Buildplate.Launcher
                     StartInfo = startInfo,
                     EnableRaisingEvents = true
                 };
-                StreamWriter? writer = new StreamWriter($"log_{instanceId}-server_bridge") { AutoFlush = true };
+                StreamWriter? writer = new StreamWriter($"log_{instanceId}-bridge") { AutoFlush = true };
                 process.OutputDataReceived += (sender, e) => writer?.WriteLine(e.Data);
                 process.ErrorDataReceived += (sender, e) => writer?.WriteLine(e.Data);
 

@@ -77,7 +77,7 @@ namespace ViennaDotNet.Buildplate_Importer
                 dbConnectionString = commandLine.hasOption("db") ? commandLine.getOptionValue("db")! : "./earth.db";
                 objectStoreConnectionString = commandLine.hasOption("objectstore") ? commandLine.getOptionValue("objectstore")! : "localhost:5396";
                 eventBusConnectionString = commandLine.hasOption("eventbus") ? commandLine.getOptionValue("eventbus")! : "localhost:5532";
-                playerId = commandLine.getOptionValue("playerId")!;
+                playerId = commandLine.getOptionValue("playerId")!.ToLowerInvariant();
                 worldDir = commandLine.getOptionValue("worldDir")!;
             }
             catch (ParseException exception)
@@ -156,16 +156,19 @@ namespace ViennaDotNet.Buildplate_Importer
             try
             {
                 using MemoryStream byteArrayOutputStream = new MemoryStream();
-                using ZipArchive zipArchive = new ZipArchive(byteArrayOutputStream, ZipArchiveMode.Create);
-                foreach (string dirName in new string[] { "region", "entities" })
+
+                using (ZipArchive zipArchive = new ZipArchive(byteArrayOutputStream, ZipArchiveMode.Create))
                 {
-                    string dir = Path.Combine(worldDir, dirName);
-                    foreach (string regionName in new string[] { "r.0.0.mca", "r.0.-1.mca", "r.-1.0.mca", "r.-1.-1.mca" })
+                    foreach (string dirName in new string[] { "region", "entities" })
                     {
-                        ZipArchiveEntry zipEntry = zipArchive.CreateEntry(dirName + "/" + regionName, CompressionLevel.Optimal);
-                        using (FileStream fileInputStream = File.OpenRead(Path.Combine(dir, regionName)))
-                        using (Stream zipEntryStream = zipEntry.Open())
-                            fileInputStream.CopyTo(zipEntryStream);
+                        string dir = Path.Combine(worldDir, dirName);
+                        foreach (string regionName in new string[] { "r.0.0.mca", "r.0.-1.mca", "r.-1.0.mca", "r.-1.-1.mca" })
+                        {
+                            ZipArchiveEntry zipEntry = zipArchive.CreateEntry(dirName + "/" + regionName, CompressionLevel.Optimal);
+                            using (FileStream fileInputStream = File.OpenRead(Path.Combine(dir, regionName)))
+                            using (Stream zipEntryStream = zipEntry.Open())
+                                fileInputStream.CopyTo(zipEntryStream);
+                        }
                     }
                 }
 

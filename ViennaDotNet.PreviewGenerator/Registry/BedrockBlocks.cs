@@ -29,7 +29,7 @@ namespace ViennaDotNet.PreviewGenerator.Registry
                     JObject element = (JObject)_element;
                     int id = element["id"]!.ToObject<int>();
                     string name = element["name"]!.ToObject<string>()!;
-                    Dictionary<string, object> state = new();
+                    SortedDictionary<string, object> state = new();
                     JObject stateObject = (JObject)element["state"]!;
                     foreach (var entry in stateObject)
                     {
@@ -53,12 +53,12 @@ namespace ViennaDotNet.PreviewGenerator.Registry
             });
 
             AIR = BedrockBlocks.getId("minecraft:air", new());
-            Dictionary<string, object> hashMap = new();
+            SortedDictionary<string, object> hashMap = new();
             hashMap.Add("liquid_depth", 0);
             WATER = BedrockBlocks.getId("minecraft:water", hashMap);
         }
 
-        public static int getId(string name, Dictionary<string, object> state)
+        public static int getId(string name, SortedDictionary<string, object> state)
         {
             BlockNameAndState blockNameAndState = new BlockNameAndState(name, state);
             return stateToIdMap.GetOrDefault(blockNameAndState, -1);
@@ -103,9 +103,9 @@ namespace ViennaDotNet.PreviewGenerator.Registry
         private sealed class BlockNameAndState
         {
             public readonly string name;
-            public readonly Dictionary<string, object> state;
+            public readonly SortedDictionary<string, object> state;
 
-            public BlockNameAndState(string name, Dictionary<string, object> state)
+            public BlockNameAndState(string name, SortedDictionary<string, object> state)
             {
                 this.name = name;
                 this.state = state;
@@ -113,7 +113,16 @@ namespace ViennaDotNet.PreviewGenerator.Registry
 
             public override int GetHashCode()
             {
-                return name.GetHashCode() ^ state.GetHashCode();
+                unchecked // Overflow is fine, just wrap
+                {
+                    int hash = 17 * name.GetHashCode();
+                    foreach (var kvp in state)
+                    {
+                        hash = hash * 23 + kvp.Key.GetHashCode();
+                        hash = hash * 23 + (kvp.Value?.GetHashCode() ?? 0);
+                    }
+                    return hash;
+                }
             }
 
             public override bool Equals(object? obj)
