@@ -41,7 +41,7 @@ namespace ViennaDotNet.ApiServer
         }
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
-        public static void Main(string[] args)
+        public static int Main(string[] args)
         {
             TypeDescriptor.AddAttributes(typeof(Uuid), new TypeConverterAttribute(typeof(StringToUuidConv)));
 
@@ -79,15 +79,14 @@ namespace ViennaDotNet.ApiServer
             else if (res is NotParsed<Options> notParsed)
             {
                 if (res.Errors.Any(error => error is HelpRequestedError))
-                    Environment.Exit(2);
+                    return 0;
                 else if (res.Errors.Any(error => error is VersionRequestedError))
-                    Environment.Exit(3);
+                    return 0;
                 else
-                    Environment.Exit(1);
-                return;
+                    return 1;
             }
             else
-                return;
+                return 1;
 
             Log.Information("Connecting to database");
             try
@@ -97,8 +96,7 @@ namespace ViennaDotNet.ApiServer
             catch (EarthDB.DatabaseException ex)
             {
                 Log.Fatal($"Could not connect to database: {ex}");
-                Environment.Exit(1);
-                return;
+                return 1;
             }
             Log.Information("Connected to database");
 
@@ -110,8 +108,7 @@ namespace ViennaDotNet.ApiServer
             catch (EventBusClientException ex)
             {
                 Log.Fatal($"Could not connect to event bus: {ex}");
-                Environment.Exit(1);
-                return;
+                return 1;
             }
             Log.Information("Connected to event bus");
             Log.Information("Connecting to object storage");
@@ -122,8 +119,7 @@ namespace ViennaDotNet.ApiServer
             catch (ObjectStoreClientException ex)
             {
                 Log.Fatal($"Could not connect to object storage: {ex}");
-                Environment.Exit(1);
-                return;
+                return 1;
             }
             Log.Information("Connected to object storage");
 
@@ -135,6 +131,8 @@ namespace ViennaDotNet.ApiServer
             BuildplateInstanceRequestHandler.start(DB, eventBus, objectStore, Catalog);
 
             CreateHostBuilder(args, options.HttpPort).Build().Run();
+
+            return 0;
         }
 
         public static IHostBuilder CreateHostBuilder(string[] args, int httpPort) =>

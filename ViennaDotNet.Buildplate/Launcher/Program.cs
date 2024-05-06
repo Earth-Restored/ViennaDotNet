@@ -23,7 +23,7 @@ namespace ViennaDotNet.Buildplate.Launcher
             public string ConnectorPluginJar { get; set; }
         }
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-        static void Main(string[] args)
+        static int Main(string[] args)
         {
             var log = new LoggerConfiguration()
                 .WriteTo.Console()
@@ -54,15 +54,14 @@ namespace ViennaDotNet.Buildplate.Launcher
             else if (res is NotParsed<Options> notParsed)
             {
                 if (res.Errors.Any(error => error is HelpRequestedError))
-                    Environment.Exit(2);
+                    return 0;
                 else if (res.Errors.Any(error => error is VersionRequestedError))
-                    Environment.Exit(3);
+                    return 0;
                 else
-                    Environment.Exit(1);
-                return;
+                    return 1;
             }
             else
-                return;
+                return 1;
 
             Log.Information("Connecting to event bus");
             EventBusClient eventBusClient;
@@ -73,8 +72,7 @@ namespace ViennaDotNet.Buildplate.Launcher
             catch (EventBusClientException ex)
             {
                 Log.Fatal($"Could not connect to event bus: {ex}");
-                Environment.Exit(1);
-                return;
+                return 1;
             }
             Log.Information("Connected to event bus");
 
@@ -85,14 +83,10 @@ namespace ViennaDotNet.Buildplate.Launcher
 
             AppDomain.CurrentDomain.ProcessExit += (sender, e) =>
             {
-                // maybe works better like this?
-                //new Thread(() =>
-                //{
                 instanceManager.shutdown();
-                //});
             };
 
-            while (true) Thread.Sleep(1000);
+            return 0;
         }
     }
 }

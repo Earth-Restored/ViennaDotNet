@@ -26,8 +26,6 @@ namespace ViennaDotNet.EventBus.Server
                 try
                 {
                     Socket socket = serverSocket.AcceptSocket();
-                    //socket.ReceiveTimeout = Timeout;
-                    //socket.SendTimeout = Timeout;
                     Log.Information($"Connection from {socket.RemoteEndPoint}");
                     Connection connection = new Connection(this, socket);
                     new Thread(connection.run).Start();

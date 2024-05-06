@@ -5,16 +5,16 @@ namespace ViennaDotNet.Launcher.Programs
 {
     internal static class ApiServer
     {
-        const string dirName = "ApiServer";
-        const string exeName = "ApiServer.exe";
-        const string dispName = "Api server";
-
+        public const string DirName = "ApiServer";
+        public const string ExeName = "ApiServer.exe";
+        public const string DispName = "Api server";
+        
         public static bool Check()
         {
-            string exePath = Path.GetFullPath(Path.Combine(dirName, exeName));
+            string exePath = Path.GetFullPath(Path.Combine(DirName, ExeName));
             if (!File.Exists(exePath))
             {
-                Log.Error($"{dispName} exe doesn't exits: {exePath}");
+                Log.Error($"{DispName} exe doesn't exits: {exePath}");
                 return false;
             }
 
@@ -27,7 +27,7 @@ namespace ViennaDotNet.Launcher.Programs
             };
             foreach (var fileName in catalogFiles)
             {
-                string path = Path.GetFullPath(Path.Combine(dirName, "data", "catalog", fileName));
+                string path = Path.GetFullPath(Path.Combine(DirName, "data", "catalog", fileName));
                 if (!File.Exists(path))
                 {
                     Log.Error($"Catalog file \"{Path.GetFileNameWithoutExtension(path)}\" doesn't exits: {path}");
@@ -42,7 +42,7 @@ namespace ViennaDotNet.Launcher.Programs
             };
             foreach (var dirName in catalogDirs)
             {
-                string path = Path.GetFullPath(Path.Combine(ApiServer.dirName, "data", "catalog", dirName));
+                string path = Path.GetFullPath(Path.Combine(ApiServer.DirName, "data", "catalog", dirName));
                 if (!Directory.Exists(path))
                 {
                     Log.Error($"Directory \"{Path.GetFileName(path)}\" doesn't exits: {path}");
@@ -50,12 +50,12 @@ namespace ViennaDotNet.Launcher.Programs
                 }
             }
 
-            string resourcePack = Path.GetFullPath(Path.Combine(dirName, "data", "resourcepacks", "vanilla.zip"));
+            string resourcePack = Path.GetFullPath(Path.Combine(DirName, "data", "resourcepacks", "vanilla.zip"));
             if (!File.Exists(resourcePack))
             {
                 Console.WriteLine($"Resourcepack wasn't found: {resourcePack}");
                 Console.WriteLine("Download it from https://cdn.mceserv.net/availableresourcepack/resourcepacks/dba38e59-091a-4826-b76a-a08d7de5a9e2-1301b0c257a311678123b9e7325d0d6c61db3c35 (using internet archive)");
-                Console.WriteLine($"Rename it to vanilla.zip and move it to: {dirName}/data/resourcepacks");
+                Console.WriteLine($"Rename it to vanilla.zip and move it to: {DirName}/data/resourcepacks");
                 U.ConfirmType("done");
 
                 if (!File.Exists(resourcePack))
@@ -70,8 +70,8 @@ namespace ViennaDotNet.Launcher.Programs
 
         public static void Run(Settings settings)
         {
-            Log.Information($"Running {dispName}");
-            Process.Start(new ProcessStartInfo(Path.GetFullPath(Path.Combine(dirName, exeName)), new string[]
+            Log.Information($"Running {DispName}");
+            Process.Start(new ProcessStartInfo(Path.GetFullPath(Path.Combine(DirName, ExeName)), new string[]
             {
                 $"--port={settings.ApiPort}",
                 $"--db={settings.DatabaseConnectionString}",
@@ -79,7 +79,7 @@ namespace ViennaDotNet.Launcher.Programs
                 $"--objectstore=localhost:{settings.ObjectStorePort}"
             })
             {
-                WorkingDirectory = Path.Combine(Environment.CurrentDirectory, dirName),
+                WorkingDirectory = Path.Combine(Environment.CurrentDirectory, DirName),
                 CreateNoWindow = false,
                 UseShellExecute = true
             });

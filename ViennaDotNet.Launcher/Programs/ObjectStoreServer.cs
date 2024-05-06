@@ -5,16 +5,16 @@ namespace ViennaDotNet.Launcher.Programs
 {
     internal static class ObjectStoreServer
     {
-        const string dirName = "ObjectStoreServer";
-        const string exeName = "ObjectStoreServer.exe";
-        const string dispName = "ObjectStore server";
+        public const string DirName = "ObjectStoreServer";
+        public const string ExeName = "ObjectStoreServer.exe";
+        public const string DispName = "ObjectStore server";
 
         public static bool Check()
         {
-            string exePath = Path.GetFullPath(Path.Combine(dirName, exeName));
+            string exePath = Path.GetFullPath(Path.Combine(DirName, ExeName));
             if (!File.Exists(exePath))
             {
-                Log.Error($"{dispName} exe doesn't exits: {exePath}");
+                Log.Error($"{DispName} exe doesn't exits: {exePath}");
                 return false;
             }
 
@@ -23,14 +23,14 @@ namespace ViennaDotNet.Launcher.Programs
 
         public static void Run(Settings settings)
         {
-            Log.Information($"Running {dispName}");
-            Process.Start(new ProcessStartInfo(Path.GetFullPath(Path.Combine(dirName, exeName)), new string[]
+            Log.Information($"Running {DispName}");
+            Process.Start(new ProcessStartInfo(Path.GetFullPath(Path.Combine(DirName, ExeName)), new string[]
             {
                 $"--dataDir={settings.ObjectStoreDataDir}",
                 $"--port={settings.ObjectStorePort}"
             })
             {
-                WorkingDirectory = Path.Combine(Environment.CurrentDirectory, dirName),
+                WorkingDirectory = Path.Combine(Environment.CurrentDirectory, DirName),
                 CreateNoWindow = false,
                 UseShellExecute = true
             });

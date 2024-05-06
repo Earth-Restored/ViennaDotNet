@@ -10,7 +10,7 @@ namespace ViennaDotNet.EventBus.Server
             [Option("port", Default = 5532, Required = false, HelpText = "Port to listen on")]
             public int Port { get; set; }
         }
-        static void Main(string[] args)
+        static int Main(string[] args)
         {
             var log = new LoggerConfiguration()
                 .WriteTo.Console()
@@ -34,15 +34,14 @@ namespace ViennaDotNet.EventBus.Server
             else if (res is NotParsed<Options> notParsed)
             {
                 if (res.Errors.Any(error => error is HelpRequestedError))
-                    Environment.Exit(2);
+                    return 0;
                 else if (res.Errors.Any(error => error is VersionRequestedError))
-                    Environment.Exit(3);
+                    return 0;
                 else
-                    Environment.Exit(1);
-                return;
+                    return 1;
             }
             else
-                return;
+                return 1;
 
             NetworkServer server;
             try
@@ -52,11 +51,12 @@ namespace ViennaDotNet.EventBus.Server
             catch (IOException ex)
             {
                 Log.Fatal(ex.ToString());
-                Environment.Exit(1);
-                return;
+                return 1;
             }
 
             server.run();
+
+            return 0;
         }
     }
 }

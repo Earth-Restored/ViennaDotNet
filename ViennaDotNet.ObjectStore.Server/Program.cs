@@ -15,7 +15,7 @@ namespace ViennaDotNet.ObjectStore.Server
             public int Port { get; set; }
         }
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-        static void Main(string[] args)
+        static int Main(string[] args)
         {
             var log = new LoggerConfiguration()
                 .WriteTo.Console()
@@ -39,15 +39,14 @@ namespace ViennaDotNet.ObjectStore.Server
             else if (res is NotParsed<Options> notParsed)
             {
                 if (res.Errors.Any(error => error is HelpRequestedError))
-                    Environment.Exit(2);
+                    return 0;
                 else if (res.Errors.Any(error => error is VersionRequestedError))
-                    Environment.Exit(3);
+                    return 0;
                 else
-                    Environment.Exit(1);
-                return;
+                    return 1;
             }
             else
-                return;
+                return 1;
 
             NetworkServer server;
             try
@@ -60,11 +59,12 @@ namespace ViennaDotNet.ObjectStore.Server
             )
             {
                 Log.Fatal(ex.ToString());
-                Environment.Exit(1);
-                return;
+                return 1;
             }
 
             server.run();
+
+            return 0;
         }
     }
 }

@@ -38,6 +38,10 @@ namespace ViennaDotNet.Launcher
                 new UISpacer(new Vector2I(0, 1)),
                 new UIButton("Start", start),
                 new UIButton("Configure", configure),
+                new UISpacer(new Vector2I(0, 1)),
+                new UIButton("Import buildplate", importWorld),
+                new UIButton("Modify data", modifyData),
+                new UISpacer(new Vector2I(0, 1)),
                 new UIButton("Exit")
                 {
                     OnClickFunc = () => UIManager.ContinueOptions.CloseUI
@@ -178,6 +182,7 @@ namespace ViennaDotNet.Launcher
                 new UISpacer(new Vector2I(0, 1)),
                 new UIBool("Skip file validation before starting")
                 {
+                    Value = Settings.SkipFileChecks!.Value,
                     OnInvoke = oldVal =>
                     {
                         Settings.SkipFileChecks = !oldVal;
@@ -203,12 +208,68 @@ namespace ViennaDotNet.Launcher
 
         static void importWorld()
         {
+            ConsoleE.ColorClear();
+            Console.CursorVisible = true;
 
+            if (!BuildplateImporter.Check())
+            {
+                U.PAK(true);
+                Console.CursorVisible = false;
+                return;
+            }
+
+            Console.WriteLine("ID of the player the buildplate will be added to: ");
+            string playerId = ConsoleE.ReadNonWhiteSpaceLine();
+
+            Console.WriteLine("Path to the !Java! world to import (directory or a zip file)");
+            string worldPath;
+            while (true)
+            {
+                worldPath = ConsoleE.ReadNonWhiteSpaceLine();
+                if (File.Exists(worldPath) || Directory.Exists(worldPath))
+                    break;
+                else
+                    Console.WriteLine("File/Directory doesn't exist");
+            }
+
+            int? exitCode = BuildplateImporter.Run(Settings, playerId, worldPath);
+            if (exitCode is null)
+                Log.Error("Failed to start importer");
+            else if (exitCode != 0)
+            {
+                Log.Error($"Failed to import buildplate, error code: {exitCode}");
+                Console.WriteLine($"Make sure {Programs.Buildplate.DispName}, {EventBusServer.DispName} and {ObjectStoreServer.DispName} are running");
+            }
+            else
+                Log.Information("Imported buildplate");
+
+            U.PAK();
+            Console.CursorVisible = false;
         }
 
-        static void copyData()
+        static void modifyData()
         {
+            UIList uIList = new UIList(new UIElement[]
+            {
+                new UIText("***ViennaDotNet Launcher/Modify data***"),
+                new UISpacer(new Vector2I(0, 1)),
+                new UIButton("Import"),
+                new UIButton("Export"),
+                new UIButton("Delete"),
+                new UISpacer(new Vector2I(0, 1)),
+                new UIButton("Back")
+                {
+                    OnClickFunc = () => UIManager.ContinueOptions.CloseUI
+                }
+            })
+            {
+                HorizontalOffset = 1
+            };
+            uIList.SetColor(ConsoleColor.White, ConsoleColor.Black);
 
+            UIManager ui = new UIManager(uIList);
+
+            ui.Open();
         }
 
         static void about()

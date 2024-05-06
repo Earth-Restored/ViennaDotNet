@@ -32,7 +32,7 @@ namespace ViennaDotNet.Buildplate_Importer
             public string WorldPath { get; set; }
         }
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-        static async Task<int> Main(string[] args)
+        static async Task Main(string[] args)
         {
             var log = new LoggerConfiguration()
                .WriteTo.Console()
@@ -56,14 +56,18 @@ namespace ViennaDotNet.Buildplate_Importer
             else if (res is NotParsed<Options> notParsed)
             {
                 if (res.Errors.Any(error => error is HelpRequestedError))
-                    return 4;
+                    Environment.Exit(0);
                 else if (res.Errors.Any(error => error is VersionRequestedError))
-                    return 5;
+                    Environment.Exit(0);
                 else
-                    return 1;
+                    Environment.Exit(1);
+                return;
             }
             else
-                return 1;
+            {
+                Environment.Exit(1);
+                return;
+            }
 
             Log.Information("Connecting to database");
             EarthDB earthDB;
@@ -74,7 +78,8 @@ namespace ViennaDotNet.Buildplate_Importer
             catch (EarthDB.DatabaseException ex)
             {
                 Log.Fatal($"Could not connect to database: {ex}");
-                return 1;
+                Environment.Exit(1);
+                return;
             }
             Log.Information("Connected to database");
 
@@ -87,7 +92,8 @@ namespace ViennaDotNet.Buildplate_Importer
             catch (ObjectStoreClientException ex)
             {
                 Log.Fatal($"Could not connect to object storage: {ex}");
-                return 1;
+                Environment.Exit(1);
+                return;
             }
             Log.Information("Connected to object storage");
 
@@ -108,7 +114,8 @@ namespace ViennaDotNet.Buildplate_Importer
             if (serverData == null)
             {
                 Log.Fatal("Could not get world data");
-                return 2;
+                Environment.Exit(2);
+                return;
             }
 
             string buildplateId = U.RandomUuid().ToString();
@@ -116,11 +123,13 @@ namespace ViennaDotNet.Buildplate_Importer
             if (!await storeBuildplate(earthDB, eventBusClient, objectStoreClient, options.PlayerId, buildplateId, serverData, U.CurrentTimeMillis()))
             {
                 Log.Fatal("Could not add buildplate");
-                return 3;
+                Environment.Exit(3);
+                return;
             }
 
             Log.Information($"Added buildplate with ID {buildplateId} for player {options.PlayerId}");
-            return 0;
+            Environment.Exit(0);
+            return;
         }
 
         private static byte[]? createServerDataFromWorldPath(string worldPath)
