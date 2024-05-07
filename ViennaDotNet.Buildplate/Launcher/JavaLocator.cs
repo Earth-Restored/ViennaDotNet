@@ -9,7 +9,15 @@ namespace ViennaDotNet.Buildplate.Launcher
         {
             Log.Information("Trying to locate Java");
 
-            string? javaHome = Environment.GetEnvironmentVariable("JAVA_HOME");
+            string? javaHome;
+            if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+            {
+                javaHome = Environment.GetEnvironmentVariable("JAVA_HOME", EnvironmentVariableTarget.User);
+                if (string.IsNullOrWhiteSpace(javaHome))
+                    javaHome = Environment.GetEnvironmentVariable("JAVA_HOME", EnvironmentVariableTarget.Machine);
+            }
+            else
+                javaHome = Environment.GetEnvironmentVariable("JAVA_HOME");
             if (!string.IsNullOrEmpty(javaHome))
             {
                 Log.Information("Trying JAVA_HOME");

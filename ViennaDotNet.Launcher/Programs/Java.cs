@@ -10,7 +10,7 @@ namespace ViennaDotNet.Launcher.Programs
             if (check()) return;
 
             Console.WriteLine("Java from JAVA_HOME is not suitable (does not exist or cannot be accessed)");
-            Console.WriteLine("Download and install Java 17 from https://www.oracle.com/java/technologies/downloads/#jdk17-windows");
+            Console.WriteLine("Download and install Java 17 from https://www.oracle.com/java/technologies/downloads/#java17");
             U.ConfirmType("done");
 
             if (check()) return;
@@ -21,7 +21,19 @@ namespace ViennaDotNet.Launcher.Programs
 
         private static bool check()
         {
-            string? javaHome = Environment.GetEnvironmentVariable("JAVA_HOME");
+            // if  EnvironmentVariableTarget.Process was used, it wouldn't be refreshed if java is installed
+            string? javaHome;
+            if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+            {
+                javaHome = Environment.GetEnvironmentVariable("JAVA_HOME", EnvironmentVariableTarget.User);
+                Console.WriteLine("A " + javaHome);
+                if (string.IsNullOrWhiteSpace(javaHome))
+                    javaHome = Environment.GetEnvironmentVariable("JAVA_HOME", EnvironmentVariableTarget.Machine);
+                Console.WriteLine("B " + javaHome);
+            }
+            else
+                javaHome = Environment.GetEnvironmentVariable("JAVA_HOME");
+            Console.WriteLine("C " + javaHome);
             if (!string.IsNullOrEmpty(javaHome))
             {
                 try

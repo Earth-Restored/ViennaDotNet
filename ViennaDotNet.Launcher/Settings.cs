@@ -25,7 +25,7 @@ namespace ViennaDotNet.Launcher
         public bool? SkipFileChecks { get; set; }
 
         public void Save(string path)
-            => File.WriteAllText(path, JsonConvert.SerializeObject(this));
+            => File.WriteAllText(path, JsonConvert.SerializeObject(this, Formatting.Indented));
 
         public static Settings Load(string path)
         {

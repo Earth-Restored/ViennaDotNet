@@ -35,3 +35,8 @@ if not exist "build\TappablesGenerator\data\tappable" mkdir build\TappablesGener
 robocopy ViennaDotNet.TappablesGenerator\bin\Release\net8.0\publish\data\tappable build\TappablesGenerator\data\tappable /e /njh /njs /nc /ns /np /nfl
 
 robocopy  ViennaDotNet.Launcher\bin\Release\net8.0\publish build ViennaDotNet.Launcher.exe /njh /njs /nc /ns /np
+
+if not exist "build\MCServer" mkdir build\MCServer
+if not exist "build\MCServer\mods" mkdir build\MCServer\mods
+
+if not exist "build\FountainBridge" mkdir build\FountainBridge
