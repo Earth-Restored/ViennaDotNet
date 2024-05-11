@@ -8,7 +8,7 @@
         Rewards.Item[] inventory,
         Rewards.Buildplate[] buildplates,
         Rewards.Challenge[] challenges,
-        Rewards.PersonaItem[] personaItems,
+        string[] personaItems,
         Rewards.UtilityBlock[] utilityBlocks
     )
     {
@@ -28,10 +28,6 @@
         public record Challenge(
             string id
         )
-        {
-        }
-
-        public record PersonaItem()
         {
         }
 

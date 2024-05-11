@@ -145,7 +145,7 @@ namespace ViennaDotNet.ApiServer.Utils
                 items.Select(item => new Types.Common.Rewards.Item(item.Key, item.Value ?? 0)).ToArray(),
                 buildplates.Select(buildplate => new Types.Common.Rewards.Buildplate(buildplate)).ToArray(),
                 challenges.Select(challenge => new Types.Common.Rewards.Challenge(challenge)).ToArray(),
-                Array.Empty<Types.Common.Rewards.PersonaItem>(),
+                Array.Empty<string>(),
                 Array.Empty<Types.Common.Rewards.UtilityBlock>()
             );
         }
