@@ -59,7 +59,8 @@ namespace ViennaDotNet.DB.Models.Player
         {
             public enum Type
             {
-                LEVEL_UP
+                LEVEL_UP,
+                JOURNAL_ITEM_UNLOCKED
             }
 
             public enum Lifetime

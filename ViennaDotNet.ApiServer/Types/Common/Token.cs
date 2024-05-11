@@ -17,7 +17,9 @@ namespace ViennaDotNet.ApiServer.Types.Common
             [EnumMember(Value = "adv_zyki")]
             LEVEL_UP,
             [EnumMember(Value = "redeemtappable")]
-            TAPPABLE
+            TAPPABLE,
+            [EnumMember(Value = "item.unlocked")]
+            JOURNAL_ITEM_UNLOCKED
         }
 
         [JsonConverter(typeof(StringEnumConverter))]

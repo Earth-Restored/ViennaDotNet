@@ -113,6 +113,13 @@ namespace ViennaDotNet.ApiServer.Utils
                                 inventory.addItems(id, Java.IntStream.Range(0, quantity).Select(index => new NonStackableItemInstance(U.RandomUuid().ToString(), 0)).ToArray());
 
                             journal.touchItem(id, currentTime);
+                            // TODO: should probably wrap this in a "JournalUtils" class so that incrementing the counter and adding the item unlocked token for new items are always handled together, in case this is ever required from somewhere other than Rewards
+                            if (journal.getItem(id)!.amountCollected == 0)
+                            {
+                                updateQuery.Then(TokenUtils.addToken(playerId, new Tokens.Token(Tokens.Token.Type.JOURNAL_ITEM_UNLOCKED, new Rewards().toDBRewardsModel(), Tokens.Token.Lifetime.PERSISTENT, new Dictionary<string, string>() { 
+                                    { "itemid", id } 
+                                })));
+                            }
                             journal.addCollectedItem(id, quantity);
                         }
                     }
