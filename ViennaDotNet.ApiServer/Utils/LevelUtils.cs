@@ -1,5 +1,6 @@
 ﻿using ViennaDotNet.DB;
 using ViennaDotNet.DB.Models.Player;
+using static ViennaDotNet.DB.Models.Player.Tokens;
 
 namespace ViennaDotNet.ApiServer.Utils
 {
@@ -30,7 +31,7 @@ namespace ViennaDotNet.ApiServer.Utils
                     profile.level++;
                     Rewards rewards = levels[profile.level - 2].rewards;
                     updateQuery.Then(rewards.toRedeemQuery(playerId, currentTime, catalog));
-                    updateQuery.Then(TokenUtils.addToken(playerId, new Tokens.Token(Tokens.Token.Type.LEVEL_UP, new Rewards().setLevel(profile.level).toDBRewardsModel(), Tokens.Token.Lifetime.TRANSIENT, new())));
+                    updateQuery.Then(TokenUtils.addToken(playerId, new LevelUpToken(profile.level)));
                 }
 
                 if (changed)

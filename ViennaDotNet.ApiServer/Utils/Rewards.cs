@@ -3,6 +3,7 @@ using ViennaDotNet.Common.Utils;
 using ViennaDotNet.DB;
 using ViennaDotNet.DB.Models.Common;
 using ViennaDotNet.DB.Models.Player;
+using static ViennaDotNet.DB.Models.Player.Tokens;
 
 namespace ViennaDotNet.ApiServer.Utils
 {
@@ -116,9 +117,7 @@ namespace ViennaDotNet.ApiServer.Utils
                             // TODO: should probably wrap this in a "JournalUtils" class so that incrementing the counter and adding the item unlocked token for new items are always handled together, in case this is ever required from somewhere other than Rewards
                             if (journal.getItem(id)!.amountCollected == 0)
                             {
-                                updateQuery.Then(TokenUtils.addToken(playerId, new Tokens.Token(Tokens.Token.Type.JOURNAL_ITEM_UNLOCKED, new Rewards().toDBRewardsModel(), Tokens.Token.Lifetime.PERSISTENT, new Dictionary<string, string>() { 
-                                    { "itemid", id } 
-                                })));
+                                updateQuery.Then(TokenUtils.addToken(playerId, new JournalItemUnlockedToken(id)));
                             }
                             journal.addCollectedItem(id, quantity);
                         }

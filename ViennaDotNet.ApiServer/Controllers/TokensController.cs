@@ -38,12 +38,7 @@ namespace ViennaDotNet.ApiServer.Controllers
                     "tokens",
                     tokens.getTokens().Collect(() => new Dictionary<string, Token>(), (hashmap, token) =>
                     {
-                        hashmap[token.id] = new Token(
-                            Enum.Parse<Token.Type>(token.token.type.ToString()),
-                            new Dictionary<string, string>(token.token.properties),
-                            Rewards.fromDBRewardsModel(token.token.rewards).toApiResponse(),
-                            Enum.Parse<Token.Lifetime>(token.token.lifetime.ToString())
-                        );
+                        hashmap[token.id] = tokenToApiResponse(token.token);
                     }, DictionaryExtensions.AddRange)
                 }
             }, null));
@@ -87,16 +82,42 @@ namespace ViennaDotNet.ApiServer.Controllers
 
             if (token != null)
             {
-                string resp = JsonConvert.SerializeObject(new Token(
-                    Enum.Parse<Token.Type>(token.type.ToString()),
-                    new Dictionary<string, string>(token.properties),
-                    Rewards.fromDBRewardsModel(token.rewards).toApiResponse(),
-                    Enum.Parse<Token.Lifetime>(token.lifetime.ToString())
-                ));
+                string resp = JsonConvert.SerializeObject(tokenToApiResponse(token));
                 return Content(resp, "application/json");
             }
             else
                 return BadRequest();
+        }
+
+        private static Token tokenToApiResponse(Tokens.Token token)
+        {
+            Dictionary<string, string> properties = new();
+            switch (token.type)
+            {
+                case Tokens.Token.Type.JOURNAL_ITEM_UNLOCKED:
+                    properties["itemid"] = ((Tokens.JournalItemUnlockedToken)token).itemId;
+                    break;
+            }
+
+            Rewards rewards = token.type switch
+            {
+                Tokens.Token.Type.LEVEL_UP => new Rewards().setLevel(((Tokens.LevelUpToken)token).level),
+                _ => new Rewards(),
+            };
+
+            Token.Lifetime lifetime = token.type switch
+            {
+                Tokens.Token.Type.LEVEL_UP => Token.Lifetime.TRANSIENT,
+                Tokens.Token.Type.JOURNAL_ITEM_UNLOCKED => Token.Lifetime.PERSISTENT,
+                _ => throw new InvalidDataException($"Unknown Token type '{token.type}'"),
+            };
+
+            return new Token(
+                    Enum.Parse<Token.Type>(token.type.ToString()),
+                    properties,
+                    rewards.toApiResponse(),
+                    lifetime
+            );
         }
     }
 }

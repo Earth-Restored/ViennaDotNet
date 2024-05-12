@@ -2,6 +2,7 @@
 using Newtonsoft.Json;
 using ViennaDotNet.Common.Excceptions;
 using ViennaDotNet.Common.Utils;
+using ViennaDotNet.DB.Models.Player;
 
 namespace ViennaDotNet.DB
 {
@@ -192,7 +193,7 @@ namespace ViennaDotNet.DB
                         {
                             var json = reader.GetString(0);
                             var version = reader.GetInt32(1);
-                            var value = JsonConvert.DeserializeObject(json, entry.valueType)!;
+                            var value = JsonConvert.DeserializeObject(json, entry.valueType, new Tokens.TokenConverter())!;
                             results.getValues[entry.type] = new Results.Result(value, version);
                         }
                         else
