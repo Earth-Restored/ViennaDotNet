@@ -1,2 +1,7 @@
-"C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\msbuild.exe" ViennaDotNet.ApiServer\ViennaDotNet.ApiServer.csproj /p:DeployOnBuild=true /p:PublishProfile=Folder_win-x64
-"C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\msbuild.exe" ViennaDotNet.Buildplate\ViennaDotNet.Buildplate.csproj /p:DeployOnBuild=true /p:PublishProfile=Folder_win-x64
+dotnet publish ViennaDotNet.ApiServer\ViennaDotNet.ApiServer.csproj -r win-x64 -p:PublishSingleFile=true --self-contained true -p:PublishReadyToRun=true -p:PublishDir=bin\Release\net8.0\publish
+dotnet publish ViennaDotNet.Buildplate\ViennaDotNet.Buildplate.csproj -r win-x64 -p:PublishSingleFile=true --self-contained true -p:PublishReadyToRun=true -p:PublishDir=bin\Release\net8.0\publish
+dotnet publish ViennaDotNet.Buildplate_Importer\ViennaDotNet.Buildplate_Importer.csproj -r win-x64 -p:PublishSingleFile=true --self-contained true -p:PublishReadyToRun=true -p:PublishDir=bin\Release\net8.0\publish
+dotnet publish ViennaDotNet.EventBus.Server\ViennaDotNet.EventBus.Server.csproj -r win-x64 -p:PublishSingleFile=true --self-contained true -p:PublishReadyToRun=true -p:PublishDir=bin\Release\net8.0\publish
+dotnet publish ViennaDotNet.Launcher\ViennaDotNet.Launcher.csproj -r win-x64 -p:PublishSingleFile=true --self-contained true -p:PublishReadyToRun=true -p:PublishDir=bin\Release\net8.0\publish
+dotnet publish ViennaDotNet.ObjectStore.Server\ViennaDotNet.ObjectStore.Server.csproj -r win-x64 -p:PublishSingleFile=true --self-contained true -p:PublishReadyToRun=true -p:PublishDir=bin\Release\net8.0\publish
+dotnet publish ViennaDotNet.TappablesGenerator\ViennaDotNet.TappablesGenerator.csproj -r win-x64 -p:PublishSingleFile=true --self-contained true -p:PublishReadyToRun=true -p:PublishDir=bin\Release\net8.0\publish

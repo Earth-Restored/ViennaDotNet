@@ -8,6 +8,7 @@
     <Platforms>AnyCPU;x64;x86;ARM32;ARM64</Platforms>
     <AssemblyName>EventBusServer</AssemblyName>
     <TrimMode>partial</TrimMode>
+    <RuntimeIdentifiers>win-x64;win-x86</RuntimeIdentifiers>
   </PropertyGroup>
 
   <ItemGroup>

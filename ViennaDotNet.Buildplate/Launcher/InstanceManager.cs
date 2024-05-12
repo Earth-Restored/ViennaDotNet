@@ -5,7 +5,6 @@ using ViennaDotNet.EventBus.Client;
 
 namespace ViennaDotNet.Buildplate.Launcher
 {
-    // TODO: need to deal with instances that are idle for too long with no player connecting
     public class InstanceManager
     {
         private readonly Starter starter;

@@ -2,6 +2,7 @@
 using Cyotek.Data.Nbt.Serialization;
 using Newtonsoft.Json;
 using Serilog;
+using Serilog.Core;
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Text;
@@ -14,6 +15,8 @@ namespace ViennaDotNet.Buildplate.Launcher
 {
     public class Instance
     {
+        private const int HOST_PLAYER_CONNECT_TIMEOUT = 20000;
+
         public static Instance run(EventBusClient eventBusClient, string playerId, string buildplateId, string instanceId, bool survival, bool night, string publicAddress, int port, int serverInternalPort, string javaCmd, FileInfo fountainBridgeJar, DirectoryInfo serverTemplateDir, string fabricJarName, FileInfo connectorPluginJar, DirectoryInfo baseDir, string eventBusConnectionstring)
         {
             Instance instance = new Instance(eventBusClient, playerId, buildplateId, instanceId, survival, night, publicAddress, port, serverInternalPort, javaCmd, fountainBridgeJar, serverTemplateDir, fabricJarName, connectorPluginJar, baseDir, eventBusConnectionstring);
@@ -61,6 +64,8 @@ namespace ViennaDotNet.Buildplate.Launcher
         private ConsoleProcess? bridgeProcess = null;
         private bool shuttingDown = false;
         private readonly object subprocessLock = new object();
+
+        private volatile bool hostPlayerConnected = false;
 
         private Instance(EventBusClient eventBusClient, string playerId, string buildplateId, string instanceId, bool survival, bool night, string publicAddress, int port, int serverInternalPort, string javaCmd, FileInfo fountainBridgeJar, DirectoryInfo serverTemplateDir, string fabricJarName, FileInfo connectorPluginJar, DirectoryInfo baseDir, string eventBusConnectionstring)
         {
@@ -231,6 +236,7 @@ namespace ViennaDotNet.Buildplate.Launcher
                         Log.Information("Server is ready");
                         startBridgeProcess();
                         readyFuture.SetResult(/*null*/);
+                        startHostPlayerConnectTimeout();
                     }
                     break;
                 case "saved":
@@ -238,8 +244,13 @@ namespace ViennaDotNet.Buildplate.Launcher
                         WorldSavedMessage? worldSavedMessage = readJson<WorldSavedMessage>(@event.data);
                         if (worldSavedMessage != null)
                         {
-                            Log.Information("Saving snapshot");
-                            sendEventBusRequest<object>("saved", worldSavedMessage, false);
+                            if (hostPlayerConnected)
+                            {
+                                Log.Information("Saving snapshot");
+                                sendEventBusRequest<object>("saved", worldSavedMessage, false);
+                            }
+                            else
+                                Log.Information("Not saving snapshot because host player never connected");
                         }
                     }
                     break;
@@ -280,23 +291,24 @@ namespace ViennaDotNet.Buildplate.Launcher
             {
                 case "playerConnected":
                     {
-                        Log.Debug("Player connecting...");
                         PlayerConnectedRequest? playerConnectedRequest = readJson<PlayerConnectedRequest>(request.data);
                         if (playerConnectedRequest != null)
                         {
-                            if (playerConnectedRequest.uuid == playerId)    // TODO: probably remove this eventually and put in API server
+                            if (!hostPlayerConnected && playerConnectedRequest.uuid != playerId)
                             {
-                                PlayerConnectedResponse? playerConnectedResponse = sendEventBusRequest<PlayerConnectedResponse>("playerConnected", playerConnectedRequest, true).Result;
-                                if (playerConnectedResponse != null)
-                                {
-                                    Log.Information($"Player {playerConnectedRequest.uuid} has connected");
-                                    return playerConnectedResponse;
-                                }
-                            }
-                            else
-                            {
-                                Log.Warning($"BAD CODE request: {playerConnectedRequest.uuid}, actual id: {playerId}");
+                                Log.Information($"Rejecting player connection for player {playerConnectedRequest.uuid} because the host player must connect first");
                                 return new PlayerConnectedResponse(false, null);
+                            }
+
+                            PlayerConnectedResponse? playerConnectedResponse = sendEventBusRequest<PlayerConnectedResponse>("playerConnected", playerConnectedRequest, true).Result;
+                            if (playerConnectedResponse != null)
+                            {
+                                Log.Information($"Player {playerConnectedRequest.uuid} has connected");
+
+                                if (!hostPlayerConnected && playerConnectedRequest.uuid == playerId)
+                                    hostPlayerConnected = true;
+
+                                return playerConnectedResponse;
                             }
                         }
                     }
@@ -811,6 +823,33 @@ namespace ViennaDotNet.Buildplate.Launcher
             }
 
             Monitor.Exit(subprocessLock);
+        }
+
+        private void startHostPlayerConnectTimeout()
+        {
+            new Thread(() =>
+            {
+                try
+                {
+                    Thread.Sleep(HOST_PLAYER_CONNECT_TIMEOUT);
+                }
+                catch (ThreadInterruptedException exception)
+                {
+                    throw new InvalidOperationException(null, exception);
+                }
+
+                lock (subprocessLock)
+                {
+                    if (shuttingDown)
+                        return;
+                }
+
+                if (!hostPlayerConnected)
+                {
+                    Log.Information("Host player has not connected yet, shutting down");
+                    beginShutdown();
+                }
+            }).Start();
         }
 
         private void beginShutdown()
