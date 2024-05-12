@@ -5,8 +5,10 @@ using Microsoft.Extensions.Primitives;
 using Newtonsoft.Json;
 using System.Security.Claims;
 using ViennaDotNet.ApiServer.Exceptions;
+using ViennaDotNet.ApiServer.Utils;
 using ViennaDotNet.Common.Excceptions;
 using ViennaDotNet.Common.Utils;
+using ViennaDotNet.DB.Models.Player;
 using BurnRate = ViennaDotNet.ApiServer.Types.Common.BurnRate;
 using CraftingCalculator = ViennaDotNet.ApiServer.Utils.CraftingCalculator;
 using CraftingSlot = ViennaDotNet.DB.Models.Player.Workshop.CraftingSlot;
@@ -411,7 +413,10 @@ namespace ViennaDotNet.ApiServer.Controllers
                             }
                         }
 
-                        return new EarthDB.Query(true).Update("crafting", playerId, craftingSlots).Then(rewards.toRedeemQuery(playerId, requestStartedOn, catalog));
+                        return new EarthDB.Query(true)
+                            .Update("crafting", playerId, craftingSlots)
+                            .Then(ActivityLogUtils.addEntry(playerId, new ActivityLog.CraftingCompletedEntry(requestStartedOn, rewards.toDBRewardsModel())))
+                            .Then(rewards.toRedeemQuery(playerId, requestStartedOn, catalog));
                     })
                     .Execute(earthDB);
 
@@ -442,7 +447,6 @@ namespace ViennaDotNet.ApiServer.Controllers
                 EarthDB.Results results = new EarthDB.Query(true)
                     .Get("smelting", playerId, typeof(SmeltingSlots))
                     .Then(results1 =>
-
                     {
                         SmeltingSlots smeltingSlots = (SmeltingSlots)results1.Get("smelting").Value;
                         SmeltingSlot smeltingSlot = smeltingSlots.slots[slotIndex - 1];
@@ -474,7 +478,10 @@ namespace ViennaDotNet.ApiServer.Controllers
                             }
                         }
 
-                        return new EarthDB.Query(true).Update("smelting", playerId, smeltingSlots).Then(rewards.toRedeemQuery(playerId, requestStartedOn, catalog));
+                        return new EarthDB.Query(true)
+                            .Update("smelting", playerId, smeltingSlots)
+                            .Then(ActivityLogUtils.addEntry(playerId, new ActivityLog.SmeltingCompletedEntry(requestStartedOn, rewards.toDBRewardsModel())))
+                            .Then(rewards.toRedeemQuery(playerId, requestStartedOn, catalog));
                     })
                     .Execute(earthDB);
 

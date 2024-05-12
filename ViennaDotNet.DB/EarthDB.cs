@@ -193,7 +193,10 @@ namespace ViennaDotNet.DB
                         {
                             var json = reader.GetString(0);
                             var version = reader.GetInt32(1);
-                            var value = JsonConvert.DeserializeObject(json, entry.valueType, new Tokens.TokenConverter())!;
+                            var value = JsonConvert.DeserializeObject(json, entry.valueType, 
+                                new Tokens.TokenConverter(),
+                                new ActivityLog.Entry.EntryConverter()
+                            )!;
                             results.getValues[entry.type] = new Results.Result(value, version);
                         }
                         else

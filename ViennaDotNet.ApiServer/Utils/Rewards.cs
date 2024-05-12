@@ -82,6 +82,7 @@ namespace ViennaDotNet.ApiServer.Utils
             EarthDB.Query updateQuery = new EarthDB.Query(true);
             getQuery.Then(results =>
             {
+                bool checkLevelUp = false;
                 if (rubies > 0 || experiencePoints > 0)
                 {
                     Profile profile = (Profile)results.Get("profile").Value;
@@ -94,7 +95,7 @@ namespace ViennaDotNet.ApiServer.Utils
                     updateQuery.Update("profile", playerId, profile);
 
                     if (experiencePoints > 0)
-                        updateQuery.Then(LevelUtils.checkAndHandlePlayerLevelUp(playerId, currentTime, catalog));
+                        checkLevelUp = true;
                 }
 
                 if (!items.IsEmpty())
@@ -116,6 +117,7 @@ namespace ViennaDotNet.ApiServer.Utils
                             journal.touchItem(id, currentTime);
                             if (journal.getItem(id)!.amountCollected == 0)
                             {
+                                updateQuery.Then(ActivityLogUtils.addEntry(playerId, new ActivityLog.JournalItemUnlockedEntry(currentTime, id)));
                                 updateQuery.Then(TokenUtils.addToken(playerId, new JournalItemUnlockedToken(id)));
                             }
                             journal.addCollectedItem(id, quantity);
@@ -133,6 +135,11 @@ namespace ViennaDotNet.ApiServer.Utils
                 if (!challenges.IsEmpty())
                 {
                     // TODO
+                }
+
+                if (checkLevelUp)
+                {
+                    updateQuery.Then(LevelUtils.checkAndHandlePlayerLevelUp(playerId, currentTime, catalog));
                 }
 
                 return updateQuery;

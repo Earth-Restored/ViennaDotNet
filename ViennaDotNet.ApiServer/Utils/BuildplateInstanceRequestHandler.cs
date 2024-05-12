@@ -324,19 +324,20 @@ namespace ViennaDotNet.ApiServer.Utils
                         inventory.addItems(inventoryAddItemMessage.itemId, new NonStackableItemInstance[] { new NonStackableItemInstance(inventoryAddItemMessage.instanceId!, inventoryAddItemMessage.wear) });
 
                     journal.touchItem(inventoryAddItemMessage.itemId, timestamp);
-                    Tokens.Token? journalItemUnlockedToken = null;
-                    if (journal.getItem(inventoryAddItemMessage.itemId)!.amountCollected == 0)
-                    {
-                        journalItemUnlockedToken = new Tokens.JournalItemUnlockedToken(inventoryAddItemMessage.itemId);
-                    }
+                    bool journalItemUnlocked = false;
+                    if (journal.getItem(inventoryAddItemMessage.itemId)!.amountCollected == 0) journalItemUnlocked = true;
+
                     journal.addCollectedItem(inventoryAddItemMessage.itemId, inventoryAddItemMessage.count);
 
                     EarthDB.Query query = new EarthDB.Query(true)
                         .Update("inventory", inventoryAddItemMessage.playerId, inventory)
                         .Update("journal", inventoryAddItemMessage.playerId, journal);
 
-                    if (journalItemUnlockedToken != null)
-                        query.Then(TokenUtils.addToken(playerId, journalItemUnlockedToken));
+                    if (journalItemUnlocked)
+                    {
+                        query.Then(ActivityLogUtils.addEntry(playerId, new ActivityLog.JournalItemUnlockedEntry(timestamp, inventoryAddItemMessage.itemId)));
+                        query.Then(TokenUtils.addToken(playerId, new Tokens.JournalItemUnlockedToken(inventoryAddItemMessage.itemId)));
+                    }
 
                     return query;
                 })

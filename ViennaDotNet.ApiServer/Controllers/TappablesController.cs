@@ -116,7 +116,10 @@ namespace ViennaDotNet.ApiServer.Controllers
                         redeemedTappables.add(tappable.id, tappable.spawnTime + tappable.validFor);
                         redeemedTappables.prune(requestStartedOn);
                         query.Update("redeemedTappables", playerId, redeemedTappables);
-                        query.Then(rewards.toRedeemQuery(playerId, requestStartedOn, catalog)).Then(results2 => new EarthDB.Query(false).Extra("success", true).Extra("rewards", results2.getExtra("rewards")));
+                        query.Then(ActivityLogUtils.addEntry(playerId, new ActivityLog.TappableEntry(requestStartedOn, rewards.toDBRewardsModel())));
+                        query.Then(rewards.toRedeemQuery(playerId, requestStartedOn, catalog));
+                        query.Then(results2 => new EarthDB.Query(false).Extra("success", true).Extra("rewards", rewards));
+
                         return query;
                     })
                     .Execute(earthDB);

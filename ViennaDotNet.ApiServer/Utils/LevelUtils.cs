@@ -30,6 +30,7 @@ namespace ViennaDotNet.ApiServer.Utils
                     changed = true;
                     profile.level++;
                     Rewards rewards = levels[profile.level - 2].rewards;
+                    updateQuery.Then(ActivityLogUtils.addEntry(playerId, new ActivityLog.LevelUpEntry(currentTime, profile.level)));
                     updateQuery.Then(rewards.toRedeemQuery(playerId, currentTime, catalog));
                     updateQuery.Then(TokenUtils.addToken(playerId, new LevelUpToken(profile.level)));
                 }

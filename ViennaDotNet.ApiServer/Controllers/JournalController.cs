@@ -10,6 +10,8 @@ using ViennaDotNet.ApiServer.Exceptions;
 using Uma.Uuid;
 using ViennaDotNet.ApiServer.Utils;
 using Newtonsoft.Json;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ViennaDotNet.ApiServer.Controllers
 {
@@ -28,12 +30,15 @@ namespace ViennaDotNet.ApiServer.Controllers
                 return BadRequest();
 
             Journal journalModel;
+            ActivityLog activityLogModel;
             try
             {
                 EarthDB.Results results = new EarthDB.Query(false)
                     .Get("journal", playerId, typeof(Journal))
+                    .Get("activityLog", playerId, typeof(ActivityLog))
                     .Execute(earthDB);
                 journalModel = (Journal)results.Get("journal").Value;
+                activityLogModel = (ActivityLog)results.Get("activityLog").Value;
             }
             catch (EarthDB.DatabaseException exception)
             {
@@ -47,11 +52,36 @@ namespace ViennaDotNet.ApiServer.Controllers
                 itemJournalEntry.amountCollected
             ));
 
-            // TODO
-            Types.Journal.JournalRecord.ActivityLogEntry[] activityLog = Array.Empty<Types.Journal.JournalRecord.ActivityLogEntry>();
+            LinkedList<Types.Journal.JournalRecord.ActivityLogEntry> _activityLogList = activityLogModel.getEntries()
+                .Select(activityLogEntryToApiResponse)
+                .Collect(() => new LinkedList<Types.Journal.JournalRecord.ActivityLogEntry>(), (list, val) => list.AddLast(val), (list1, list2) => list1.AddRange(list1));
+            var activityLogList = _activityLogList.Reverse().ToArray();
+            Types.Journal.JournalRecord.ActivityLogEntry[] activityLog = activityLogList;
 
             string resp = JsonConvert.SerializeObject(new EarthApiResponse(new Types.Journal.JournalRecord(inventoryJournal, activityLog)));
             return Content(resp, "application/json");
+        }
+
+        private static Types.Journal.JournalRecord.ActivityLogEntry activityLogEntryToApiResponse(ActivityLog.Entry entry)
+        {
+            Rewards rewards = entry.type switch
+            {
+                ActivityLog.Entry.Type.LEVEL_UP => new Rewards().setLevel(((ActivityLog.LevelUpEntry)entry).level),
+                ActivityLog.Entry.Type.TAPPABLE => Rewards.fromDBRewardsModel(((ActivityLog.TappableEntry)entry).rewards),
+                ActivityLog.Entry.Type.JOURNAL_ITEM_UNLOCKED => new Rewards().addItem(((ActivityLog.JournalItemUnlockedEntry)entry).itemId, 0),
+                ActivityLog.Entry.Type.CRAFTING_COMPLETED => Rewards.fromDBRewardsModel(((ActivityLog.CraftingCompletedEntry)entry).rewards),
+                ActivityLog.Entry.Type.SMELTING_COMPLETED => Rewards.fromDBRewardsModel(((ActivityLog.SmeltingCompletedEntry)entry).rewards),
+                _ => throw new InvalidDataException($"Unknown ActivityLog.Entry.Type '{entry.type}'"),
+            };
+
+            Dictionary<string, string> properties = new();
+
+            return new Types.Journal.JournalRecord.ActivityLogEntry(
+                Enum.Parse<Types.Journal.JournalRecord.ActivityLogEntry.Type>(entry.type.ToString()),
+                TimeFormatter.FormatTime(entry.timestamp),
+                rewards.toApiResponse(),
+                properties
+            );
         }
     }
 }
