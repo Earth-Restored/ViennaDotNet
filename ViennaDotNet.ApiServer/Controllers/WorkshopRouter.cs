@@ -154,42 +154,34 @@ public class WorkshopRouter : ControllerBase
     {
         string? playerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(playerId) || slotIndex < 1 || slotIndex > 3)
+        {
             return BadRequest();
+        }
 
         // request.timestamp
         long requestStartedOn = ((DateTime)HttpContext.Items["RequestStartedOn"]!).ToUnixTimeMilliseconds();
 
         StartRequestCrafting? startRequest = await Request.Body.AsJsonAsync<StartRequestCrafting>(cancellationToken);
         if (startRequest is null || startRequest.multiplier < 1)
+        {
             return BadRequest();
+        }
 
         if (startRequest.ingredients.Any(item => item == null || item.quantity < 1 || (item.itemInstanceIds != null && item.itemInstanceIds.Length > 0 && item.itemInstanceIds.Length != item.quantity)))
+        {
             return BadRequest();
+        }
 
         Catalog.RecipesCatalog.CraftingRecipe? recipe = catalog.recipesCatalog.getCraftingRecipe(startRequest.recipeId);
 
         if (recipe is null)
+        {
             return BadRequest();
-
-        if (startRequest.ingredients.Length != recipe.ingredients.Length)
-            return BadRequest();
+        }
 
         if (recipe.returnItems.Length > 0)
-            throw new UnsupportedOperationException(); // TODO: implement returnItems
-
-        for (int index = 0; index < recipe.ingredients.Length; index++)
         {
-            Catalog.RecipesCatalog.CraftingRecipe.Ingredient ingredient = recipe.ingredients[index];
-            StartRequestCrafting.Item item = startRequest.ingredients[index];
-            if (!ingredient.possibleItemIds.Any(id => id == item.itemId))
-            {
-                return BadRequest();
-            }
-
-            if (item.quantity != ingredient.count * startRequest.multiplier)
-            {
-                return BadRequest();
-            }
+            throw new UnsupportedOperationException(); // TODO: implement returnItems
         }
 
         try
@@ -207,32 +199,112 @@ public class WorkshopRouter : ControllerBase
                     Inventory inventory = (Inventory)results1.Get("inventory").Value;
                     Hotbar hotbar = (Hotbar)results1.Get("hotbar").Value;
 
-                    if (craftingSlot.locked || craftingSlot.activeJob != null)
-                        return query;
-
-                    LinkedList<InputItem> inputItems = new();
-                    foreach (StartRequestCrafting.Item item in startRequest.ingredients)
+                    if (craftingSlot.locked || craftingSlot.activeJob is not null)
                     {
+                        return query;
+                    }
+
+                    InputItem[] providedItems = new InputItem[startRequest.ingredients.Length];
+                    for (int index = 0; index < startRequest.ingredients.Length; index++)
+                    {
+                        StartRequestCrafting.Item item = startRequest.ingredients[index];
                         if (item.itemInstanceIds == null || item.itemInstanceIds.Length == 0)
                         {
                             if (!inventory.takeItems(item.itemId, item.quantity))
+                            {
                                 return query;
+                            }
 
-                            inputItems.AddLast(new InputItem(item.itemId, item.quantity, []));
+                            providedItems[index] = new InputItem(item.itemId, item.quantity, []);
                         }
                         else
                         {
                             NonStackableItemInstance[]? instances = inventory.takeItems(item.itemId, item.itemInstanceIds);
-                            if (instances == null)
+                            if (instances is null)
+                            {
                                 return query;
+                            }
 
-                            inputItems.AddLast(new InputItem(item.itemId, item.quantity, instances));
+                            providedItems[index] = new InputItem(item.itemId, item.quantity, instances);
                         }
                     }
 
                     hotbar.limitToInventory(inventory);
 
-                    craftingSlot.activeJob = new CraftingSlot.ActiveJob(startRequest.sessionId, recipe.id, requestStartedOn, [.. inputItems], startRequest.multiplier, 0, false);
+                    LinkedList<LinkedList<InputItem>> inputItems = [];
+                    foreach (Catalog.RecipesCatalog.CraftingRecipe.Ingredient ingredient in recipe.ingredients)
+                    {
+                        LinkedList<InputItem> ingredientItems = [];
+                        int requiredCount = ingredient.count * startRequest.multiplier;
+                        for (int index = 0; index < providedItems.Length; index++)
+                        {
+                            InputItem providedItem = providedItems[index];
+                            if (providedItem.count == 0)
+                            {
+                                continue;
+                            }
+
+                            if (!ingredient.possibleItemIds.Any(id => id == providedItem.id))
+                            {
+                                continue;
+                            }
+
+                            if (requiredCount > providedItem.count)
+                            {
+                                requiredCount -= providedItem.count;
+                                ingredientItems.AddLast(providedItem);
+                                providedItems[index] = new InputItem(providedItem.id, 0, []);
+                            }
+                            else
+                            {
+                                NonStackableItemInstance[] takenInstances;
+                                NonStackableItemInstance[] remainingInstances;
+                                if (providedItem.instances.Length > 0)
+                                {
+                                    takenInstances = ArrayExtensions.CopyOfRange(providedItem.instances, 0, requiredCount);
+                                    remainingInstances = ArrayExtensions.CopyOfRange(providedItem.instances, requiredCount, providedItem.count);
+                                }
+                                else
+                                {
+                                    takenInstances = [];
+                                    remainingInstances = [];
+                                }
+
+                                ingredientItems.AddLast(new InputItem(providedItem.id, requiredCount, takenInstances));
+                                providedItems[index] = new InputItem(providedItem.id, providedItem.count - requiredCount, remainingInstances);
+                                requiredCount = 0;
+                            }
+
+                            if (requiredCount == 0)
+                            {
+                                break;
+                            }
+                        }
+
+                        if (requiredCount > 0)
+                        {
+                            return query;
+                        }
+
+                        if (ingredientItems.Count == 0)
+                        {
+                            throw new UnreachableException();
+                        }
+
+                        inputItems.AddLast(ingredientItems);
+                    }
+
+                    if (inputItems.Count != recipe.ingredients.Length)
+                    {
+                        throw new UnreachableException();
+                    }
+
+                    if (providedItems.Any(item => item.count > 0))
+                    {
+                        return query;
+                    }
+
+                    craftingSlot.activeJob = new CraftingSlot.ActiveJob(startRequest.sessionId, recipe.id, requestStartedOn, inputItems.Select(inputItems1 => inputItems1.ToArray()).ToArray(), startRequest.multiplier, 0, false);
 
                     query.Update("crafting", playerId, craftingSlots).Update("inventory", playerId, inventory).Update("hotbar", playerId, hotbar);
 
@@ -314,11 +386,11 @@ public class WorkshopRouter : ControllerBase
                     Inventory inventory = (Inventory)results1.Get("inventory").Value;
                     Hotbar hotbar = (Hotbar)results1.Get("hotbar").Value;
 
-                    if (smeltingSlot.locked || smeltingSlot.activeJob != null)
+                    if (smeltingSlot.locked || smeltingSlot.activeJob is null)
                         return query;
 
                     InputItem input;
-                    if (startRequest.input.itemInstanceIds == null || startRequest.input.itemInstanceIds.Length == 0)
+                    if (startRequest.input.itemInstanceIds is null || startRequest.input.itemInstanceIds.Length == 0)
                     {
                         if (!inventory.takeItems(startRequest.input.itemId, startRequest.input.quantity))
                             return query;
@@ -336,11 +408,8 @@ public class WorkshopRouter : ControllerBase
 
                     SmeltingSlot.Fuel? fuel;
                     int requiredFuelHeat = recipe.heatRequired * startRequest.multiplier - (smeltingSlot.burning != null ? smeltingSlot.burning.remainingHeat : 0);
-                    if (startRequest.fuel != null && startRequest.fuel.quantity > 0)
+                    if (startRequest.fuel is not null && startRequest.fuel.quantity > 0)
                     {
-                        if (requiredFuelHeat <= 0)
-                            return query;
-
                         int requiredFuelCount = 0;
                         while (requiredFuelHeat > 0)
                         {
@@ -349,32 +418,46 @@ public class WorkshopRouter : ControllerBase
                         }
 
                         if (startRequest.fuel.quantity < requiredFuelCount)
-                            return query;
-
-                        InputItem fuelItem;
-                        if (startRequest.fuel.itemInstanceIds == null || startRequest.fuel.itemInstanceIds.Length == 0)
                         {
-                            if (!inventory.takeItems(startRequest.fuel.itemId, startRequest.fuel.quantity))
-                                return query;
+                            return query;
+                        }
 
-                            fuelItem = new InputItem(startRequest.fuel.itemId, requiredFuelCount, []);
+                        if (requiredFuelCount > 0)
+                        {
+                            InputItem fuelItem;
+                            if (startRequest.fuel.itemInstanceIds is null || startRequest.fuel.itemInstanceIds.Length == 0)
+                            {
+                                if (!inventory.takeItems(startRequest.fuel.itemId, requiredFuelCount))
+                                {
+                                    return query;
+                                }
+
+                                fuelItem = new InputItem(startRequest.fuel.itemId, requiredFuelCount, Array.Empty<NonStackableItemInstance>());
+                            }
+                            else
+                            {
+                                NonStackableItemInstance[]? instances = inventory.takeItems(startRequest.fuel.itemId, ArrayExtensions.CopyOfRange(startRequest.fuel.itemInstanceIds, 0, requiredFuelCount));
+                                if (instances is null)
+                                {
+                                    return query;
+                                }
+
+                                fuelItem = new InputItem(startRequest.fuel.itemId, requiredFuelCount, instances);
+                            }
+
+                            fuel = new SmeltingSlot.Fuel(fuelItem, fuelCatalogItem.fuelInfo.burnTime, fuelCatalogItem.fuelInfo.heatPerSecond);
                         }
                         else
                         {
-                            NonStackableItemInstance[]? instances = inventory.takeItems(startRequest.fuel.itemId, startRequest.fuel.itemInstanceIds);
-
-                            if (instances == null)
-                                return query;
-
-                            fuelItem = new InputItem(startRequest.fuel.itemId, requiredFuelCount, instances);
+                            fuel = null;
                         }
-
-                        fuel = new SmeltingSlot.Fuel(fuelItem, fuelCatalogItem.fuelInfo.burnTime, fuelCatalogItem.fuelInfo.heatPerSecond);
                     }
                     else
                     {
                         if (requiredFuelHeat > 0)
+                        {
                             return query;
+                        }
 
                         fuel = null;
                     }
@@ -998,7 +1081,7 @@ public class WorkshopRouter : ControllerBase
                 activeJob.sessionId,
                 activeJob.recipeId,
                 new OutputItem(state.output.id, state.output.count),
-                [.. activeJob.input.Select(item => new Types.Workshop.InputItem(
+                [.. activeJob.input.SelectMany(inputItems => inputItems).Select(item => new Types.Workshop.InputItem(
                     item.id,
                     item.count,
                     [.. item.instances.Select(item => item.instanceId)]

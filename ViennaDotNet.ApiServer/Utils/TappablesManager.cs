@@ -113,19 +113,19 @@ public sealed class TappablesManager
     }
 
     public bool isTappableValidFor(Tappable tappable, long requestTime, float lat, float lon)
-	{
-		if (tappable.spawnTime - GRACE_PERIOD > requestTime || tappable.spawnTime + tappable.validFor + GRACE_PERIOD <= requestTime)
-		{
-			return false;
-		}
+    {
+        if (tappable.spawnTime - GRACE_PERIOD > requestTime || tappable.spawnTime + tappable.validFor + GRACE_PERIOD <= requestTime)
+        {
+            return false;
+        }
 
-		// TODO: check player location is in radius
+        // TODO: check player location is in radius
 
-		return true;
-	}
+        return true;
+    }
 
-	// TODO: actually use this
-	public bool isEncounterValidFor(Encounter encounter, long requestTime, float lat, float lon)
+    // TODO: actually use this
+    public bool isEncounterValidFor(Encounter encounter, long requestTime, float lat, float lon)
     {
         if (encounter.spawnTime - GRACE_PERIOD > requestTime || encounter.spawnTime + encounter.validFor <= requestTime) // no grace period when checking end time because the buildplate instance shutdown does not include the grace period anyway
         {

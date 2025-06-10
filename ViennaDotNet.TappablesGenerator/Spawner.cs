@@ -1,6 +1,5 @@
 ﻿using Newtonsoft.Json;
 using Serilog;
-using System;
 using ViennaDotNet.Common.Utils;
 using ViennaDotNet.EventBus.Client;
 

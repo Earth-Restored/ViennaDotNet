@@ -20,7 +20,7 @@ public sealed class CraftingSlot
         string sessionId,
         string recipeId,
         long startTime,
-        InputItem[] input,
+        InputItem[][] input,
         int totalRounds,
         int collectedRounds,
         bool finishedEarly

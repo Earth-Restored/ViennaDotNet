@@ -1,6 +1,5 @@
 ﻿using CommandLine;
 using Serilog;
-using System;
 using ViennaDotNet.EventBus.Client;
 using ViennaDotNet.StaticData;
 

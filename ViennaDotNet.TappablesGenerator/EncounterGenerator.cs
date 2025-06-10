@@ -1,9 +1,4 @@
-﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
-using Serilog;
-using System;
-using System.Diagnostics;
-using System.Runtime.Serialization;
+﻿using Serilog;
 using ViennaDotNet.Common.Utils;
 using ViennaDotNet.StaticData;
 
@@ -29,7 +24,7 @@ public class EncounterGenerator
         {
             Log.Warning("No encounter configs provided");
         }
-        _maxDuration = _staticData.encountersConfig.encounters.Select(encounterConfig => (int)encounterConfig.duration).DefaultIfEmpty().Max() * 1000;
+        _maxDuration = _staticData.encountersConfig.encounters.Select(encounterConfig => encounterConfig.duration).DefaultIfEmpty().Max() * 1000;
 
         _random = new Random();
     }

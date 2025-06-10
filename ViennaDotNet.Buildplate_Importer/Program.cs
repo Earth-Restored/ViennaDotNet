@@ -1,8 +1,9 @@
 ﻿using CommandLine;
-using Newtonsoft.Json;
 using Serilog;
 using System.IO.Compression;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using ViennaDotNet.Common.Utils;
 using ViennaDotNet.DB;
 using ViennaDotNet.DB.Models.Player;
@@ -28,7 +29,7 @@ internal static class Program
         [Option("id", Required = true, HelpText = "Player ID to import for")]
         public string PlayerId { get; set; }
 
-        [Option("file", Required = true, HelpText = "World to import (directory or zip)")]
+        [Option("file", Required = true, HelpText = "World to import (.zip)")]
         public string WorldPath { get; set; }
     }
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
@@ -113,8 +114,8 @@ internal static class Program
             eventBusClient = null;
         }
 
-        byte[]? serverData = createServerDataFromWorldPath(options.WorldPath);
-        if (serverData == null)
+        WorldData? worldData = readWorldFile(options.WorldPath);
+        if (worldData is null)
         {
             Log.Fatal("Could not get world data");
             Environment.Exit(2);
@@ -125,7 +126,7 @@ internal static class Program
 
         string playerId = options.PlayerId.ToLowerInvariant();
 
-        if (!await storeBuildplate(earthDB, eventBusClient, objectStoreClient, playerId, buildplateId, serverData, U.CurrentTimeMillis()))
+        if (!await storeBuildplate(earthDB, eventBusClient, objectStoreClient, playerId, buildplateId, worldData, U.CurrentTimeMillis()))
         {
             Log.Fatal("Could not add buildplate");
             Environment.Exit(3);
@@ -137,54 +138,175 @@ internal static class Program
         return;
     }
 
-    private static byte[]? createServerDataFromWorldPath(string worldPath)
+    private sealed record BuildplateMetadataVersion(
+        [property: JsonPropertyName("version")] int Version
+    );
+
+    private sealed record BuildplateMetadataV1(
+        [property: JsonPropertyName("size")] int Size,
+        [property: JsonPropertyName("offset")] int Offset,
+        [property: JsonPropertyName("night")] bool Night
+    );
+
+    private static WorldData? readWorldFile(string worldFileName)
     {
-        if (File.Exists(worldPath))
+        Dictionary<string, byte[]> worldFileContents = [];
+
+        Span<Range> parts = stackalloc Range[3];
+
+        try
         {
-            try
+            using (var zip = ZipFile.OpenRead(worldFileName))
             {
-                return File.ReadAllBytes(worldPath);
-            }
-            catch (IOException ex)
-            {
-                Log.Error($"Could not read world file: {ex}");
-                return null;
+                foreach (var entry in zip.Entries)
+                {
+                    if (entry.IsDirectory())
+                    {
+                        continue;
+                    }
+
+                    var entryPath = entry.FullName.AsSpan().Trim(['/', '\\']);
+
+                    if (entryPath is not "buildplate_metadata.json")
+                    {
+                        int partCount = entryPath.SplitAny(parts, ['/', '\\'], StringSplitOptions.RemoveEmptyEntries);
+
+                        if (partCount != 0)
+                        {
+                            continue;
+                        }
+
+                        if (entryPath[parts[0]] is not ("region" or "entities"))
+                        {
+                            continue;
+                        }
+
+                        if (entryPath[parts[1]] is not ("r.0.0.mca" or "r.0.-1.mca" or "r.-1.0.mca" or "r.-1.-1.mca"))
+                        {
+                            continue;
+                        }
+                    }
+
+                    using (var stream = entry.Open())
+                    using (var ms = new MemoryStream())
+                    {
+                        stream.CopyTo(ms);
+
+                        worldFileContents[entry.FullName] = ms.ToArray();
+                    }
+                }
             }
         }
-        else if (Directory.Exists(worldPath))
+        catch (IOException ex)
         {
-            try
-            {
-                using MemoryStream byteArrayOutputStream = new MemoryStream();
+            Log.Error($"Could not read world file: {ex}");
+            return null;
+        }
 
-                using (ZipArchive zipArchive = new ZipArchive(byteArrayOutputStream, ZipArchiveMode.Create))
+        byte[] serverData;
+        try
+        {
+            using (var zipStream = new MemoryStream())
+            {
+                using (var zip = new ZipArchive(zipStream, ZipArchiveMode.Create, true))
                 {
-                    foreach (string dirName in new string[] { "region", "entities" })
+                    foreach (string dirName in (IEnumerable<string>)["region", "entities"])
                     {
-                        string dir = Path.Combine(worldPath, dirName);
-                        foreach (string regionName in new string[] { "r.0.0.mca", "r.0.-1.mca", "r.-1.0.mca", "r.-1.-1.mca" })
+                        foreach (string fileName in (IEnumerable<string>)["r.0.0.mca", "r.0.-1.mca", "r.-1.0.mca", "r.-1.-1.mca"])
                         {
-                            ZipArchiveEntry zipEntry = zipArchive.CreateEntry(dirName + "/" + regionName, CompressionLevel.Optimal);
-                            using (FileStream fileInputStream = File.OpenRead(Path.Combine(dir, regionName)))
-                            using (Stream zipEntryStream = zipEntry.Open())
-                                fileInputStream.CopyTo(zipEntryStream);
+                            string filePath = $"{dirName}/{fileName}";
+
+                            if (!worldFileContents.TryGetValue(filePath, out byte[]? data))
+                            {
+                                Log.Error($"World file is missing {filePath}");
+                                return null;
+                            }
+
+                            var entry = zip.CreateEntry(filePath, CompressionLevel.SmallestSize);
+                            using (var entryStream = entry.Open())
+                            {
+                                entryStream.Write(data);
+                            }
                         }
                     }
                 }
 
-                return byteArrayOutputStream.ToArray();
-            }
-            catch (IOException ex)
-            {
-                Log.Error($"Could not get saved world data from world directory: {ex}");
-                return null;
+                serverData = zipStream.ToArray();
             }
         }
-        else
+        catch (IOException ex)
         {
-            Log.Error("World file/directory cannot be accessed");
+            Log.Error($"Could not prepare server data: {ex}");
             return null;
         }
+
+        int size;
+        int offset;
+        bool night;
+
+        try
+        {
+            byte[]? buildplateMetadataFileData = worldFileContents.GetValueOrDefault("buildplate_metadata.json");
+            string? buildplateMetadataString = buildplateMetadataFileData is not null
+                ? Encoding.UTF8.GetString(buildplateMetadataFileData)
+                : null;
+
+            if (buildplateMetadataString is null)
+            {
+                Log.Warning("World file does not contain buildplate_metadata.json, using default values");
+                size = 16;
+                offset = 63;
+                night = false;
+            }
+            else
+            {
+                var buildplateMetadataVersion = JsonSerializer.Deserialize<BuildplateMetadataVersion>(buildplateMetadataString);
+
+                if (buildplateMetadataVersion is null)
+                {
+                    Log.Error("Invalid buildplate metadata");
+                    return null;
+                }
+
+                switch (buildplateMetadataVersion.Version)
+                {
+                    case 1:
+                        {
+                            var buildplateMetadata = JsonSerializer.Deserialize<BuildplateMetadataV1>(buildplateMetadataString);
+
+                            if (buildplateMetadata is null)
+                            {
+                                Log.Error("Invalid buildplate metadata");
+                                return null;
+                            }
+
+                            size = buildplateMetadata.Size;
+                            offset = buildplateMetadata.Offset;
+                            night = buildplateMetadata.Night;
+                        }
+
+                        break;
+                    default:
+                        {
+                            Log.Error($"Unsupported buildplate metadata version {buildplateMetadataVersion.Version}");
+                            return null;
+                        }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"Could not read buildplate metadata file: {ex}");
+            return null;
+        }
+
+        if (size != 8 && size != 16 && size != 32)
+        {
+            Log.Error($"Invalid buildplate size {size}, must be on of: 8, 16, 32");
+            return null;
+        }
+
+        return new WorldData(serverData, size, offset, night);
     }
 
     private sealed record PreviewRequest(
@@ -192,23 +314,27 @@ internal static class Program
         bool night
     );
 
-    private static async Task<bool> storeBuildplate(EarthDB earthDB, EventBusClient? eventBusClient, ObjectStoreClient objectStoreClient, string playerId, string buildplateId, byte[] serverData, long timestamp)
+    private static async Task<bool> storeBuildplate(EarthDB earthDB, EventBusClient? eventBusClient, ObjectStoreClient objectStoreClient, string playerId, string buildplateId, WorldData worldData, long timestamp)
     {
         string? preview;
         if (eventBusClient != null)
         {
             RequestSender requestSender = eventBusClient.addRequestSender();
-            preview = await requestSender.request("buildplates", "preview", JsonConvert.SerializeObject(new PreviewRequest(Convert.ToBase64String(serverData), false))).Task;
+            preview = await requestSender.request("buildplates", "preview", JsonSerializer.Serialize(new PreviewRequest(Convert.ToBase64String(worldData.ServerData), worldData.Night))).Task;
             requestSender.close();
 
-            if (preview == null)
+            if (preview is null)
+            {
                 Log.Warning("Could not get preview for buildplate (preview generator did not respond to event bus request)");
+            }
         }
         else
+        {
             preview = null;
+        }
 
-        string? serverDataObjectId = (string?)await objectStoreClient.store(serverData).Task;
-        if (serverDataObjectId == null)
+        string? serverDataObjectId = (string?)await objectStoreClient.store(worldData.ServerData).Task;
+        if (serverDataObjectId is null)
         {
             Log.Error("Could not store data object in object store");
             return false;
@@ -229,7 +355,15 @@ internal static class Program
                 {
                     Buildplates buildplates = (Buildplates)results1.Get("buildplates").Value;
 
-                    Buildplates.Buildplate buildplate = new Buildplates.Buildplate(16, 63, 33, false, timestamp, serverDataObjectId, previewObjectId);    // TODO: make size/offset/etc. configurable
+                    int scale = worldData.Size switch
+                    {
+                        8 => 14,
+                        16 => 33,
+                        32 => 64,
+                        _ => 33,
+                    };
+
+                    Buildplates.Buildplate buildplate = new Buildplates.Buildplate(worldData.Size, worldData.Offset, scale, worldData.Night, timestamp, serverDataObjectId, previewObjectId);
 
                     buildplates.addBuildplate(buildplateId, buildplate);
 
@@ -247,4 +381,11 @@ internal static class Program
             return false;
         }
     }
+
+    private sealed record WorldData(
+        byte[] ServerData,
+        int Size,
+        int Offset,
+        bool Night
+    );
 }

@@ -488,7 +488,7 @@ public sealed class Catalog
     public sealed class NFCBoostsCatalog
     {
         private sealed record NFCBoostsCatalogFile(
-            // TODO
+        // TODO
         );
 
         internal NFCBoostsCatalog(string file)

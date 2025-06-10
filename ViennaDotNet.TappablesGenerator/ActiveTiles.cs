@@ -1,10 +1,7 @@
 ﻿using Newtonsoft.Json;
 using Serilog;
-using System;
-using System.Linq;
 using ViennaDotNet.Common.Utils;
 using ViennaDotNet.EventBus.Client;
-using static ViennaDotNet.TappablesGenerator.ActiveTiles;
 
 namespace ViennaDotNet.TappablesGenerator;
 

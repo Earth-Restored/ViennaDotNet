@@ -1,12 +1,10 @@
-﻿using System;
-
-namespace ViennaDotNet.StaticData;
+﻿namespace ViennaDotNet.StaticData;
 
 public sealed class StaticData
 {
     public readonly Catalog catalog;
     public readonly TappablesConfig tappablesConfig;
-	public readonly EncountersConfig encountersConfig;
+    public readonly EncountersConfig encountersConfig;
 
     public StaticData(string dir)
     {

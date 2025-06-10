@@ -1,4 +1,5 @@
-﻿using ViennaDotNet.Common.Utils;
+﻿using System.Diagnostics;
+using ViennaDotNet.Common.Utils;
 using ViennaDotNet.DB.Models.Player.Workshop;
 using ViennaDotNet.StaticData;
 
@@ -14,30 +15,49 @@ public static class CraftingCalculator
         int completedRounds = activeJob.finishedEarly ? activeJob.totalRounds : int.Min((int)((currentTime - activeJob.startTime) / roundDuration), activeJob.totalRounds);
         int availableRounds = completedRounds - activeJob.collectedRounds;
 
-        InputItem[] input = new InputItem[recipe.ingredients.Length];
+        LinkedList<InputItem> input = [];
         if (activeJob.input.Length != recipe.ingredients.Length)
             throw new InvalidOperationException();
 
         for (int index = 0; index < recipe.ingredients.Length; index++)
         {
             int usedCount = recipe.ingredients[index].count * completedRounds;
-            InputItem inputItem = activeJob.input[index];
-            if (inputItem.instances.Length > 0)
+            InputItem[] inputItems = activeJob.input[index];
+            foreach (InputItem inputItem in inputItems)
             {
-                if (inputItem.instances.Length != inputItem.count)
-                    throw new InvalidOperationException();
+                if (usedCount == 0)
+                {
+                    input.AddLast(inputItem);
+                }
+                else if (usedCount > inputItem.count)
+                {
+                    usedCount -= inputItem.count;
+                }
+                else
+                {
+                    if (inputItem.instances.Length > 0)
+                    {
+                        if (inputItem.instances.Length != inputItem.count)
+                        {
+                            throw new UnreachableException();
+                        }
 
-                input[index] = new InputItem(inputItem.id, inputItem.count - usedCount, ArrayExtensions.CopyOfRange(inputItem.instances, usedCount, inputItem.instances.Length));
+                        input.AddLast(new InputItem(inputItem.id, inputItem.count - usedCount, ArrayExtensions.CopyOfRange(inputItem.instances, usedCount, inputItem.instances.Length)));
+                    }
+                    else
+                    {
+                        input.AddLast(new InputItem(inputItem.id, inputItem.count - usedCount, []));
+                    }
+                    usedCount = 0;
+                }
             }
-            else
-                input[index] = new InputItem(inputItem.id, inputItem.count - usedCount, []);
         }
 
         return new State(
             completedRounds,
             availableRounds,
             activeJob.totalRounds,
-            input,
+            [.. input],
             new State.OutputItem(recipe.output.itemId, recipe.output.count),
             activeJob.startTime + roundDuration * (completedRounds + 1),
             activeJob.startTime + roundDuration * activeJob.totalRounds,
