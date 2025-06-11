@@ -326,20 +326,28 @@ public class WorkshopRouter : ControllerBase
     {
         string? playerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(playerId) || slotIndex < 1 || slotIndex > 3)
+        {
             return BadRequest();
+        }
 
         // request.timestamp
         long requestStartedOn = ((DateTime)HttpContext.Items["RequestStartedOn"]!).ToUnixTimeMilliseconds();
 
         StartRequestSmelting? startRequest = await Request.Body.AsJsonAsync<StartRequestSmelting>(cancellationToken);
         if (startRequest is null || startRequest.multiplier < 1)
+        {
             return BadRequest();
+        }
 
         if (startRequest.input.quantity < 1 || (startRequest.input.itemInstanceIds != null && startRequest.input.itemInstanceIds.Length > 0 && startRequest.input.itemInstanceIds.Length != startRequest.input.quantity))
+        {
             return BadRequest();
+        }
 
         if (startRequest.fuel != null && startRequest.fuel.quantity > 0 && startRequest.fuel.itemInstanceIds != null && startRequest.fuel.itemInstanceIds.Length > 0 && startRequest.fuel.itemInstanceIds.Length != startRequest.fuel.quantity)
+        {
             return BadRequest();
+        }
 
         Catalog.RecipesCatalog.SmeltingRecipe? recipe = staticData.catalog.recipesCatalog.getSmeltingRecipe(startRequest.recipeId);
         Catalog.ItemsCatalog.Item? fuelCatalogItem = startRequest.fuel is not null ? staticData.catalog.itemsCatalog.getItem(startRequest.fuel.itemId) : null;
@@ -386,8 +394,10 @@ public class WorkshopRouter : ControllerBase
                     Inventory inventory = (Inventory)results1.Get("inventory").Value;
                     Hotbar hotbar = (Hotbar)results1.Get("hotbar").Value;
 
-                    if (smeltingSlot.locked || smeltingSlot.activeJob is null)
+                    if (smeltingSlot.locked || smeltingSlot.activeJob is not null)
+                    {
                         return query;
+                    }
 
                     InputItem input;
                     if (startRequest.input.itemInstanceIds is null || startRequest.input.itemInstanceIds.Length == 0)
@@ -640,31 +650,21 @@ public class WorkshopRouter : ControllerBase
                         else if (inputItem.count > 0)
                             inventory.addItems(inputItem.id, inputItem.count);
 
-                        journal.touchItem(inputItem.id, requestStartedOn);
+                        journal.addCollectedItem(inputItem.id, requestStartedOn, 0);
                     }
 
+                    Rewards rewards = new Rewards();
                     int outputQuantity = state.availableRounds * state.output.count;
                     if (outputQuantity > 0)
                     {
-                        Catalog.ItemsCatalog.Item? item = staticData.catalog.itemsCatalog.getItem(state.output.id);
-
-                        Debug.Assert(item is not null);
-
-                        if (item.stackable)
-                        {
-                            inventory.addItems(item.id, outputQuantity);
-                        }
-                        else
-                        {
-                            inventory.addItems(item.id, [.. Java.IntStream.Range(0, outputQuantity).Select(index => new NonStackableItemInstance(U.RandomUuid().ToString(), 0))]);
-                        }
-
-                        journal.touchItem(state.output.id, requestStartedOn);
+                        rewards.addItem(state.output.id, outputQuantity);
                     }
 
                     craftingSlot.activeJob = null;
 
                     query.Update("crafting", playerId, craftingSlots).Update("inventory", playerId, inventory).Update("journal", playerId, journal);
+                    query.Then(ActivityLogUtils.addEntry(playerId, new ActivityLog.CraftingCompletedEntry(requestStartedOn, rewards.toDBRewardsModel())), false);
+                    query.Then(rewards.toRedeemQuery(playerId, requestStartedOn, staticData), false);
 
                     return query;
                 })
@@ -717,26 +717,7 @@ public class WorkshopRouter : ControllerBase
                     else if (state.input.count > 0)
                         inventory.addItems(state.input.id, state.input.count);
 
-                    journal.touchItem(state.input.id, requestStartedOn);
-
-                    int outputQuantity = state.availableRounds * state.output.count;
-                    if (outputQuantity > 0)
-                    {
-                        Catalog.ItemsCatalog.Item? item = staticData.catalog.itemsCatalog.getItem(state.output.id);
-
-                        Debug.Assert(item is not null);
-
-                        if (item.stackable)
-                        {
-                            inventory.addItems(item.id, outputQuantity);
-                        }
-                        else
-                        {
-                            inventory.addItems(item.id, [.. Java.IntStream.Range(0, outputQuantity).Select(index => new NonStackableItemInstance(U.RandomUuid().ToString(), 0))]);
-                        }
-
-                        journal.touchItem(state.output.id, requestStartedOn);
-                    }
+                    journal.addCollectedItem(state.input.id, requestStartedOn, 0);
 
                     if (state.remainingAddedFuel != null)
                     {
@@ -745,7 +726,14 @@ public class WorkshopRouter : ControllerBase
                         else if (state.remainingAddedFuel.item.count > 0)
                             inventory.addItems(state.remainingAddedFuel.item.id, state.remainingAddedFuel.item.count);
 
-                        journal.touchItem(state.remainingAddedFuel.item.id, requestStartedOn);
+                        journal.addCollectedItem(state.remainingAddedFuel.item.id, requestStartedOn, 0);
+                    }
+
+                    Rewards rewards = new Rewards();
+                    int outputQuantity = state.availableRounds * state.output.count;
+                    if (outputQuantity > 0)
+                    {
+                        rewards.addItem(state.output.id, outputQuantity);
                     }
 
                     smeltingSlot.activeJob = null;
@@ -755,6 +743,8 @@ public class WorkshopRouter : ControllerBase
                         smeltingSlot.burning = null;
 
                     query.Update("smelting", playerId, smeltingSlots).Update("inventory", playerId, inventory).Update("journal", playerId, journal);
+                    query.Then(ActivityLogUtils.addEntry(playerId, new ActivityLog.SmeltingCompletedEntry(requestStartedOn, rewards.toDBRewardsModel())), false);
+                    query.Then(rewards.toRedeemQuery(playerId, requestStartedOn, staticData), false);
 
                     return query;
                 })
@@ -1201,7 +1191,7 @@ public class WorkshopRouter : ControllerBase
         string recipeId,
         int multiplier,
         StartRequestSmelting.Item input,
-        StartRequestSmelting.Item? fuel
+        StartRequestSmelting.Item fuel
     )
     {
         public sealed record Item(

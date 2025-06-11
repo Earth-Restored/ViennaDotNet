@@ -4,7 +4,6 @@ using ViennaDotNet.DB;
 using ViennaDotNet.DB.Models.Common;
 using ViennaDotNet.DB.Models.Player;
 using ViennaDotNet.StaticData;
-using static ViennaDotNet.DB.Models.Player.Tokens;
 
 namespace ViennaDotNet.ApiServer.Utils;
 
@@ -120,13 +119,13 @@ public sealed class Rewards
                         else
                             inventory.addItems(id, [.. Java.IntStream.Range(0, quantity).Select(index => new NonStackableItemInstance(U.RandomUuid().ToString(), 0))]);
 
-                        journal.touchItem(id, currentTime);
-                        if (item.journalEntry is not null && journal.getItem(id)!.amountCollected == 0)
+                        if (journal.addCollectedItem(id, currentTime, quantity) == 0)
                         {
-                            updateQuery.Then(TokenUtils.addToken(playerId, new JournalItemUnlockedToken(id)));
+                            if (item.journalEntry is not null)
+                            {
+                                updateQuery.Then(TokenUtils.addToken(playerId, new Tokens.JournalItemUnlockedToken(id)));
+                            }
                         }
-
-                        journal.addCollectedItem(id, quantity);
                     }
                 }
 

@@ -2,7 +2,7 @@
 
 public sealed record Effect(
     string type,
-    string? duration, 
+    string? duration,
     int? value,
     string? unit,
     string targets,

@@ -20,7 +20,7 @@ public sealed record Boosts(
     );
 
     public sealed record MiniFig(
-        // TODO
+    // TODO
     );
 
     public sealed record ActiveEffect(
@@ -50,6 +50,6 @@ public sealed record Boosts(
     );
 
     public sealed record MiniFigRecord(
-        // TODO
+    // TODO
     );
 }

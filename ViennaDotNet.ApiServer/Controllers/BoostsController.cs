@@ -1,23 +1,16 @@
 ﻿using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Serilog;
-using System;
-using System.Linq;
-using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Security.Claims;
 using ViennaDotNet.ApiServer.Exceptions;
 using ViennaDotNet.ApiServer.Types.Common;
-using ViennaDotNet.ApiServer.Types.Profile;
 using ViennaDotNet.ApiServer.Utils;
 using ViennaDotNet.Common.Utils;
 using ViennaDotNet.DB;
 using ViennaDotNet.DB.Models.Player;
 using ViennaDotNet.StaticData;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace ViennaDotNet.ApiServer.Controllers;
 

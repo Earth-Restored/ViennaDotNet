@@ -3,8 +3,6 @@ using Cyotek.Data.Nbt.Serialization;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Serilog;
-using Serilog.Core;
-using System;
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Text;

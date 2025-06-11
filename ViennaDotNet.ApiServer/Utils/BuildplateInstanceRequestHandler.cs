@@ -579,9 +579,9 @@ public sealed class BuildplateInstanceRequestHandler
                             continue;
                         }
 
+                        Debug.Assert(item.count is not null);
                         if (catalogItem.stackable)
                         {
-                            Debug.Assert(item.count is not null);
                             inventory.addItems(item.id, item.count.Value);
                         }
                         else
@@ -591,13 +591,14 @@ public sealed class BuildplateInstanceRequestHandler
                             inventory.addItems(item.id, [new NonStackableItemInstance(item.instanceId, item.wear)]);
                         }
 
-                        journal.touchItem(item.id, timestamp);
-                        if (catalogItem.journalEntry is not null && journal.getItem(item.id)!.amountCollected == 0)
+                        if (journal.addCollectedItem(item.id, timestamp, item.count.Value) == 0)
                         {
-                            unlockedJournalItems.AddLast(item.id);
+                            if (catalogItem.journalEntry is not null)
+                            {
+                                unlockedJournalItems.AddLast(item.id);
+                            }
                         }
 
-                        journal.addCollectedItem(item.id, item.count!.Value);
                     }
 
                     Hotbar hotbar = new Hotbar();
@@ -671,14 +672,14 @@ public sealed class BuildplateInstanceRequestHandler
                 else
                     inventory.addItems(inventoryAddItemMessage.itemId, [new NonStackableItemInstance(inventoryAddItemMessage.instanceId!, inventoryAddItemMessage.wear)]);
 
-                journal.touchItem(inventoryAddItemMessage.itemId, timestamp);
                 bool journalItemUnlocked = false;
-                if (catalogItem.journalEntry is not null && journal.getItem(inventoryAddItemMessage.itemId)!.amountCollected == 0)
+                if (journal.addCollectedItem(inventoryAddItemMessage.itemId, timestamp, inventoryAddItemMessage.count) == 0)
                 {
-                    journalItemUnlocked = true;
+                    if (catalogItem.journalEntry is not null)
+                    {
+                        journalItemUnlocked = true;
+                    }
                 }
-
-                journal.addCollectedItem(inventoryAddItemMessage.itemId, inventoryAddItemMessage.count);
 
                 EarthDB.Query query = new EarthDB.Query(true)
                     .Update("inventory", inventoryAddItemMessage.playerId, inventory)

@@ -27,31 +27,21 @@ public sealed class Journal
     public ItemJournalEntry? getItem(string uuid)
         => items.GetValueOrDefault(uuid);
 
-    public ItemJournalEntry touchItem(string uuid, long timestamp)
-    {
-        ItemJournalEntry? itemJournalEntry = items.GetOrDefault(uuid, null);
-
-        if (itemJournalEntry == null)
-        {
-            return items[uuid] = new ItemJournalEntry(timestamp, timestamp, 0);
-        }
-        else
-        {
-            return items[uuid] = new ItemJournalEntry(itemJournalEntry.firstSeen, timestamp, itemJournalEntry.amountCollected);
-        }
-    }
-
-    public void addCollectedItem(string uuid, int count)
+    public int addCollectedItem(string uuid, long timestamp, int count)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(count);
 
         ItemJournalEntry? itemJournalEntry = items.GetOrDefault(uuid, null);
         if (itemJournalEntry is null)
         {
-            throw new InvalidOperationException("Item does not exist in journal, make sure to touch it or otherwise verify that it exists before calling addCollectedItem");
+            items[uuid] = new ItemJournalEntry(timestamp, timestamp, count);
+            return 0;
         }
-
-        items[uuid] = new ItemJournalEntry(itemJournalEntry.firstSeen, itemJournalEntry.lastSeen, itemJournalEntry.amountCollected + count);
+        else
+        {
+            items[uuid] = new ItemJournalEntry(itemJournalEntry.firstSeen, itemJournalEntry.lastSeen, itemJournalEntry.amountCollected + count);
+            return itemJournalEntry.amountCollected;
+        }
     }
 
     public record ItemJournalEntry(

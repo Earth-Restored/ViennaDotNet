@@ -1,7 +1,5 @@
 ﻿using System.Diagnostics;
-using Uma.Uuid;
 using ViennaDotNet.ApiServer.Types.Common;
-using ViennaDotNet.ApiServer.Utils;
 using ViennaDotNet.Common.Utils;
 using ViennaDotNet.DB.Models.Player;
 using ViennaDotNet.StaticData;

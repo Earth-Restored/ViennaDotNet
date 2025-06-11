@@ -9,7 +9,6 @@ using ViennaDotNet.ApiServer.Utils;
 using ViennaDotNet.Common.Utils;
 using ViennaDotNet.DB;
 using ViennaDotNet.DB.Models.Player;
-using ViennaDotNet.StaticData;
 using Rewards = ViennaDotNet.ApiServer.Utils.Rewards;
 
 namespace ViennaDotNet.ApiServer.Controllers;

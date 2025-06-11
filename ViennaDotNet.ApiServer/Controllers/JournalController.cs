@@ -68,7 +68,7 @@ public class JournalController : ControllerBase
             ActivityLog.Entry.Type.JOURNAL_ITEM_UNLOCKED => new Rewards().addItem(((ActivityLog.JournalItemUnlockedEntry)entry).itemId, 0),
             ActivityLog.Entry.Type.CRAFTING_COMPLETED => Rewards.fromDBRewardsModel(((ActivityLog.CraftingCompletedEntry)entry).rewards),
             ActivityLog.Entry.Type.SMELTING_COMPLETED => Rewards.fromDBRewardsModel(((ActivityLog.SmeltingCompletedEntry)entry).rewards),
-			ActivityLog.Entry.Type.BOOST_ACTIVATED => new Rewards(),
+            ActivityLog.Entry.Type.BOOST_ACTIVATED => new Rewards(),
             _ => throw new InvalidDataException($"Unknown ActivityLog.Entry.Type '{entry.type}'"),
         };
 

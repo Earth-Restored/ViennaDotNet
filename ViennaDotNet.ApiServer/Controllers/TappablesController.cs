@@ -10,7 +10,6 @@ using ViennaDotNet.ApiServer.Utils;
 using ViennaDotNet.Common.Utils;
 using ViennaDotNet.DB;
 using ViennaDotNet.DB.Models.Player;
-using ViennaDotNet.StaticData;
 
 namespace ViennaDotNet.ApiServer.Controllers;
 

@@ -6,7 +6,6 @@ using System.Diagnostics;
 using ViennaDotNet.ApiServer.Types.Catalog;
 using ViennaDotNet.ApiServer.Utils;
 using ViennaDotNet.StaticData;
-using CICIBIEActivation = ViennaDotNet.StaticData.Catalog.ItemsCatalog.Item.BoostInfo.Effect.Activation;
 using CICIBIEType = ViennaDotNet.StaticData.Catalog.ItemsCatalog.Item.BoostInfo.Effect.Type;
 using CICIBIType = ViennaDotNet.StaticData.Catalog.ItemsCatalog.Item.BoostInfo.Type;
 using CICICategory = ViennaDotNet.StaticData.Catalog.ItemsCatalog.Item.Category;
