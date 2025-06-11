@@ -70,12 +70,9 @@ public class TokensController : ControllerBase
                     {
                         return new EarthDB.Query(true)
                             .Update("tokens", playerId, tokens)
-                            .Then(TokenUtils.doActionsOnRedeemedToken(removedToken, playerId, requestStartedOn, staticData))
-                            .Then(
-                                new EarthDB.Query(false)
-                                    .Extra("success", true)
-                                    .Extra("token", removedToken)
-                            );
+                            .Then(TokenUtils.doActionsOnRedeemedToken(removedToken, playerId, requestStartedOn, staticData), false)
+                            .Extra("success", true)
+                            .Extra("token", removedToken);
                     }
                     else
                     {

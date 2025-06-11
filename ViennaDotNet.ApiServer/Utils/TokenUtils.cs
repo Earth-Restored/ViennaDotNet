@@ -44,7 +44,7 @@ public static class TokenUtils
                         updateQuery.Then(Rewards.fromDBRewardsModel(levelUpToken.rewards).toRedeemQuery(playerId, currentTime, staticData));
 
                         return updateQuery;
-                    });
+                    }, false);
                 }
 
                 break;
@@ -64,13 +64,13 @@ public static class TokenUtils
                         }*/
 
                         return updateQuery;
-                    });
+                    }, false);
                 }
 
                 break;
         }
 
-        getQuery.Then(new EarthDB.Query(false).Extra("token", token));
+        getQuery.Extra("token", token);
 
         return getQuery;
     }

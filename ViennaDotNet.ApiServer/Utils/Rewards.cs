@@ -150,8 +150,8 @@ public sealed class Rewards
             }
 
             return updateQuery;
-        });
-        getQuery.Then(new EarthDB.Query(false).Extra("rewards", this));
+        }, false);
+        getQuery.Extra("rewards", this);
 
         return getQuery;
     }
