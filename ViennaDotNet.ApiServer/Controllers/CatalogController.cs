@@ -202,59 +202,7 @@ public class CatalogController : ControllerBase
                     item.boostInfo.duration is not null ? TimeFormatter.FormatDuration(item.boostInfo.duration.Value) : null,
                     true,
                     item.boostInfo.level,
-                    [.. item.boostInfo.effects.Select(effect =>
-                    {
-                        string effectTypeString = effect.type switch
-                        {
-                            CICIBIEType.ADVENTURE_XP => "ItemExperiencePoints",
-                            CICIBIEType.CRAFTING => "CraftingSpeed",
-                            CICIBIEType.DEFENSE => "PlayerDefense",
-                            CICIBIEType.EATING => "FoodHealth",
-                            CICIBIEType.HEALING => "Health",
-                            CICIBIEType.HEALTH => "MaximumPlayerHealth",
-                            CICIBIEType.ITEM_XP => "ItemExperiencePoints",
-                            CICIBIEType.MINING_SPEED => "BlockDamage",
-                            CICIBIEType.RETENTION_BACKPACK => "RetainBackpack",
-                            CICIBIEType.RETENTION_HOTBAR => "RetainHotbar",
-                            CICIBIEType.RETENTION_XP => "RetainExperiencePoints",
-                            CICIBIEType.SMELTING => "SmeltingFuelIntensity",
-                            CICIBIEType.STRENGTH => "AttackDamage",
-                            CICIBIEType.TAPPABLE_RADIUS => "TappableInteractionRadius",
-                            _ => throw new UnreachableException(),
-                        };
-
-                        string activationString = effect.activation switch
-                        {
-                            CICIBIEActivation.INSTANT => "Instant",
-                            CICIBIEActivation.TIMED => "Timed",
-                            CICIBIEActivation.TRIGGERED => "Triggered",
-                            _ => throw new UnreachableException(),
-                        };
-
-                        return new Types.Catalog.BoostMetadata.Effect(
-                            effectTypeString,
-                            effect.activation == CICIBIEActivation.TIMED ? TimeFormatter.FormatDuration(effect.duration) : null,
-                            effect.type == CICIBIEType.RETENTION_BACKPACK || effect.type == CICIBIEType.RETENTION_HOTBAR || effect.type == CICIBIEType.RETENTION_XP ? null : effect.value,
-                            effect.type switch
-                            {
-                                CICIBIEType.HEALING or CICIBIEType.TAPPABLE_RADIUS => "Increment",
-                                CICIBIEType.ADVENTURE_XP or CICIBIEType.CRAFTING or CICIBIEType.DEFENSE or CICIBIEType.EATING or CICIBIEType.HEALTH or CICIBIEType.ITEM_XP or CICIBIEType.MINING_SPEED or CICIBIEType.SMELTING or CICIBIEType.STRENGTH => "Percentage",
-                                CICIBIEType.RETENTION_BACKPACK or CICIBIEType.RETENTION_HOTBAR or CICIBIEType.RETENTION_XP => null,
-                                _ => throw new UnreachableException(),
-                            },
-                            effect.type == CICIBIEType.CRAFTING || effect.type == CICIBIEType.SMELTING ? "UtilityBlock" : "Player",
-                            effect.applicableItemIds,
-
-                            effect.type switch
-                            {
-                                CICIBIEType.ITEM_XP => ["Tappable"],
-                                CICIBIEType.ADVENTURE_XP => ["Encounter"],
-                                _ => [],
-                            },
-                            activationString,
-                            effect.type == CICIBIEType.EATING ? "Health" : null
-                        );
-                    })],
+                    [.. item.boostInfo.effects.Select(BoostUtils.boostEffectToApiResponse)],
                     item.boostInfo.triggeredOnDeath ? "Death" : null,
                     null
                 );

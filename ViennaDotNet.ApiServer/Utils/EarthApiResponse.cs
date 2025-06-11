@@ -5,7 +5,7 @@ namespace ViennaDotNet.ApiServer.Utils;
 
 public class EarthApiResponse
 {
-    public object result;
+    public object? result;
     public Dictionary<string, int?>? updates = [];
 
     public EarthApiResponse(object _results)
@@ -13,7 +13,7 @@ public class EarthApiResponse
         result = _results;
     }
 
-    public EarthApiResponse(object _results, Updates? _updates)
+    public EarthApiResponse(object? _results, Updates? _updates)
     {
         result = _results;
         if (_updates is null)

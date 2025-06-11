@@ -1,4 +1,4 @@
-﻿using static ViennaDotNet.ApiServer.Types.Catalog.BoostMetadata;
+﻿using ViennaDotNet.ApiServer.Types.Common;
 
 namespace ViennaDotNet.ApiServer.Types.Catalog;
 
@@ -14,19 +14,4 @@ public record BoostMetadata(
     Effect[] effects,
     string? scenario,
     string? cooldown
-)
-{
-    public record Effect(
-        string type,
-        string? duration,
-        double? value,
-        string? unit,
-        string targets,
-        string[] items,
-        string[] itemScenarios,
-        string activation,
-        string? modifiesType
-    )
-    {
-    }
-}
+);
