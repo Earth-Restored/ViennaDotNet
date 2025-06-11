@@ -129,12 +129,25 @@ public class BoostsController : ControllerBase
             scenarioBoosts["death"] = [.. triggeredOnDeathBoosts];
         }
 
+        BoostUtils.StatModiferValues statModiferValues = BoostUtils.getActiveStatModifiers(boosts, requestStartedOn, catalog.itemsCatalog);
+
         Types.Boost.Boosts boostsResponse = new Types.Boost.Boosts(
             potions,
             new Types.Boost.Boosts.MiniFig[5],
             [.. activeEffects],
             scenarioBoosts,
-            new Types.Boost.Boosts.StatusEffects(null, null, null, null, null, null, null, null, null, null),    // TODO
+            new Types.Boost.Boosts.StatusEffects(
+                statModiferValues.tappableInteractionRadiusExtraMeters > 0 ? statModiferValues.tappableInteractionRadiusExtraMeters + 70 : null,
+                null,
+                null,
+                statModiferValues.attackMultiplier > 0 ? statModiferValues.attackMultiplier + 100 : null,
+                statModiferValues.defenseMultiplier > 0 ? statModiferValues.defenseMultiplier + 100 : null,
+                statModiferValues.miningSpeedMultiplier > 0 ? statModiferValues.miningSpeedMultiplier + 100 : null,
+                statModiferValues.maxPlayerHealthMultiplier > 0 ? (20 * statModiferValues.maxPlayerHealthMultiplier) / 100 + 20 : 20,
+                statModiferValues.craftingSpeedMultiplier > 0 ? statModiferValues.craftingSpeedMultiplier / 100 + 1 : null,
+                statModiferValues.smeltingSpeedMultiplier > 0 ? statModiferValues.smeltingSpeedMultiplier / 100 + 1 : null,
+                statModiferValues.foodMultiplier > 0 ? statModiferValues.foodMultiplier + 100 : null
+            ),
             [],
             hasActiveBoost ? TimeFormatter.FormatTime(expiry) : null
         );

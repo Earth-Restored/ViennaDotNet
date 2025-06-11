@@ -1,5 +1,8 @@
 ﻿using Microsoft.Data.Sqlite;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using System;
+using System.Threading;
 using ViennaDotNet.Common.Excceptions;
 using ViennaDotNet.Common.Utils;
 using ViennaDotNet.DB.Models.Player;
@@ -74,17 +77,22 @@ public sealed class EarthDB : IDisposable
 
     public class Query
     {
-        private bool _write;
-        private List<WriteObjectsEntry> writeObjects = [];
-        private List<ReadObjectsEntry> readObjects = [];
-        private List<ExtrasEntry> extras = [];
-        private List<Func<Results, Query>> thenFunctions = [];
+        private readonly bool _write;
+        private readonly List<WriteObjectsEntry> writeObjects = [];
+        private readonly LinkedList<BumpEntry> bumps = [];
+        private readonly List<ReadObjectsEntry> readObjects = [];
+        private readonly List<ExtrasEntry> extras = [];
+        private readonly List<ThenFunctionEntry> thenFunctions = [];
 
         private sealed record WriteObjectsEntry(string type, string id, object value);
+
+        private sealed record BumpEntry(string type, string id, Type valueType);
 
         private sealed record ReadObjectsEntry(string type, string id, Type valueType);
 
         private sealed record ExtrasEntry(string name, object value);
+
+        private sealed record ThenFunctionEntry(Func<Results, Query> function, bool replaceResults);
 
         public Query(bool write)
         {
@@ -101,6 +109,17 @@ public sealed class EarthDB : IDisposable
             return this;
         }
 
+        public Query bump(string type, string id, Type valueType)
+        {
+            if (!_write)
+            {
+                throw new UnsupportedOperationException();
+            }
+
+            bumps.AddLast(new BumpEntry(type, id, valueType));
+            return this;
+        }
+
         public Query Get(string type, string id, Type valueType)
         {
             readObjects.Add(new ReadObjectsEntry(type, id, valueType));
@@ -113,16 +132,25 @@ public sealed class EarthDB : IDisposable
             return this;
         }
 
+        public Query Then(Func<Results, Query> function, bool replaceResults)
+        {
+            thenFunctions.Add(new ThenFunctionEntry(function, replaceResults));
+            return this;
+        }
+
         public Query Then(Func<Results, Query> function)
         {
-            thenFunctions.Add(function);
-            return this;
+            return Then(function, true);
+        }
+
+        public Query Then(Query query, bool replaceResults)
+        {
+            return Then(results => query, replaceResults);
         }
 
         public Query Then(Query query)
         {
-            thenFunctions.Add(results => query);
-            return this;
+            return Then(query, true);
         }
         #endregion
 
@@ -131,13 +159,15 @@ public sealed class EarthDB : IDisposable
             try
             {
                 using SqliteTransaction transaction = earthDB.transaction(_write);
-                Results results = await executeInternalAsync(transaction, _write, null, cancellationToken);
+                Dictionary<string, int?> updates = [];
+                Results results = await executeInternalAsync(transaction, _write, updates, cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
                 if (transaction.Connection is not null)
                 {
                     await transaction.Connection.CloseAsync();
                 }
 
+                results.updates.AddRange(updates);
                 return results;
             }
             catch (SqliteException ex)
@@ -151,9 +181,12 @@ public sealed class EarthDB : IDisposable
             try
             {
                 using SqliteTransaction transaction = earthDB.transaction(_write);
-                Results results = executeInternal(transaction, _write, null);
+                Dictionary<string, int?> updates = [];
+                Results results = executeInternal(transaction, _write, updates);
                 transaction.Commit();
                 transaction.Connection?.Close();
+
+                results.updates.AddRange(updates);
                 return results;
             }
             catch (SqliteException ex)
@@ -162,7 +195,7 @@ public sealed class EarthDB : IDisposable
             }
         }
 
-        private async Task<Results> executeInternalAsync(SqliteTransaction transaction, bool write, Dictionary<string, int?>? parentUpdates, CancellationToken cancellationToken)
+        private async Task<Results> executeInternalAsync(SqliteTransaction transaction, bool write, Dictionary<string, int?> updates, CancellationToken cancellationToken)
         {
             if (_write && !write)
             {
@@ -170,43 +203,102 @@ public sealed class EarthDB : IDisposable
             }
 
             Results results = new Results();
-            if (parentUpdates != null)
-            {
-                results.updates.AddRange(parentUpdates);
-            }
 
             foreach (WriteObjectsEntry entry in writeObjects)
             {
-                string json = JsonConvert.SerializeObject(entry.value);
+                string json = toJson(entry.value);
 
-                var command = transaction.Connection!.CreateCommand();
-                command.CommandTimeout = TRANSACTION_TIMEOUT;
-                command.CommandText = "INSERT OR REPLACE INTO objects(type, id, value, version) VALUES ($type, $id, $value, COALESCE((SELECT version FROM objects WHERE type == $type AND id == $id), 1) + 1)";
-
-                command.Parameters.AddWithValue("$type", entry.type);
-                command.Parameters.AddWithValue("$id", entry.id);
-                command.Parameters.AddWithValue("$value", json);
-                await command.ExecuteNonQueryAsync(cancellationToken);
-
-                /*****************************/
-                command = transaction.Connection.CreateCommand();
-                command.CommandTimeout = TRANSACTION_TIMEOUT;
-                command.CommandText = "SELECT version FROM objects WHERE type == $type AND id == $id";
-
-                command.Parameters.AddWithValue("$type", entry.type);
-                command.Parameters.AddWithValue("$id", entry.id);
-                using (var reader = await command.ExecuteReaderAsync(cancellationToken))
+                using (var command = transaction.Connection!.CreateCommand())
                 {
-                    if (await reader.ReadAsync(cancellationToken))
+                    command.CommandTimeout = TRANSACTION_TIMEOUT;
+                    command.CommandText = "INSERT OR REPLACE INTO objects(type, id, value, version) VALUES ($type, $id, $value, COALESCE((SELECT version FROM objects WHERE type == $type AND id == $id), 1) + 1)";
+
+                    command.Parameters.AddWithValue("$type", entry.type);
+                    command.Parameters.AddWithValue("$id", entry.id);
+                    command.Parameters.AddWithValue("$value", json);
+                    await command.ExecuteNonQueryAsync(cancellationToken);
+                }
+
+                using (var command = transaction.Connection.CreateCommand())
+                {
+                    command.CommandTimeout = TRANSACTION_TIMEOUT;
+                    command.CommandText = "SELECT version FROM objects WHERE type == $type AND id == $id";
+
+                    command.Parameters.AddWithValue("$type", entry.type);
+                    command.Parameters.AddWithValue("$id", entry.id);
+                    using (var reader = await command.ExecuteReaderAsync(cancellationToken))
                     {
-                        int version = reader.GetInt32(0);
-                        results.updates[entry.type] = version;
-                    }
-                    else
-                    {
-                        throw new DatabaseException("Could not query updated object");
+                        if (await reader.ReadAsync(cancellationToken))
+                        {
+                            int version = reader.GetInt32(0);
+                            updates[entry.type] = version;
+                        }
+                        else
+                        {
+                            throw new DatabaseException("Could not query updated object");
+                        }
                     }
                 }
+            }
+
+            foreach (BumpEntry entry in bumps)
+            {
+                int? version;
+                using (var command = transaction.Connection!.CreateCommand())
+                {
+                    command.CommandTimeout = TRANSACTION_TIMEOUT;
+                    command.CommandText = "SELECT version FROM objects WHERE type == $type AND id == $id";
+
+                    command.Parameters.AddWithValue("$type", entry.type);
+                    command.Parameters.AddWithValue("$id", entry.id);
+                    using (var reader = await command.ExecuteReaderAsync(cancellationToken))
+                    {
+                        if (await reader.ReadAsync(cancellationToken))
+                        {
+                            version = reader.GetInt32(0);
+                        }
+                        else
+                        {
+                            version = null;
+                        }
+                    }
+                }
+
+                int resultVersion;
+                if (version != null)
+                {
+                    using (var command = transaction.Connection!.CreateCommand())
+                    {
+                        command.CommandTimeout = TRANSACTION_TIMEOUT;
+                        command.CommandText = "UPDATE objects SET version = $version WHERE type == $type AND id == $id";
+
+                        command.Parameters.AddWithValue("$version", version + 1);
+                        command.Parameters.AddWithValue("$type", entry.type);
+                        command.Parameters.AddWithValue("$id", entry.id);
+                        await command.ExecuteNonQueryAsync(cancellationToken);
+                    }
+
+                    resultVersion = version.Value + 1;
+                }
+                else
+                {
+                    object value = createNewInstance(entry.valueType);
+                    string json = toJson(value);
+
+                    using (var command = transaction.Connection!.CreateCommand())
+                    {
+                        command.CommandTimeout = TRANSACTION_TIMEOUT;
+                        command.CommandText = "INSERT INTO objects(type, id, value, version) VALUES ($type, $id, $json, 2)";
+
+                        command.Parameters.AddWithValue("$type", entry.type);
+                        command.Parameters.AddWithValue("$id", entry.id);
+                        command.Parameters.AddWithValue("$json", json);
+                        await command.ExecuteNonQueryAsync(cancellationToken);
+                    }
+                    resultVersion = 2;
+                }
+
+                updates[entry.type] = resultVersion;
             }
 
             foreach (ReadObjectsEntry entry in readObjects)
@@ -223,23 +315,12 @@ public sealed class EarthDB : IDisposable
                     {
                         string json = reader.GetString(0);
                         int version = reader.GetInt32(1);
-                        object value = JsonConvert.DeserializeObject(json, entry.valueType,
-                            new Tokens.TokenConverter(),
-                            new ActivityLog.Entry.EntryConverter()
-                        )!;
+                        object value = fromJson(json, entry.valueType);
                         results.getValues[entry.type] = new Results.Result(value, version);
                     }
                     else
                     {
-                        try
-                        {
-                            object value = Activator.CreateInstance(entry.valueType)!;
-                            results.getValues[entry.type] = new Results.Result(value, 1);
-                        }
-                        catch (Exception ex)
-                        {
-                            throw new DatabaseException(ex);
-                        }
+                        results.getValues[entry.type] = new Results.Result(createNewInstance(entry.valueType), 1);
                     }
                 }
             }
@@ -247,27 +328,29 @@ public sealed class EarthDB : IDisposable
             foreach (ExtrasEntry entry in extras)
                 results.extras[entry.name] = entry.value;
 
-            foreach (Func<Results, Query> function in thenFunctions)
+            foreach (var entry in thenFunctions)
             {
-                Query query = function.Invoke(results);
-                results = await query.executeInternalAsync(transaction, write, results.updates, cancellationToken);
+                Query query = entry.function(results);
+                Results innerResults = await query.executeInternalAsync(transaction, write, updates, cancellationToken);
+                if (entry.replaceResults)
+                {
+                    results = innerResults;
+                }
             }
 
             return results;
         }
 
-        private Results executeInternal(SqliteTransaction transaction, bool write, Dictionary<string, int?>? parentUpdates)
+        private Results executeInternal(SqliteTransaction transaction, bool write, Dictionary<string, int?> updates)
         {
             if (_write && !write)
                 throw new UnsupportedOperationException();
 
             Results results = new Results();
-            if (parentUpdates != null)
-                results.updates.AddRange(parentUpdates);
 
             foreach (WriteObjectsEntry entry in writeObjects)
             {
-                string json = JsonConvert.SerializeObject(entry.value);
+                string json = toJson(entry.value);
 
                 var command = transaction.Connection!.CreateCommand();
                 command.CommandTimeout = TRANSACTION_TIMEOUT;
@@ -290,11 +373,72 @@ public sealed class EarthDB : IDisposable
                     if (reader.Read())
                     {
                         int version = reader.GetInt32(0);
-                        results.updates[entry.type] = version;
+                        updates[entry.type] = version;
                     }
                     else
                         throw new DatabaseException("Could not query updated object");
                 }
+            }
+
+            foreach (BumpEntry entry in bumps)
+            {
+                int? version;
+                using (var command = transaction.Connection!.CreateCommand())
+                {
+                    command.CommandTimeout = TRANSACTION_TIMEOUT;
+                    command.CommandText = "SELECT version FROM objects WHERE type == $type AND id == $id";
+
+                    command.Parameters.AddWithValue("$type", entry.type);
+                    command.Parameters.AddWithValue("$id", entry.id);
+                    using (var reader = command.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            version = reader.GetInt32(0);
+                        }
+                        else
+                        {
+                            version = null;
+                        }
+                    }
+                }
+
+                int resultVersion;
+                if (version != null)
+                {
+                    using (var command = transaction.Connection!.CreateCommand())
+                    {
+                        command.CommandTimeout = TRANSACTION_TIMEOUT;
+                        command.CommandText = "UPDATE objects SET version = $version WHERE type == $type AND id == $id";
+
+                        command.Parameters.AddWithValue("$version", version + 1);
+                        command.Parameters.AddWithValue("$type", entry.type);
+                        command.Parameters.AddWithValue("$id", entry.id);
+                        command.ExecuteNonQuery();
+                    }
+
+                    resultVersion = version.Value + 1;
+                }
+                else
+                {
+                    object value = createNewInstance(entry.valueType);
+                    string json = toJson(value);
+
+                    using (var command = transaction.Connection!.CreateCommand())
+                    {
+                        command.CommandTimeout = TRANSACTION_TIMEOUT;
+                        command.CommandText = "INSERT INTO objects(type, id, value, version) VALUES ($type, $id, $json, 2)";
+
+                        command.Parameters.AddWithValue("$type", entry.type);
+                        command.Parameters.AddWithValue("$id", entry.id);
+                        command.Parameters.AddWithValue("$json", json);
+                        command.ExecuteNonQuery();
+                    }
+
+                    resultVersion = 2;
+                }
+
+                updates[entry.type] = resultVersion;
             }
 
             foreach (ReadObjectsEntry entry in readObjects)
@@ -311,23 +455,12 @@ public sealed class EarthDB : IDisposable
                     {
                         string json = reader.GetString(0);
                         int version = reader.GetInt32(1);
-                        object value = JsonConvert.DeserializeObject(json, entry.valueType,
-                            new Tokens.TokenConverter(),
-                            new ActivityLog.Entry.EntryConverter()
-                        )!;
+                        object value = fromJson(json, entry.valueType);
                         results.getValues[entry.type] = new Results.Result(value, version);
                     }
                     else
                     {
-                        try
-                        {
-                            object value = Activator.CreateInstance(entry.valueType)!;
-                            results.getValues[entry.type] = new Results.Result(value, 1);
-                        }
-                        catch (Exception ex)
-                        {
-                            throw new DatabaseException(ex);
-                        }
+                        results.getValues[entry.type] = new Results.Result(createNewInstance(entry.valueType), 1);
                     }
                 }
             }
@@ -335,13 +468,41 @@ public sealed class EarthDB : IDisposable
             foreach (ExtrasEntry entry in extras)
                 results.extras[entry.name] = entry.value;
 
-            foreach (Func<Results, Query> function in thenFunctions)
+            foreach (var entry in thenFunctions)
             {
-                Query query = function.Invoke(results);
-                results = query.executeInternal(transaction, write, results.updates);
+                Query query = entry.function(results);
+                Results innerResults = query.executeInternal(transaction, write, updates);
+                if (entry.replaceResults)
+                {
+                    results = innerResults;
+                }
             }
 
             return results;
+        }
+    }
+
+    private static object fromJson(string json, Type valueType)
+    {
+        return JsonConvert.DeserializeObject(json, valueType, new Tokens.TokenConverter(), new ActivityLog.Entry.EntryConverter());
+    }
+
+    private static string toJson(object value)
+    {
+        return JsonConvert.SerializeObject(value);
+    }
+
+    private static object createNewInstance(Type valueType)
+    {
+        try
+        {
+            object? value = Activator.CreateInstance(valueType);
+            return value;
+        }
+        catch (/*ReflectiveOperationException*/Exception exception)
+
+        {
+            throw new DatabaseException(exception);
         }
     }
 

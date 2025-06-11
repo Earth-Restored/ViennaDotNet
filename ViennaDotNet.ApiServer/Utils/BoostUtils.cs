@@ -3,7 +3,6 @@ using Uma.Uuid;
 using ViennaDotNet.ApiServer.Types.Common;
 using ViennaDotNet.ApiServer.Utils;
 using ViennaDotNet.Common.Utils;
-using ViennaDotNet.DB;
 using ViennaDotNet.DB.Models.Player;
 using ViennaDotNet.StaticData;
 
@@ -59,7 +58,7 @@ public static class BoostUtils
                 continue;
             }
 
-            if (activeBoost.startTime + activeBoost.duration > currentTime)
+            if (activeBoost.startTime + activeBoost.duration < currentTime)
             {
                 continue;
             }
@@ -75,7 +74,7 @@ public static class BoostUtils
                 {
                     CICIBIEActivation.INSTANT => false,
                     CICIBIEActivation.TRIGGERED => true,
-                    CICIBIEActivation.TIMED => activeBoost.startTime + effect.duration <= currentTime,
+                    CICIBIEActivation.TIMED => activeBoost.startTime + effect.duration >= currentTime,
                     _ => throw new UnreachableException(),
                 }))
             {
@@ -84,6 +83,89 @@ public static class BoostUtils
         }
 
         return [.. effects];
+    }
+
+    public sealed record StatModiferValues(
+        int maxPlayerHealthMultiplier,
+        int attackMultiplier,
+        int defenseMultiplier,
+        int foodMultiplier,
+        int miningSpeedMultiplier,
+        int craftingSpeedMultiplier,
+        int smeltingSpeedMultiplier,
+        int tappableInteractionRadiusExtraMeters,
+        bool keepHotbar,
+        bool keepInventory,
+        bool keepXp
+    );
+
+    public static StatModiferValues getActiveStatModifiers(Boosts boosts, long currentTime, Catalog.ItemsCatalog itemsCatalog)
+    {
+        int maxPlayerHealth = 0;
+        int attackMultiplier = 0;
+        int defenseMultiplier = 0;
+        int foodMultiplier = 0;
+        int miningSpeedMultiplier = 0;
+        int craftingMultiplier = 0;
+        int smeltingMultiplier = 0;
+        int tappableInteractionRadius = 0;
+        bool keepHotbar = false;
+        bool keepInventory = false;
+        bool keepXp = false;
+
+        foreach (var effect in BoostUtils.getActiveEffects(boosts, currentTime, itemsCatalog))
+        {
+            switch (effect.type)
+            {
+                case CICIBIEType.HEALTH:
+                    maxPlayerHealth += effect.value;
+                    break;
+                case CICIBIEType.STRENGTH:
+                    attackMultiplier += effect.value;
+                    break;
+                case CICIBIEType.DEFENSE:
+                    defenseMultiplier += effect.value;
+                    break;
+                case CICIBIEType.EATING:
+                    foodMultiplier += effect.value;
+                    break;
+                case CICIBIEType.MINING_SPEED:
+                    miningSpeedMultiplier += effect.value;
+                    break;
+                case CICIBIEType.CRAFTING:
+                    craftingMultiplier += effect.value;
+                    break;
+                case CICIBIEType.SMELTING:
+                    smeltingMultiplier += effect.value;
+                    break;
+                case CICIBIEType.TAPPABLE_RADIUS:
+                    tappableInteractionRadius += effect.value;
+                    break;
+                case CICIBIEType.RETENTION_HOTBAR:
+                    keepHotbar = true;
+                    break;
+                case CICIBIEType.RETENTION_BACKPACK:
+                    keepInventory = true;
+                    break;
+                case CICIBIEType.RETENTION_XP:
+                    keepXp = true;
+                    break;
+            }
+        }
+
+        return new StatModiferValues(
+            maxPlayerHealth,
+            attackMultiplier,
+            defenseMultiplier,
+            foodMultiplier,
+            miningSpeedMultiplier,
+            craftingMultiplier,
+            smeltingMultiplier,
+            tappableInteractionRadius,
+            keepHotbar,
+            keepInventory,
+            keepXp
+        );
     }
 
     public static Effect boostEffectToApiResponse(Catalog.ItemsCatalog.Item.BoostInfo.Effect effect)
@@ -131,12 +213,12 @@ public static class BoostUtils
 
             effect.type switch
             {
-                CICIBIEType.ITEM_XP=> ["Tappable"],
-                CICIBIEType.ADVENTURE_XP=> ["Encounter"],
+                CICIBIEType.ITEM_XP => ["Tappable"],
+                CICIBIEType.ADVENTURE_XP => ["Encounter"],
                 _ => [],
             },
-			activationString,
-			effect.type == CICIBIEType.EATING ? "Health" : null
-		);
+            activationString,
+            effect.type == CICIBIEType.EATING ? "Health" : null
+        );
     }
 }
