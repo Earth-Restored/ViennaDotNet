@@ -1,0 +1,93 @@
+﻿{
+    "military": {
+        "*": "RESTRICTED_AREA"
+    },
+    "aeroway": {
+        "*": "RESTRICTED_AREA"
+    },
+    "barrier": {
+        "ditch": "RESTRICTED_AREA",
+        "block": "RESTRICTED_AREA",
+        "border_control": "RESTRICTED_AREA",
+        "sally_port": "RESTRICTED_AREA"
+    },
+    "amenity": {
+        "grave_yard": "RESTRICTED_AREA",
+        "parking": "HIGHWAY_MINOR"
+    },
+    "building": {
+        "*": "BUILDING",
+        "barracks": "RESTRICTED_AREA",
+        "government": "RESTRICTED_AREA",
+        "slurry_tank": "OPEN_PRIVATE_AREA",
+        "sty": "OPEN_PRIVATE_AREA",
+        "hangar": "RESTRICTED_AREA",
+        "carport": "HIGHWAY_MINOR",
+        "bunker": "RESTRICTED_AREA",
+        "military": "RESTRICTED_AREA"
+    },
+    "highway": {
+        "*": "HIGHWAY_MINOR",
+        "motorway": "HIGHWAY_MAJOR",
+        "trunk": "HIGHWAY_MAJOR",
+        "primary": "HIGHWAY_MAJOR",
+        "secondary": "HIGHWAY_MAJOR",
+        "tertiary": "HIGHWAY_MINOR",
+        "tertiary_link": "HIGHWAY_MINOR",
+        "unclassified": "HIGHWAY_SERVICE",
+        "residential": "HIGHWAY_SERVICE",
+        "footway": "FOOTPATH",
+        "bridleway": "CYCLE_PATH",
+        "path": "FOOTPATH",
+        "cycleway": "CYCLE_PATH"
+    },
+    "landuse": {
+        "allotments": "OPEN_PRIVATE_AREA",
+        "farmland": "OPEN_PRIVATE_AREA",
+        "farmyard": "OPEN_PRIVATE_AREA",
+        "forest": "FOREST",
+        "cemetery": "RESTRICTED_AREA",
+        "meadow": "OPEN_PRIVATE_AREA",
+        "orchard": "OPEN_PRIVATE_AREA",
+        "plant_nursery": "OPEN_PRIVATE_AREA",
+        "vineyard": "OPEN_PRIVATE_AREA",
+        "flowerbed": "OPEN_PRIVATE_AREA",
+        "basin": "WATER",
+        "salt_pond": "WATER",
+        "grass": "BASE_BACKGROUND",
+        "landfill": "RESTRICTED_AREA",
+        "port": "PIER",
+        "recreation_ground": "OPEN_PUBLIC_AREA",
+        "village_green": "OPEN_PUBLIC_AREA"
+    },
+    "leisure": {
+        "adult_gaming_centre": "RESTRICTED_AREA",
+        "beach_resort": "SAND",
+        "dog_park": "OPEN_PUBLIC_AREA",
+        "garden": "OPEN_PUBLIC_AREA",
+        "park": "OPEN_PUBLIC_AREA",
+        "pitch": "ATHLETIC_FIELD",
+        "swimming_pool": "WATER",
+        "playground": "OPEN_PUBLIC_AREA"
+    },
+    "natural": {
+        "*": "BASE_BACKGROUND",
+        "wood": "FOREST",
+        "water": "WATER",
+        "bay": "WATER",
+        "beach": "SAND",
+        "reef": "WATER",
+        "shoal": "SAND",
+        "strait": "WATER",
+        "sand": "SAND"
+    },
+    "railway": {
+        "*": "HIGHWAY_SERVICE",
+        "abandoned": null
+    },
+    "waterway": {
+        "*": "WATER",
+        "dock": "PIER",
+        "boatyard": null
+    }
+}

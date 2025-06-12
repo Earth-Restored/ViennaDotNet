@@ -1,0 +1,28 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace ViennaDotNet.TileRenderer;
+
+internal enum RenderLayer // Layer order is bottom to top btw, not in same order as Genoa Colours!!!
+{
+    LAYER_BASE_BACKGROUND,
+    LAYER_SAND,
+    LAYER_OPEN_PUBLIC_AREA,
+    LAYER_OPEN_PRIVATE_AREA,
+    LAYER_ATHLETIC_FIELD,
+    LAYER_FOREST,
+    LAYER_WATER,
+    LAYER_PIER,
+    LAYER_MOUNTAIN,
+    LAYER_BUILDING,
+    LAYER_FOOTPATH,
+    LAYER_CYCLE_PATH,
+    LAYER_HIGHWAY_SERVICE,
+    LAYER_HIGHWAY_MINOR,
+    LAYER_HIGHWAY_MAJOR,
+    LAYER_RESTRICTED_AREA,
+    LAYER_NONE // MUST ALWAYS BE LAST!
+}

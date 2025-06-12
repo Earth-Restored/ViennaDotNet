@@ -19,14 +19,11 @@ public struct Point
 
     public Point(BinaryReader reader)
     {
-        Load(reader);
+        this = Load(reader);
     }
 
-    public void Load(BinaryReader reader)
-    {
-        X = reader.ReadDouble();
-        Y = reader.ReadDouble();
-    }
+    public static Point Load(BinaryReader reader)
+        => new Point(reader.ReadDouble(), reader.ReadDouble());
 
     public static Point operator +(Point left, Point right)
         => new Point(left.X + right.X, left.Y + right.Y);
