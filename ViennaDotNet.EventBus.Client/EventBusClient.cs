@@ -250,6 +250,10 @@ public class EventBusClient
         {
             // empty
         }
+        catch (ObjectDisposedException)
+        {
+            // empty
+        }
         finally
         {
             socket.Close();

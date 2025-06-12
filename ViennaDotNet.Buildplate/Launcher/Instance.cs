@@ -104,7 +104,7 @@ public class Instance
         this.baseDir = baseDir;
         this.eventBusAddress = eventBusConnectionString;
         this.eventBusQueueName = "buildplate_" + this.instanceId;
-        this.connectorPluginArgString = JsonConvert.SerializeObject(new ConnectorPluginArg(this.eventBusAddress, this.eventBusQueueName, this.inventoryType));
+        this.connectorPluginArgString = JsonConvert.SerializeObject(new ConnectorPluginArg(this.eventBusAddress, this.eventBusQueueName, this.inventoryType)).Replace("\"", "\\\"", StringComparison.Ordinal);
     }
 
     private void run()
@@ -913,7 +913,7 @@ public class Instance
 
         try
         {
-            bool useShellExecute = true;
+            bool useShellExecute = false;
 
             bridgeProcess = new ConsoleProcess(javaCmd, useShellExecute, !useShellExecute);
             if (!useShellExecute)
