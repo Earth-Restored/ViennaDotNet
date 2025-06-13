@@ -7,7 +7,7 @@ using ViennaDotNet.TileRenderer.Wkb;
 
 namespace ViennaDotNet.TileRenderer;
 
-public class Renderer
+public class TileRenderer
 {
     // Map layers with their JSON string versions
     private static readonly FrozenDictionary<string, RenderLayer> layerStringMapping = new Dictionary<string, RenderLayer>()
@@ -56,13 +56,13 @@ public class Renderer
     private readonly List<string> _tags;
     private readonly Dictionary<string, Dictionary<string, RenderLayer>> _tagsMap;
 
-    private Renderer(List<string> tags, Dictionary<string, Dictionary<string, RenderLayer>> tagsMap)
+    private TileRenderer(List<string> tags, Dictionary<string, Dictionary<string, RenderLayer>> tagsMap)
     {
         _tags = tags;
         _tagsMap = tagsMap;
     }
 
-    public static Renderer Create(string tagMapJson, ILogger logger)
+    public static TileRenderer Create(string tagMapJson, ILogger logger)
     {
         List<string> tags = [];
         Dictionary<string, Dictionary<string, RenderLayer>> tagsMap = [];
@@ -101,7 +101,7 @@ public class Renderer
             }
         }
 
-        return new Renderer(tags, tagsMap);
+        return new TileRenderer(tags, tagsMap);
     }
 
     public async Task RenderAsync(NpgsqlDataSource dataSource, SKCanvas canvas, double latitude, double longtitute, int zoom, CancellationToken cancellationToken = default)

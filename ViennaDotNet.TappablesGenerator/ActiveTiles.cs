@@ -61,6 +61,7 @@ public sealed class ActiveTiles
         }, () =>
         {
             Log.Error("Event bus subscriber error");
+            Log.CloseAndFlush();
             Environment.Exit(1);
         }));
     }
