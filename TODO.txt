@@ -1,5 +1,4 @@
 shop
-map - https://github.com/Project-Genoa/TileRenderer
 encounters - convert (maybe even manually) the data in weird format to normal buildplate format and then MCEToJava
 rewrite launcher
 admin panel - manage player inventory, stats, boosts, buildplates, ...

@@ -256,6 +256,10 @@ public class ObjectStoreClient
         {
             // empty
         }
+        catch (ObjectDisposedException)
+        {
+            // empty
+        }
         finally
         {
             socket.Close();
