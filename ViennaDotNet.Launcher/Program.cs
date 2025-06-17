@@ -13,18 +13,21 @@ internal static class Program
 {
     public const string SettingsFile = "config.json";
 
-    public static Settings Settings;
+    public static LoggerConfiguration LoggerConfiguration => new LoggerConfiguration()
+            .WriteTo.Conditional(e => LogToConsole, wt => wt.Console())
+            .WriteTo.File("logs/debug.txt", rollingInterval: RollingInterval.Day, rollOnFileSizeLimit: true, fileSizeLimitBytes: 8338607, outputTemplate: "{Timestamp:HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
+            .MinimumLevel.Debug();
+
+    public static Settings Settings = Settings.Default;
+
+    public static bool LogToConsole = true;
 
     static async Task Main(string[] args)
     {
         CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
         CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
 
-        var log = new LoggerConfiguration()
-            .WriteTo.Console()
-            .WriteTo.File("logs/debug.txt", rollingInterval: RollingInterval.Day, rollOnFileSizeLimit: true, fileSizeLimitBytes: 8338607, outputTemplate: "{Timestamp:HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
-            .MinimumLevel.Debug()
-            .CreateLogger();
+        var log = LoggerConfiguration.CreateLogger();
 
         Log.Logger = log;
 
@@ -40,7 +43,9 @@ internal static class Program
 
         await AutoUpdater.CheckAndUpdate();
 
-        Settings = Settings.Load(SettingsFile);
+        Settings = await Settings.LoadAsync(SettingsFile);
+
+        LogToConsole = false;
 
         //ConfigurationManager.RuntimeConfig = """{ "Theme": "Light" }""";
         ConfigurationManager.Enable(ConfigLocations.All);

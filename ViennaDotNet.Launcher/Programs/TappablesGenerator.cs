@@ -1,12 +1,13 @@
 ﻿using Serilog;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace ViennaDotNet.Launcher.Programs;
 
 internal static class TappablesGenerator
 {
     public const string DirName = "TappablesGenerator";
-    public const string ExeName = "TappablesGenerator.exe";
+    public static readonly string ExeName = "TappablesGenerator" + (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ".exe" : "");
     public const string DispName = "Tappable generator";
 
     public static bool Check()

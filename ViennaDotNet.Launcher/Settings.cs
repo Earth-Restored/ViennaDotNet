@@ -34,7 +34,15 @@ public class Settings
     public void Save(string path)
         => File.WriteAllText(path, JsonSerializer.Serialize(this, jsonOptions));
 
-    public static Settings Load(string path)
+    public async Task SaveAsync(string path)
+    {
+        using (var fs = File.OpenWrite(path))
+        {
+            await JsonSerializer.SerializeAsync(fs, this, jsonOptions);
+        }
+    }
+
+    public static async Task<Settings> LoadAsync(string path)
     {
         Log.Information("Loading settings...");
 
@@ -49,7 +57,11 @@ public class Settings
         {
             try
             {
-                settings = JsonSerializer.Deserialize<Settings>(File.ReadAllText(path), jsonOptions);
+                using (var fs = File.OpenRead(path))
+                {
+                    settings = await JsonSerializer.DeserializeAsync<Settings>(fs, jsonOptions);
+                }
+
                 if (settings is null)
                 {
                     throw new Exception("Settings is null");
@@ -114,7 +126,7 @@ public class Settings
 
         Log.Information("Loaded settings");
 
-        settings.Save(path);
+        await settings.SaveAsync(path);
 
         if (anyErrors)
         {

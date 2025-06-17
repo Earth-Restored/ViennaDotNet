@@ -115,9 +115,29 @@ internal sealed class OptionsWindow : Window
 
         var skipFileValidationInput = new CheckBox()
         {
-            CheckedState = settings.SkipFileChecks is null ? CheckState.None : settings.SkipFileChecks.Value ? CheckState.Checked : CheckState.UnChecked,
+            Text = settings.SkipFileChecks switch
+            {
+                true => "Yes",
+                false => "No",
+                _ => "",
+            },
+            CheckedState = settings.SkipFileChecks switch
+            {
+                true => CheckState.Checked,
+                false => CheckState.UnChecked,
+                _ => CheckState.None,
+            },
             X = Pos.Right(skipFileValidationLabel) + 1,
             Y = Pos.Y(skipFileValidationLabel),
+        };
+        skipFileValidationInput.CheckedStateChanged += (s, e) =>
+        {
+            skipFileValidationInput.Text = e.Value switch
+            {
+                CheckState.Checked => "Yes",
+                CheckState.UnChecked => "No",
+                _ => "",
+            };
         };
 
         var cancelBtn = new Button()

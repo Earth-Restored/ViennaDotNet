@@ -1,12 +1,13 @@
 ﻿using Serilog;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace ViennaDotNet.Launcher.Programs;
 
 internal static class BuildplateImporter
 {
-    public const string DirName = "Buildplate_Importer";
-    public const string ExeName = "ViennaDotNet.Buildplate_Importer.exe";
+    public const string DirName = "BuildplateImporter";
+    public static readonly string ExeName = "Buildplate_Importer" + (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ".exe" : "");
     public const string DispName = "Buildplate importer";
 
     public static bool Check()
@@ -21,7 +22,7 @@ internal static class BuildplateImporter
         return true;
     }
 
-    public static int? Run(Settings settings, string playerId, string worldPath)
+    public static int? Run(Settings settings, string playerId, string filePath)
     {
         Log.Information($"Running {DispName}");
         Process? process;
@@ -33,7 +34,7 @@ internal static class BuildplateImporter
                 $"--eventbus=localhost:{settings.EventBusPort}",
                 $"--objectstore=localhost:{settings.ObjectStorePort}",
                 $"--id={playerId}",
-                $"--file={worldPath}"
+                $"--file={filePath}"
             ])
             {
                 WorkingDirectory = Path.Combine(Environment.CurrentDirectory, DirName),

@@ -1,12 +1,13 @@
 ﻿using Serilog;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace ViennaDotNet.Launcher.Programs;
 
 internal static class Buildplate
 {
     public const string DirName = "Buildplate";
-    public const string ExeName = "BuildplateLauncher.exe";
+    public static readonly string ExeName = "BuildplateLauncher" + (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ".exe" : "");
     public const string DispName = "Buildplate launcher";
 
     public static bool Check()

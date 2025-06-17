@@ -1,12 +1,13 @@
 ﻿using Serilog;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace ViennaDotNet.Launcher.Programs;
 
 internal static class ApiServer
 {
     public const string DirName = "ApiServer";
-    public const string ExeName = "ApiServer.exe";
+    public static readonly string ExeName = "ApiServer" + (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ".exe" : "");
     public const string DispName = "Api server";
 
     public static bool Check()
