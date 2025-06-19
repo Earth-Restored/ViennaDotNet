@@ -17,7 +17,7 @@ public class Settings
         EventBusPort = 5532,
         ObjectStorePort = 5396,
         IPv4 = "192.168.x.x",
-        EarthDatabaseConnectionString = $".{Path.DirectorySeparatorChar}..{Path.DirectorySeparatorChar}earth.db",
+        EarthDatabaseConnectionString = $".{Path.DirectorySeparatorChar}data{Path.DirectorySeparatorChar}earth.db",
         TileDatabaseConnectionString = "Host=localhost;Username=mylogin;Password=mypass;Database=genoa_tile_data",
         SkipFileChecks = false,
     };

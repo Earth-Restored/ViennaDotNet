@@ -73,6 +73,8 @@ internal static class Program
             return 1;
         }
 
+        Log.Information("Connected to tile database");
+
         Log.Information("Connecting to event bus");
         EventBusClient eventBusClient;
         try
