@@ -1,6 +1,7 @@
 ﻿using Serilog.Core;
 using Serilog.Events;
 using Serilog.Formatting.Display;
+using System;
 using System.Text;
 
 namespace ViennaDotNet.Launcher.Utils;
@@ -35,6 +36,7 @@ internal sealed class CollectionSink : ILogEventSink
 
         _formatter.Format(logEvent, _writer);
         var builder = _writer.GetStringBuilder();
+#if NET9_0_OR_GREATER
         var log = builder.ToString().AsSpan();
 
         foreach (var lineRange in log.Split(Environment.NewLine))
@@ -46,6 +48,14 @@ internal sealed class CollectionSink : ILogEventSink
                 _logCollection.Add(line.ToString());
             }
         }
+#else
+        string log = builder.ToString();
+
+        foreach (string line in log.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            _logCollection.Add(line.ToString());
+        }
+#endif
 
         builder.Clear();
     }

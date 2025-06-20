@@ -7,7 +7,7 @@ namespace ViennaDotNet.Launcher.Programs;
 
 internal static class BuildplateImporter
 {
-    public static readonly string ExeName = "Buildplate_Importer" + (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ".exe" : "");
+    public static readonly string ExeName = "BuildplateImporter" + (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ".exe" : "");
     public const string DispName = "Buildplate importer";
 
     public static bool Check(Settings settings, ILogger logger)

@@ -177,7 +177,7 @@ internal sealed class LauncherWindow : Window
         int stoppedCount = 0;
         foreach (var process in ProcessUtils.GetProgramProcesses(name))
         {
-            await process.StopGracefullyOrKillAsync(3000, cancellationToken);
+            await process.StopGracefullyOrKillAsync(3000, false, cancellationToken);
             stoppedCount++;
         }
 

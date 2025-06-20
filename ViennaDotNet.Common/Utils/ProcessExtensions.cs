@@ -5,9 +5,9 @@ namespace ViennaDotNet.Common.Utils;
 
 public static partial class ProcessExtensions
 {
-    public static void StopGracefullyOrKill(this Process process, int timeout)
+    public static void StopGracefullyOrKill(this Process process, int timeout, bool allowConsoleReAlloc = false)
     {
-        if (!process.TryStopGracefully(timeout))
+        if (!process.TryStopGracefully(timeout, allowConsoleReAlloc))
         {
             process.Kill();
         }
@@ -15,9 +15,9 @@ public static partial class ProcessExtensions
         process.WaitForExit(timeout);
     }
 
-    public static async Task StopGracefullyOrKillAsync(this Process process, int timeout, CancellationToken cancellationToken)
+    public static async Task StopGracefullyOrKillAsync(this Process process, int timeout, bool allowConsoleReAlloc, CancellationToken cancellationToken)
     {
-        if (!await process.TryStopGracefullyAsync(timeout, cancellationToken))
+        if (!await process.TryStopGracefullyAsync(timeout, allowConsoleReAlloc, cancellationToken))
         {
             process.Kill();
         }
@@ -25,7 +25,7 @@ public static partial class ProcessExtensions
         await process.WaitForExitAsync(timeout, cancellationToken);
     }
 
-    public static bool TryStopGracefully(this Process process, int timeout)
+    public static bool TryStopGracefully(this Process process, int timeout, bool allowConsoleReAlloc)
     {
         try
         {
@@ -34,7 +34,7 @@ public static partial class ProcessExtensions
                 return true;
             }
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && allowConsoleReAlloc)
             {
                 if (process.WinTrySendCtrlC(timeout))
                 {
@@ -55,7 +55,7 @@ public static partial class ProcessExtensions
         return process.HasExited;
     }
 
-    public static async Task<bool> TryStopGracefullyAsync(this Process process, int timeout, CancellationToken cancellationToken)
+    public static async Task<bool> TryStopGracefullyAsync(this Process process, int timeout, bool allowConsoleReAlloc, CancellationToken cancellationToken)
     {
         try
         {
@@ -64,7 +64,7 @@ public static partial class ProcessExtensions
                 return true;
             }
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && allowConsoleReAlloc)
             {
                 if (await process.WinTrySendCtrlCAsync(timeout, cancellationToken))
                 {

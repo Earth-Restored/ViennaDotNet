@@ -47,12 +47,12 @@ internal sealed class JsonNbtConverter
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public enum Type
         {
-            [JsonStringEnumMemberName("compound")] COMPOUND,
-            [JsonStringEnumMemberName("list")] LIST,
-            [JsonStringEnumMemberName("int")] INT,
-            [JsonStringEnumMemberName("byte")] BYTE,
-            [JsonStringEnumMemberName("float")] FLOAT,
-            [JsonStringEnumMemberName("string")] STRING
+            Compound,
+            List,
+            Int,
+            Byte,
+            Float,
+            String
         }
 
         public readonly Type type;
@@ -68,7 +68,7 @@ internal sealed class JsonNbtConverter
     public sealed class CompoundJsonNbtTag : JsonNbtTag
     {
         public CompoundJsonNbtTag(Dictionary<string, JsonNbtTag> value)
-            : base(Type.COMPOUND, value)
+            : base(Type.Compound, value)
         {
         }
     }
@@ -76,7 +76,7 @@ internal sealed class JsonNbtConverter
     public sealed class ListJsonNbtTag : JsonNbtTag
     {
         public ListJsonNbtTag(JsonNbtTag[] value)
-            : base(Type.LIST, value)
+            : base(Type.List, value)
         {
         }
     }
@@ -84,7 +84,7 @@ internal sealed class JsonNbtConverter
     public sealed class IntJsonNbtTag : JsonNbtTag
     {
         public IntJsonNbtTag(int value)
-            : base(Type.INT, value)
+            : base(Type.Int, value)
         {
         }
     }
@@ -92,7 +92,7 @@ internal sealed class JsonNbtConverter
     public sealed class ByteJsonNbtTag : JsonNbtTag
     {
         public ByteJsonNbtTag(byte value)
-            : base(Type.BYTE, value)
+            : base(Type.Byte, value)
         {
         }
     }
@@ -100,7 +100,7 @@ internal sealed class JsonNbtConverter
     public sealed class FloatJsonNbtTag : JsonNbtTag
     {
         public FloatJsonNbtTag(float value)
-            : base(Type.FLOAT, value)
+            : base(Type.Float, value)
         {
         }
     }
@@ -108,7 +108,7 @@ internal sealed class JsonNbtConverter
     public sealed class StringJsonNbtTag : JsonNbtTag
     {
         public StringJsonNbtTag(string value)
-            : base(Type.STRING, value)
+            : base(Type.String, value)
         {
         }
     }

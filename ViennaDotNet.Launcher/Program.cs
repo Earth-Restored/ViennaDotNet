@@ -46,9 +46,6 @@ internal static class Program
 
         LogToConsole = false;
 
-        //ConfigurationManager.RuntimeConfig = """{ "Theme": "Light" }""";
-        ConfigurationManager.Enable(ConfigLocations.All);
-
         Application.Run<LauncherWindow>().Dispose();
 
         Application.Shutdown();
