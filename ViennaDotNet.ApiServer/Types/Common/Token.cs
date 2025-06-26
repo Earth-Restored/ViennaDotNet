@@ -7,7 +7,7 @@ public sealed record Token(
     Token.Type ClientType,
     Dictionary<string, string> ClientProperties,
     Rewards Rewards,
-    Token.Lifetime Lifetime
+    Token.LifetimeE Lifetime
 )
 {
     [JsonConverter(typeof(JsonStringEnumConverter))]
@@ -22,7 +22,7 @@ public sealed record Token(
     }
 
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    public enum Lifetime
+    public enum LifetimeE
     {
         [JsonStringEnumMemberName("Persistent")]
         PERSISTENT,

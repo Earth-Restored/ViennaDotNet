@@ -19,7 +19,7 @@ public sealed class BuildplateInstancesManager
     public BuildplateInstancesManager(EventBusClient eventBusClient)
     {
         _eventBusClient = eventBusClient;
-        _subscriber = _eventBusClient.addSubscriber("buildplates", new Subscriber.SubscriberListener(
+        _subscriber = _eventBusClient.AddSubscriber("buildplates", new Subscriber.SubscriberListener(
             HandleEvent,
             () =>
             {
@@ -28,7 +28,7 @@ public sealed class BuildplateInstancesManager
                 Environment.Exit(1);
             }
         ));
-        _requestSender = _eventBusClient.addRequestSender();
+        _requestSender = _eventBusClient.AddRequestSender();
     }
 
     public async Task<string?> RequestBuildplateInstance(string? playerId, string? encounterId, string buildplateId, InstanceType type, long shutdownTime, bool night)
@@ -84,7 +84,7 @@ public sealed class BuildplateInstancesManager
         }
 
         Log.Information("Did not find existing instance, starting new instance");
-        string? instanceId = await _requestSender.request("buildplates", "start", Json.Serialize(new StartRequest(playerId, encounterId, buildplateId, night, type, shutdownTime))).Task;
+        string? instanceId = await _requestSender.Request("buildplates", "start", Json.Serialize(new StartRequest(playerId, encounterId, buildplateId, night, type, shutdownTime))).Task;
         if (instanceId is null)
         {
             Log.Error("Buildplate start request was rejected/ignored");
@@ -124,7 +124,7 @@ public sealed class BuildplateInstancesManager
     {
         Log.Information("Requesting buildplate preview");
 
-        string? preview = _requestSender.request("buildplates", "preview", Json.Serialize(new PreviewRequest(Convert.ToBase64String(serverData), night))).Task.Result;
+        string? preview = _requestSender.Request("buildplates", "preview", Json.Serialize(new PreviewRequest(Convert.ToBase64String(serverData), night))).Task.Result;
         if (preview is null)
             Log.Error("Preview request was rejected/ignored");
 
@@ -133,14 +133,14 @@ public sealed class BuildplateInstancesManager
 
     private Task HandleEvent(Subscriber.Event @event)
     {
-        switch (@event.type)
+        switch (@event.Type)
         {
             case "started":
                 {
                     StartNotification startNotification;
                     try
                     {
-                        startNotification = Json.Deserialize<StartNotification>(@event.data)!;
+                        startNotification = Json.Deserialize<StartNotification>(@event.Data)!;
                         if (startNotification.PlayerId is null && startNotification.Type != InstanceType.ENCOUNTER)
                         {
                             Log.Warning("Bad start notification");
@@ -180,7 +180,7 @@ public sealed class BuildplateInstancesManager
                 break;
             case "ready":
                 {
-                    string instanceId = @event.data;
+                    string instanceId = @event.Data;
                     lock (_instances)
                     {
                         InstanceInfo? instanceInfo = _instances.GetOrDefault(instanceId, null);
@@ -205,7 +205,7 @@ public sealed class BuildplateInstancesManager
                 break;
             case "shuttingDown":
                 {
-                    string instanceId = @event.data;
+                    string instanceId = @event.Data;
                     lock (_instances)
                     {
                         InstanceInfo? instanceInfo = _instances.GetValueOrDefault(instanceId);
@@ -230,7 +230,7 @@ public sealed class BuildplateInstancesManager
                 break;
             case "stopped":
                 {
-                    string instanceId = @event.data;
+                    string instanceId = @event.Data;
                     lock (_instances)
                     {
                         var instanceInfo = _instances.JavaRemove(instanceId);

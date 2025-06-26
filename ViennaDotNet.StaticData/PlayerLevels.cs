@@ -1,13 +1,15 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Text.Json;
+using ViennaDotNet.Common;
 
 namespace ViennaDotNet.StaticData;
 
-public sealed class Levels
+public sealed class PlayerLevels
 {
-    public readonly Level[] levels;
+    public readonly ImmutableArray<Level> Levels;
 
-    internal Levels(string dir)
+    internal PlayerLevels(string dir)
     {
         try
         {
@@ -17,7 +19,7 @@ public sealed class Levels
             {
                 using (var stream = File.OpenRead(file))
                 {
-                    var level = JsonSerializer.Deserialize<Level>(stream);
+                    var level = Json.Deserialize<Level>(stream);
 
                     Debug.Assert(level is not null);
 
@@ -25,11 +27,11 @@ public sealed class Levels
                 }
             }
 
-            this.levels = [.. levels];
+            Levels = [.. levels];
 
-            for (int index = 1; index < this.levels.Length; index++)
+            for (int index = 1; index < Levels.Length; index++)
             {
-                if (this.levels[index].experienceRequired <= this.levels[index - 1].experienceRequired)
+                if (Levels[index].ExperienceRequired <= Levels[index - 1].ExperienceRequired)
                 {
                     throw new StaticDataException($"Level {index + 2} has lower experience required than preceding level {index + 1}");
                 }
@@ -46,15 +48,15 @@ public sealed class Levels
     }
 
     public sealed record Level(
-        int experienceRequired,
-        int rubies,
-        Level.Item[] items,
-        string[] buildplates
+        int ExperienceRequired,
+        int Rubies,
+        Level.Item[] Items,
+        string[] Buildplates
     )
     {
         public sealed record Item(
-            string id,
-            int count
+            string Id,
+            int Count
         );
     }
 }

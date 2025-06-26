@@ -18,6 +18,9 @@ public static class Json
     public static T? Deserialize<T>(string json)
         => JsonSerializer.Deserialize<T>(json, options);
 
+    public static T? Deserialize<T>(Stream utf8Json)
+        => JsonSerializer.Deserialize<T>(utf8Json, options);
+
     public static ValueTask<T?> DeserializeAsync<T>(Stream utf8Stream, CancellationToken cancellationToken)
         => JsonSerializer.DeserializeAsync<T>(utf8Stream, options, cancellationToken);
 

@@ -7,24 +7,24 @@ namespace ViennaDotNet.ApiServer.Utils;
 
 public static class SmeltingCalculator
 {
-    public static State CalculateState(long currentTime, SmeltingSlot.ActiveJob activeJob, SmeltingSlot.Burning? burning, Catalog catalog)
+    public static State CalculateState(long currentTime, SmeltingSlot.ActiveJobR activeJob, SmeltingSlot.BurningR? burning, Catalog catalog)
     {
-        Catalog.RecipesCatalog.SmeltingRecipe? recipe = catalog.recipesCatalog.getSmeltingRecipe(activeJob.recipeId);
+        Catalog.RecipesCatalogR.SmeltingRecipe? recipe = catalog.RecipesCatalog.GetSmeltingRecipe(activeJob.RecipeId);
         Debug.Assert(recipe is not null);
 
-        int totalHeatRequired = recipe.heatRequired * activeJob.totalRounds;
-        long totalCompletionTime = activeJob.startTime + CalculateDurationForHeat(totalHeatRequired, burning, activeJob.addedFuel);
+        int totalHeatRequired = recipe.HeatRequired * activeJob.TotalRounds;
+        long totalCompletionTime = activeJob.StartTime + CalculateDurationForHeat(totalHeatRequired, burning, activeJob.AddedFuel);
         long nextCompletionTime = 0;
         int completedRounds;
-        if (activeJob.finishedEarly)
+        if (activeJob.FinishedEarly)
         {
-            completedRounds = activeJob.totalRounds;
+            completedRounds = activeJob.TotalRounds;
         }
         else
         {
-            for (completedRounds = 0; completedRounds < activeJob.totalRounds; completedRounds++)
+            for (completedRounds = 0; completedRounds < activeJob.TotalRounds; completedRounds++)
             {
-                nextCompletionTime = activeJob.startTime + CalculateDurationForHeat(recipe.heatRequired * (completedRounds + 1), burning, activeJob.addedFuel);
+                nextCompletionTime = activeJob.StartTime + CalculateDurationForHeat(recipe.HeatRequired * (completedRounds + 1), burning, activeJob.AddedFuel);
                 if (nextCompletionTime >= currentTime)
                 {
                     break;
@@ -32,32 +32,32 @@ public static class SmeltingCalculator
             }
         }
 
-        if (completedRounds < activeJob.totalRounds && nextCompletionTime == 0)
+        if (completedRounds < activeJob.TotalRounds && nextCompletionTime == 0)
         {
             throw new InvalidOperationException();
         }
 
-        int availableRounds = completedRounds - activeJob.collectedRounds;
-        bool completed = completedRounds == activeJob.totalRounds;
+        int availableRounds = completedRounds - activeJob.CollectedRounds;
+        bool completed = completedRounds == activeJob.TotalRounds;
 
         InputItem input;
-        if (activeJob.input.count != activeJob.totalRounds)
+        if (activeJob.Input.Count != activeJob.TotalRounds)
         {
             throw new InvalidOperationException();
         }
 
-        if (activeJob.input.instances.Length > 0)
+        if (activeJob.Input.Instances.Length > 0)
         {
-            if (activeJob.input.instances.Length != activeJob.input.count)
+            if (activeJob.Input.Instances.Length != activeJob.Input.Count)
             {
                 throw new InvalidOperationException();
             }
 
-            input = new InputItem(activeJob.input.id, activeJob.input.count - completedRounds, ArrayExtensions.CopyOfRange(activeJob.input.instances, completedRounds, activeJob.input.instances.Length));
+            input = new InputItem(activeJob.Input.Id, activeJob.Input.Count - completedRounds, ArrayExtensions.CopyOfRange(activeJob.Input.Instances, completedRounds, activeJob.Input.Instances.Length));
         }
         else
         {
-            input = new InputItem(activeJob.input.id, activeJob.input.count - completedRounds, []);
+            input = new InputItem(activeJob.Input.Id, activeJob.Input.Count - completedRounds, []);
         }
 
         int consumedAddedFuelCount = 0;
@@ -69,38 +69,38 @@ public static class SmeltingCalculator
 
         if (burning is not null)
         {
-            currentFuel = burning.fuel;
-            currentFuelTotalHeat = burning.remainingHeat;
-            burnStartTime = activeJob.startTime;
-            burnEndTime = burnStartTime + burning.remainingHeat * 1000 / burning.fuel.heatPerSecond;
+            currentFuel = burning.Fuel;
+            currentFuelTotalHeat = burning.RemainingHeat;
+            burnStartTime = activeJob.StartTime;
+            burnEndTime = burnStartTime + burning.RemainingHeat * 1000 / burning.Fuel.HeatPerSecond;
         }
         else
         {
-            if (activeJob.addedFuel is null)
+            if (activeJob.AddedFuel is null)
             {
                 throw new InvalidOperationException();
             }
 
-            currentFuel = activeJob.addedFuel;
+            currentFuel = activeJob.AddedFuel;
             consumedAddedFuelCount = 1;
-            currentFuelTotalHeat = currentFuel.heatPerSecond * currentFuel.burnDuration;
-            burnStartTime = activeJob.startTime;
-            burnEndTime = burnStartTime + currentFuel.burnDuration * 1000;
+            currentFuelTotalHeat = currentFuel.HeatPerSecond * currentFuel.BurnDuration;
+            burnStartTime = activeJob.StartTime;
+            burnEndTime = burnStartTime + currentFuel.BurnDuration * 1000;
         }
 
         while (burnEndTime < fuelEndTime)
         {
-            if (activeJob.addedFuel is null)
+            if (activeJob.AddedFuel is null)
             {
                 throw new InvalidOperationException();
             }
 
             totalHeatRequired -= currentFuelTotalHeat;
-            currentFuel = activeJob.addedFuel;
+            currentFuel = activeJob.AddedFuel;
             consumedAddedFuelCount++;
-            currentFuelTotalHeat = currentFuel.heatPerSecond * currentFuel.burnDuration;
+            currentFuelTotalHeat = currentFuel.HeatPerSecond * currentFuel.BurnDuration;
             burnStartTime = burnEndTime;
-            burnEndTime = burnStartTime + currentFuel.burnDuration * 1000;
+            burnEndTime = burnStartTime + currentFuel.BurnDuration * 1000;
         }
 
         if (totalHeatRequired < 0)
@@ -111,7 +111,7 @@ public static class SmeltingCalculator
         int remainingHeat;
         if (!completed)
         {
-            remainingHeat = (int)(currentFuelTotalHeat * (burnEndTime - fuelEndTime)) / (currentFuel.burnDuration * 1000);
+            remainingHeat = (int)(currentFuelTotalHeat * (burnEndTime - fuelEndTime)) / (currentFuel.BurnDuration * 1000);
         }
         else
         {
@@ -124,7 +124,7 @@ public static class SmeltingCalculator
         }
 
         SmeltingSlot.Fuel? remainingAddedFuel;
-        if (activeJob.addedFuel is null)
+        if (activeJob.AddedFuel is null)
         {
             if (consumedAddedFuelCount > 0)
             {
@@ -135,36 +135,36 @@ public static class SmeltingCalculator
         }
         else
         {
-            if (consumedAddedFuelCount > activeJob.addedFuel.item.count)
+            if (consumedAddedFuelCount > activeJob.AddedFuel.Item.Count)
             {
                 throw new InvalidOperationException();
             }
 
-            if (activeJob.addedFuel.item.instances.Length > 0)
+            if (activeJob.AddedFuel.Item.Instances.Length > 0)
             {
-                if (activeJob.addedFuel.item.instances.Length != activeJob.addedFuel.item.count)
+                if (activeJob.AddedFuel.Item.Instances.Length != activeJob.AddedFuel.Item.Count)
                 {
                     throw new InvalidOperationException();
                 }
 
-                remainingAddedFuel = new SmeltingSlot.Fuel(new InputItem(activeJob.addedFuel.item.id, activeJob.addedFuel.item.count - consumedAddedFuelCount, ArrayExtensions.CopyOfRange(activeJob.addedFuel.item.instances, consumedAddedFuelCount, activeJob.addedFuel.item.instances.Length)), activeJob.addedFuel.burnDuration, activeJob.addedFuel.heatPerSecond);
+                remainingAddedFuel = new SmeltingSlot.Fuel(new InputItem(activeJob.AddedFuel.Item.Id, activeJob.AddedFuel.Item.Count - consumedAddedFuelCount, ArrayExtensions.CopyOfRange(activeJob.AddedFuel.Item.Instances, consumedAddedFuelCount, activeJob.AddedFuel.Item.Instances.Length)), activeJob.AddedFuel.BurnDuration, activeJob.AddedFuel.HeatPerSecond);
             }
             else
             {
-                remainingAddedFuel = new SmeltingSlot.Fuel(new InputItem(activeJob.addedFuel.item.id, activeJob.addedFuel.item.count - consumedAddedFuelCount, []), activeJob.addedFuel.burnDuration, activeJob.addedFuel.heatPerSecond);
+                remainingAddedFuel = new SmeltingSlot.Fuel(new InputItem(activeJob.AddedFuel.Item.Id, activeJob.AddedFuel.Item.Count - consumedAddedFuelCount, []), activeJob.AddedFuel.BurnDuration, activeJob.AddedFuel.HeatPerSecond);
             }
         }
 
         SmeltingSlot.Fuel currentBurningFuel;
         if (consumedAddedFuelCount > 0)
         {
-            if (activeJob.addedFuel!.item.instances.Length > 0)
+            if (activeJob.AddedFuel!.Item.Instances.Length > 0)
             {
-                currentBurningFuel = new SmeltingSlot.Fuel(new InputItem(activeJob.addedFuel.item.id, 1, [activeJob.addedFuel.item.instances[consumedAddedFuelCount - 1]]), activeJob.addedFuel.burnDuration, activeJob.addedFuel.heatPerSecond);
+                currentBurningFuel = new SmeltingSlot.Fuel(new InputItem(activeJob.AddedFuel.Item.Id, 1, [activeJob.AddedFuel.Item.Instances[consumedAddedFuelCount - 1]]), activeJob.AddedFuel.BurnDuration, activeJob.AddedFuel.HeatPerSecond);
             }
             else
             {
-                currentBurningFuel = new SmeltingSlot.Fuel(new InputItem(activeJob.addedFuel.item.id, 1, []), activeJob.addedFuel.burnDuration, activeJob.addedFuel.heatPerSecond);
+                currentBurningFuel = new SmeltingSlot.Fuel(new InputItem(activeJob.AddedFuel.Item.Id, 1, []), activeJob.AddedFuel.BurnDuration, activeJob.AddedFuel.HeatPerSecond);
             }
         }
         else
@@ -175,9 +175,9 @@ public static class SmeltingCalculator
         return new State(
             completedRounds,
             availableRounds,
-            activeJob.totalRounds,
+            activeJob.TotalRounds,
             input,
-            new State.OutputItem(recipe.output, 1),
+            new State.OutputItem(recipe.Output, 1),
             nextCompletionTime,
             totalCompletionTime,
             remainingAddedFuel,
@@ -189,37 +189,37 @@ public static class SmeltingCalculator
         );
     }
 
-    private static int CalculateDurationForHeat(int requiredHeat, SmeltingSlot.Burning? burning, SmeltingSlot.Fuel? addedFuel)
+    private static int CalculateDurationForHeat(int requiredHeat, SmeltingSlot.BurningR? burning, SmeltingSlot.Fuel? addedFuel)
     {
         int duration = 0;
         if (burning is not null)
         {
-            if (burning.remainingHeat >= requiredHeat)
+            if (burning.RemainingHeat >= requiredHeat)
             {
-                duration += requiredHeat * 1000 / burning.fuel.heatPerSecond;
+                duration += requiredHeat * 1000 / burning.Fuel.HeatPerSecond;
                 requiredHeat = 0;
             }
             else
             {
-                duration += burning.remainingHeat * 1000 / burning.fuel.heatPerSecond;
-                requiredHeat -= burning.remainingHeat;
+                duration += burning.RemainingHeat * 1000 / burning.Fuel.HeatPerSecond;
+                requiredHeat -= burning.RemainingHeat;
             }
         }
 
         if (addedFuel is not null)
         {
-            for (int count = 0; count < addedFuel.item.count; count++)
+            for (int count = 0; count < addedFuel.Item.Count; count++)
             {
-                if (requiredHeat < addedFuel.heatPerSecond * addedFuel.burnDuration)
+                if (requiredHeat < addedFuel.HeatPerSecond * addedFuel.BurnDuration)
                 {
-                    duration += requiredHeat * 1000 / addedFuel.heatPerSecond;
+                    duration += requiredHeat * 1000 / addedFuel.HeatPerSecond;
                     requiredHeat = 0;
                     break;
                 }
                 else
                 {
-                    duration += addedFuel.burnDuration * 1000;
-                    requiredHeat -= addedFuel.heatPerSecond * addedFuel.burnDuration;
+                    duration += addedFuel.BurnDuration * 1000;
+                    requiredHeat -= addedFuel.HeatPerSecond * addedFuel.BurnDuration;
                 }
             }
         }

@@ -91,12 +91,12 @@ public sealed class Rewards
                 Profile profile = (Profile)results.Get("profile").Value;
                 if (_rubies > 0)
                 {
-                    profile.rubies.earned += _rubies;
+                    profile.Rubies.Earned += _rubies;
                 }
 
                 if (_experiencePoints > 0)
                 {
-                    profile.experience += _experiencePoints;
+                    profile.Experience += _experiencePoints;
                 }
 
                 updateQuery.Update("profile", playerId, profile);
@@ -117,21 +117,21 @@ public sealed class Rewards
                     int quantity = entry.Value ?? 0; // idk, no null checks here, so I added ?? 0
                     if (quantity > 0)
                     {
-                        Catalog.ItemsCatalog.Item? item = staticData.catalog.itemsCatalog.getItem(id);
+                        Catalog.ItemsCatalogR.Item? item = staticData.Catalog.ItemsCatalog.GetItem(id);
                         Debug.Assert(item is not null);
 
-                        if (item.stackable)
+                        if (item.Stackable)
                         {
-                            inventory.addItems(id, quantity);
+                            inventory.AddItems(id, quantity);
                         }
                         else
                         {
-                            inventory.addItems(id, [.. Java.IntStream.Range(0, quantity).Select(index => new NonStackableItemInstance(U.RandomUuid().ToString(), 0))]);
+                            inventory.AddItems(id, [.. Java.IntStream.Range(0, quantity).Select(index => new NonStackableItemInstance(U.RandomUuid().ToString(), 0))]);
                         }
 
-                        if (journal.addCollectedItem(id, currentTime, quantity) == 0)
+                        if (journal.AddCollectedItem(id, currentTime, quantity) == 0)
                         {
-                            if (item.journalEntry is not null)
+                            if (item.JournalEntry is not null)
                             {
                                 updateQuery.Then(TokenUtils.AddToken(playerId, new Tokens.JournalItemUnlockedToken(id)));
                             }
@@ -180,14 +180,14 @@ public sealed class Rewards
     public static Rewards FromDBRewardsModel(DB.Models.Common.Rewards rewardsModel)
     {
         Rewards rewards = new Rewards();
-        rewards.addRubies(rewardsModel.rubies);
-        rewards.addExperiencePoints(rewardsModel.experiencePoints);
-        if (rewardsModel.level is not null)
-            rewards.setLevel(rewardsModel.level.Value);
+        rewards.addRubies(rewardsModel.Rubies);
+        rewards.addExperiencePoints(rewardsModel.ExperiencePoints);
+        if (rewardsModel.Level is not null)
+            rewards.setLevel(rewardsModel.Level.Value);
 
-        rewardsModel.items.ForEach((id, count) => rewards.addItem(id, count ?? 0));
-        Array.ForEach(rewardsModel.buildplates, id => rewards.addBuildplate(id));
-        Array.ForEach(rewardsModel.challenges, id => rewards.addChallenge(id));
+        rewardsModel.Items.ForEach((id, count) => rewards.addItem(id, count ?? 0));
+        Array.ForEach(rewardsModel.Buildplates, id => rewards.addBuildplate(id));
+        Array.ForEach(rewardsModel.Challenges, id => rewards.addChallenge(id));
         return rewards;
     }
 

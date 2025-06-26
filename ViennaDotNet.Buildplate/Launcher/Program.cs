@@ -73,7 +73,7 @@ internal static class Program
         EventBusClient eventBusClient;
         try
         {
-            eventBusClient = EventBusClient.create(options.EventBusConnectionString);
+            eventBusClient = EventBusClient.Create(options.EventBusConnectionString);
         }
         catch (EventBusClientException ex)
         {

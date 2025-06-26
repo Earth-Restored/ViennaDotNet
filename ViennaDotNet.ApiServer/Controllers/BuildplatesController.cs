@@ -29,7 +29,7 @@ public class BuildplatesController : ControllerBase
     private static EarthDB earthDB => Program.DB;
     private static ObjectStoreClient objectStoreClient => Program.objectStore;
     private static BuildplateInstancesManager buildplateInstancesManager => Program.buildplateInstancesManager;
-    private static Catalog catalog => Program.staticData.catalog;
+    private static Catalog catalog => Program.staticData.Catalog;
     private static TappablesManager tappablesManager => Program.tappablesManager;
 
     [HttpGet("buildplates")]
@@ -54,22 +54,22 @@ public class BuildplatesController : ControllerBase
 
         // not null is ensured in .Where
 #pragma warning disable CS8619 // Nullability of reference types in value doesn't match target type.
-        OwnedBuildplate[] ownedBuildplates = [.. buildplatesModel.getBuildplates().Select(async buildplateEntry =>
+        OwnedBuildplate[] ownedBuildplates = [.. buildplatesModel.GetBuildplates().Select(async buildplateEntry =>
         {
-            byte[]? previewData = (await objectStoreClient.get(buildplateEntry.buildplate.previewObjectId).Task) as byte[];
+            byte[]? previewData = (await objectStoreClient.Get(buildplateEntry.Buildplate.PreviewObjectId).Task) as byte[];
             if (previewData is null)
             {
-                Log.Error($"Preview object {buildplateEntry.buildplate.previewObjectId} for buildplate {buildplateEntry.id} could not be loaded from object store");
+                Log.Error($"Preview object {buildplateEntry.Buildplate.PreviewObjectId} for buildplate {buildplateEntry.Id} could not be loaded from object store");
                 return null;
             }
 
             string model = Encoding.ASCII.GetString(previewData);
             return new OwnedBuildplate(
-                buildplateEntry.id,
+                buildplateEntry.Id,
                 "00000000-0000-0000-0000-000000000000",
-                new Dimension(buildplateEntry.buildplate.size, buildplateEntry.buildplate.size),
-                new Offset(0, buildplateEntry.buildplate.offset, 0),
-                buildplateEntry.buildplate.scale,
+                new Dimension(buildplateEntry.Buildplate.Size, buildplateEntry.Buildplate.Size),
+                new Offset(0, buildplateEntry.Buildplate.Offset, 0),
+                buildplateEntry.Buildplate.Scale,
                 OwnedBuildplate.TypeE.SURVIVAL,
                 SurfaceOrientation.HORIZONTAL,
                 model,
@@ -77,7 +77,7 @@ public class BuildplatesController : ControllerBase
                 false,    // TODO
                 0,    // TODO
                 false,    // TODO
-                TimeFormatter.FormatTime(buildplateEntry.buildplate.lastModified),
+                TimeFormatter.FormatTime(buildplateEntry.Buildplate.LastModified),
                 0,    // TODO
                 ""
             );
@@ -135,7 +135,7 @@ public class BuildplatesController : ControllerBase
 
             inventory = (DB.Models.Player.Inventory)results.Get("inventory").Value;
             hotbar = (Hotbar)results.Get("hotbar").Value;
-            buildplate = ((Buildplates)results.Get("buildplates").Value).getBuildplate(buildplateId);
+            buildplate = ((Buildplates)results.Get("buildplates").Value).GetBuildplate(buildplateId);
         }
         catch (EarthDB.DatabaseException exception)
         {
@@ -147,14 +147,14 @@ public class BuildplatesController : ControllerBase
             return NotFound();
         }
 
-        byte[]? serverData = (await objectStoreClient.get(buildplate.serverDataObjectId).Task) as byte[];
+        byte[]? serverData = (await objectStoreClient.Get(buildplate.ServerDataObjectId).Task) as byte[];
         if (serverData is null)
         {
-            Log.Error($"Data object {buildplate.serverDataObjectId} for buildplate {buildplateId} could not be loaded from object store");
+            Log.Error($"Data object {buildplate.ServerDataObjectId} for buildplate {buildplateId} could not be loaded from object store");
             return StatusCode(StatusCodes.Status500InternalServerError);
         }
 
-        string? sharedBuildplateServerDataObjectId = (await objectStoreClient.store(serverData).Task) as string;
+        string? sharedBuildplateServerDataObjectId = (await objectStoreClient.Store(serverData).Task) as string;
         if (sharedBuildplateServerDataObjectId is null)
         {
             Log.Error("Could not store data object for shared buildplate in object store");
@@ -164,33 +164,33 @@ public class BuildplatesController : ControllerBase
         string sharedBuildplateId = U.RandomUuid().ToString();
         SharedBuildplates.SharedBuildplate sharedBuildplate = new SharedBuildplates.SharedBuildplate(
             playerId,
-            buildplate.size,
-            buildplate.offset,
-            buildplate.scale,
-            buildplate.night,
+            buildplate.Size,
+            buildplate.Offset,
+            buildplate.Scale,
+            buildplate.Night,
             requestStartedOn,
-            buildplate.lastModified,
+            buildplate.LastModified,
             sharedBuildplateServerDataObjectId
         );
 
         for (int index = 0; index < 7; index++)
         {
-            Hotbar.Item? item = hotbar.items[index];
+            Hotbar.Item? item = hotbar.Items[index];
             SharedBuildplates.SharedBuildplate.HotbarItem? sharedBuildplateHotbarItem;
             if (item is null)
             {
                 sharedBuildplateHotbarItem = null;
             }
-            else if (item.instanceId is null)
+            else if (item.InstanceId is null)
             {
-                sharedBuildplateHotbarItem = new SharedBuildplates.SharedBuildplate.HotbarItem(item.uuid, item.count, null, 0);
+                sharedBuildplateHotbarItem = new SharedBuildplates.SharedBuildplate.HotbarItem(item.Uuid, item.Count, null, 0);
             }
             else
             {
-                sharedBuildplateHotbarItem = new SharedBuildplates.SharedBuildplate.HotbarItem(item.uuid, 1, item.instanceId, inventory.getItemInstance(item.uuid, item.instanceId)?.wear ?? 0);
+                sharedBuildplateHotbarItem = new SharedBuildplates.SharedBuildplate.HotbarItem(item.Uuid, 1, item.InstanceId, inventory.GetItemInstance(item.Uuid, item.InstanceId)?.Wear ?? 0);
             }
 
-            sharedBuildplate.hotbar[index] = sharedBuildplateHotbarItem;
+            sharedBuildplate.Hotbar[index] = sharedBuildplateHotbarItem;
         }
 
         try
@@ -201,7 +201,7 @@ public class BuildplatesController : ControllerBase
                 {
                     SharedBuildplates sharedBuildplates = (SharedBuildplates)results1.Get("sharedBuildplates").Value;
 
-                    sharedBuildplates.addSharedBuildplate(sharedBuildplateId, sharedBuildplate);
+                    sharedBuildplates.AddSharedBuildplate(sharedBuildplateId, sharedBuildplate);
 
                     return new EarthDB.Query(true)
                         .Update("sharedBuildplates", "", sharedBuildplates);
@@ -210,7 +210,7 @@ public class BuildplatesController : ControllerBase
         }
         catch (EarthDB.DatabaseException exception)
         {
-            objectStoreClient.delete(sharedBuildplateServerDataObjectId);
+            objectStoreClient.Delete(sharedBuildplateServerDataObjectId);
             throw new ServerErrorException(exception);
         }
 
@@ -234,7 +234,7 @@ public class BuildplatesController : ControllerBase
                     .Get("sharedBuildplates", "", typeof(SharedBuildplates))
                         .ExecuteAsync(earthDB, cancellationToken);
             SharedBuildplates sharedBuildplates = (SharedBuildplates)results.Get("sharedBuildplates").Value;
-            sharedBuildplate = sharedBuildplates.getSharedBuildplate(sharedBuildplateId);
+            sharedBuildplate = sharedBuildplates.GetSharedBuildplate(sharedBuildplateId);
         }
         catch (EarthDB.DatabaseException exception)
         {
@@ -246,14 +246,14 @@ public class BuildplatesController : ControllerBase
             return NotFound();
         }
 
-        byte[]? serverData = (await objectStoreClient.get(sharedBuildplate.serverDataObjectId).Task) as byte[];
+        byte[]? serverData = (await objectStoreClient.Get(sharedBuildplate.ServerDataObjectId).Task) as byte[];
         if (serverData is null)
         {
-            Log.Error($"Data object {sharedBuildplate.serverDataObjectId} for shared buildplate {sharedBuildplateId} could not be loaded from object store");
+            Log.Error($"Data object {sharedBuildplate.ServerDataObjectId} for shared buildplate {sharedBuildplateId} could not be loaded from object store");
             return StatusCode(StatusCodes.Status500InternalServerError);
         }
 
-        string? preview = buildplateInstancesManager.GetBuildplatePreview(serverData, sharedBuildplate.night);
+        string? preview = buildplateInstancesManager.GetBuildplatePreview(serverData, sharedBuildplate.Night);
         if (preview is null)
         {
             Log.Error("Could not get preview for buildplate");
@@ -261,27 +261,27 @@ public class BuildplatesController : ControllerBase
         }
 
         string resp = Json.Serialize(new EarthApiResponse(new SharedBuildplate(
-            sharedBuildplate.playerId,    // TODO: supposed to return username here, not player ID
-            TimeFormatter.FormatTime(sharedBuildplate.created),
+            sharedBuildplate.PlayerId,    // TODO: supposed to return username here, not player ID
+            TimeFormatter.FormatTime(sharedBuildplate.Created),
             new SharedBuildplate.BuildplateDataR(
-                new Dimension(sharedBuildplate.size, sharedBuildplate.size),
-                new Offset(0, sharedBuildplate.offset, 0),
-                sharedBuildplate.scale,
+                new Dimension(sharedBuildplate.Size, sharedBuildplate.Size),
+                new Offset(0, sharedBuildplate.Offset, 0),
+                sharedBuildplate.Scale,
                 SharedBuildplate.BuildplateDataR.TypeE.SURVIVAL,
                 SurfaceOrientation.HORIZONTAL,
                 preview,
                 0
             ),
             new Types.Inventory.Inventory(
-                [.. sharedBuildplate.hotbar.Select(item => item is not null ? new HotbarItem(
-                    item.uuid,
-                    item.count,
-                    item.instanceId,
-                    item.instanceId is not null ? ItemWear.WearToHealth(item.uuid, item.wear, catalog.itemsCatalog) : 0.0f
+                [.. sharedBuildplate.Hotbar.Select(item => item is not null ? new HotbarItem(
+                    item.Uuid,
+                    item.Count,
+                    item.InstanceId,
+                    item.InstanceId is not null ? ItemWear.WearToHealth(item.Uuid, item.Wear, catalog.ItemsCatalog) : 0.0f
                 ) : null)],
-                [.. sharedBuildplate.hotbar
-                    .Where(item => item is not null && item.instanceId is null)
-                    .Select(item => item!.uuid)
+                [.. sharedBuildplate.Hotbar
+                    .Where(item => item is not null && item.InstanceId is null)
+                    .Select(item => item!.Uuid)
                     .Distinct()
                     .Select(uuid => new StackableInventoryItem(
                         uuid,
@@ -291,9 +291,9 @@ public class BuildplatesController : ControllerBase
                         new StackableInventoryItem.OnR(TimeFormatter.FormatTime(0)),
                         new StackableInventoryItem.OnR(TimeFormatter.FormatTime(0))
                     ))],
-                [.. sharedBuildplate.hotbar
-                    .Where(item => item is not null && item.instanceId is not null)
-                    .Select(item => item!.uuid)
+                [.. sharedBuildplate.Hotbar
+                    .Where(item => item is not null && item.InstanceId is not null)
+                    .Select(item => item!.Uuid)
                     .Distinct()
                     .Select(uuid => new NonStackableInventoryItem(
                         uuid,
@@ -362,7 +362,7 @@ public class BuildplatesController : ControllerBase
             EarthDB.Results results = await new EarthDB.Query(false)
                     .Get("buildplates", playerId, typeof(Buildplates))
                     .ExecuteAsync(earthDB, cancellationToken);
-            buildplate = ((Buildplates)results.Get("buildplates").Value).getBuildplate(instanceInfo.BuildplateId);
+            buildplate = ((Buildplates)results.Get("buildplates").Value).GetBuildplate(instanceInfo.BuildplateId);
         }
         catch (EarthDB.DatabaseException ex)
         {
@@ -417,7 +417,7 @@ public class BuildplatesController : ControllerBase
                 .Get("buildplates", playerId, typeof(Buildplates))
                 .ExecuteAsync(earthDB, cancellationToken);
 
-            buildplate = ((Buildplates)results.Get("buildplates").Value).getBuildplate(buildplateId);
+            buildplate = ((Buildplates)results.Get("buildplates").Value).GetBuildplate(buildplateId);
         }
         catch (EarthDB.DatabaseException exception)
         {
@@ -429,7 +429,7 @@ public class BuildplatesController : ControllerBase
             return NotFound();
         }
 
-        string? instanceId = await buildplateInstancesManager.RequestBuildplateInstance(playerId, null, buildplateId, type, 0, buildplate.night);
+        string? instanceId = await buildplateInstancesManager.RequestBuildplateInstance(playerId, null, buildplateId, type, 0, buildplate.Night);
         if (instanceId is null)
         {
             return StatusCode(StatusCodes.Status500InternalServerError);
@@ -460,7 +460,7 @@ public class BuildplatesController : ControllerBase
             EarthDB.Results results = await new EarthDB.Query(false)
                 .Get("sharedBuildplates", "", typeof(SharedBuildplates))
                 .ExecuteAsync(earthDB, cancellationToken);
-            sharedBuildplate = ((SharedBuildplates)results.Get("sharedBuildplates").Value).getSharedBuildplate(sharedBuildplateId);
+            sharedBuildplate = ((SharedBuildplates)results.Get("sharedBuildplates").Value).GetSharedBuildplate(sharedBuildplateId);
         }
         catch (EarthDB.DatabaseException exception)
         {
@@ -472,7 +472,7 @@ public class BuildplatesController : ControllerBase
             return NotFound();
         }
 
-        string? instanceId = await buildplateInstancesManager.RequestBuildplateInstance(playerId, null, sharedBuildplateId, type, 0, sharedBuildplate.night);
+        string? instanceId = await buildplateInstancesManager.RequestBuildplateInstance(playerId, null, sharedBuildplateId, type, 0, sharedBuildplate.Night);
         if (instanceId is null)
         {
             return StatusCode(StatusCodes.Status500InternalServerError);
@@ -560,7 +560,7 @@ public class BuildplatesController : ControllerBase
                         EarthDB.Results results = await new EarthDB.Query(false)
                             .Get("buildplates", instanceInfo.PlayerId, typeof(Buildplates))
                             .ExecuteAsync(earthDB, cancellationToken);
-                        buildplate = ((Buildplates)results.Get("buildplates").Value).getBuildplate(instanceInfo.BuildplateId);
+                        buildplate = ((Buildplates)results.Get("buildplates").Value).GetBuildplate(instanceInfo.BuildplateId);
                     }
                     catch (EarthDB.DatabaseException exception)
                     {
@@ -572,9 +572,9 @@ public class BuildplatesController : ControllerBase
                         return null;
                     }
 
-                    size = buildplate.size;
-                    offset = buildplate.offset;
-                    scale = buildplate.scale;
+                    size = buildplate.Size;
+                    offset = buildplate.Offset;
+                    scale = buildplate.Scale;
                 }
 
                 break;
@@ -586,7 +586,7 @@ public class BuildplatesController : ControllerBase
                         EarthDB.Results results = await new EarthDB.Query(false)
                             .Get("sharedBuildplates", "", typeof(SharedBuildplates))
                             .ExecuteAsync(earthDB, cancellationToken);
-                        sharedBuildplate = ((SharedBuildplates)results.Get("sharedBuildplates").Value).getSharedBuildplate(instanceInfo.BuildplateId);
+                        sharedBuildplate = ((SharedBuildplates)results.Get("sharedBuildplates").Value).GetSharedBuildplate(instanceInfo.BuildplateId);
                     }
                     catch (EarthDB.DatabaseException exception)
                     {
@@ -598,9 +598,9 @@ public class BuildplatesController : ControllerBase
                         return null;
                     }
 
-                    size = sharedBuildplate.size;
-                    offset = sharedBuildplate.offset;
-                    scale = sharedBuildplate.scale;
+                    size = sharedBuildplate.Size;
+                    offset = sharedBuildplate.Offset;
+                    scale = sharedBuildplate.Scale;
                 }
 
                 break;
@@ -613,7 +613,7 @@ public class BuildplatesController : ControllerBase
                         EarthDB.Results results = await new EarthDB.Query(false)
                             .Get("encounterBuildplates", "", typeof(EncounterBuildplates))
                             .ExecuteAsync(earthDB, cancellationToken);
-                        encounterBuildplate = ((EncounterBuildplates)results.Get("encounterBuildplates").Value).getEncounterBuildplate(instanceInfo.BuildplateId);
+                        encounterBuildplate = ((EncounterBuildplates)results.Get("encounterBuildplates").Value).GetEncounterBuildplate(instanceInfo.BuildplateId);
                     }
                     catch (EarthDB.DatabaseException exception)
                     {
@@ -625,9 +625,9 @@ public class BuildplatesController : ControllerBase
                         return null;
                     }
 
-                    size = encounterBuildplate.size;
-                    offset = encounterBuildplate.offset;
-                    scale = encounterBuildplate.scale;
+                    size = encounterBuildplate.Size;
+                    offset = encounterBuildplate.Offset;
+                    scale = encounterBuildplate.Scale;
                 }
 
                 break;

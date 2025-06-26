@@ -7,46 +7,46 @@ namespace ViennaDotNet.ApiServer.Utils;
 
 public static class CraftingCalculator
 {
-    public static State CalculateState(long currentTime, CraftingSlot.ActiveJob activeJob, Catalog catalog)
+    public static State CalculateState(long currentTime, CraftingSlot.ActiveJobR activeJob, Catalog catalog)
     {
-        Catalog.RecipesCatalog.CraftingRecipe recipe = catalog.recipesCatalog.crafting.Where(craftingRecipe => craftingRecipe.id == activeJob.recipeId).First();
+        Catalog.RecipesCatalogR.CraftingRecipe recipe = catalog.RecipesCatalog.Crafting.Where(craftingRecipe => craftingRecipe.Id == activeJob.RecipeId).First();
 
-        long roundDuration = recipe.duration * 1000;
-        int completedRounds = activeJob.finishedEarly ? activeJob.totalRounds : int.Min((int)((currentTime - activeJob.startTime) / roundDuration), activeJob.totalRounds);
-        int availableRounds = completedRounds - activeJob.collectedRounds;
+        long roundDuration = recipe.Duration * 1000;
+        int completedRounds = activeJob.FinishedEarly ? activeJob.TotalRounds : int.Min((int)((currentTime - activeJob.StartTime) / roundDuration), activeJob.TotalRounds);
+        int availableRounds = completedRounds - activeJob.CollectedRounds;
 
         LinkedList<InputItem> input = [];
-        if (activeJob.input.Length != recipe.ingredients.Length)
+        if (activeJob.Input.Length != recipe.Ingredients.Length)
             throw new InvalidOperationException();
 
-        for (int index = 0; index < recipe.ingredients.Length; index++)
+        for (int index = 0; index < recipe.Ingredients.Length; index++)
         {
-            int usedCount = recipe.ingredients[index].count * completedRounds;
-            InputItem[] inputItems = activeJob.input[index];
+            int usedCount = recipe.Ingredients[index].Count * completedRounds;
+            InputItem[] inputItems = activeJob.Input[index];
             foreach (InputItem inputItem in inputItems)
             {
                 if (usedCount == 0)
                 {
                     input.AddLast(inputItem);
                 }
-                else if (usedCount > inputItem.count)
+                else if (usedCount > inputItem.Count)
                 {
-                    usedCount -= inputItem.count;
+                    usedCount -= inputItem.Count;
                 }
                 else
                 {
-                    if (inputItem.instances.Length > 0)
+                    if (inputItem.Instances.Length > 0)
                     {
-                        if (inputItem.instances.Length != inputItem.count)
+                        if (inputItem.Instances.Length != inputItem.Count)
                         {
                             throw new UnreachableException();
                         }
 
-                        input.AddLast(new InputItem(inputItem.id, inputItem.count - usedCount, ArrayExtensions.CopyOfRange(inputItem.instances, usedCount, inputItem.instances.Length)));
+                        input.AddLast(new InputItem(inputItem.Id, inputItem.Count - usedCount, ArrayExtensions.CopyOfRange(inputItem.Instances, usedCount, inputItem.Instances.Length)));
                     }
                     else
                     {
-                        input.AddLast(new InputItem(inputItem.id, inputItem.count - usedCount, []));
+                        input.AddLast(new InputItem(inputItem.Id, inputItem.Count - usedCount, []));
                     }
                     usedCount = 0;
                 }
@@ -56,12 +56,12 @@ public static class CraftingCalculator
         return new State(
             completedRounds,
             availableRounds,
-            activeJob.totalRounds,
+            activeJob.TotalRounds,
             [.. input],
-            new State.OutputItem(recipe.output.itemId, recipe.output.count),
-            activeJob.startTime + roundDuration * (completedRounds + 1),
-            activeJob.startTime + roundDuration * activeJob.totalRounds,
-            completedRounds == activeJob.totalRounds
+            new State.OutputItem(recipe.Output.ItemId, recipe.Output.Count),
+            activeJob.StartTime + roundDuration * (completedRounds + 1),
+            activeJob.StartTime + roundDuration * activeJob.TotalRounds,
+            completedRounds == activeJob.TotalRounds
         );
     }
 

@@ -32,7 +32,7 @@ public class EarthApiResponse
 
         public UpdatesResponse(EarthDB.Results results)
         {
-            Dictionary<string, int?> updates = results.getUpdates();
+            Dictionary<string, int?> updates = results.GetUpdates();
             set(updates, "profile", "characterProfile");
             set(updates, "inventory", "inventory");
             set(updates, "crafting", "crafting");

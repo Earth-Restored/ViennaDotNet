@@ -3,60 +3,60 @@
 namespace ViennaDotNet.PreviewGenerator;
 
 internal sealed record PreviewModel(
-     [property: JsonPropertyName("format_version")] int format_version, // always 1
-     bool isNight,
-     [property: JsonPropertyName("sub_chunks")] PreviewModel.SubChunk[] sub_chunks,
-     PreviewModel.BlockEntity[] blockEntities,
-     PreviewModel.Entity[] entities
+     [property: JsonPropertyName("format_version")] int FormatVersion, // always 1
+     bool IsNight,
+     [property: JsonPropertyName("sub_chunks")] PreviewModel.SubChunk[] SubChunks,
+     PreviewModel.BlockEntity[] BlockEntities,
+     PreviewModel.Entity[] Entities
 )
 {
     public sealed record Position(
-        int x,
-        int y,
-        int z
+        int X,
+        int Y,
+        int Z
     );
 
     public sealed record SubChunk(
-        Position position,
-        SubChunk.PaletteEntry[] block_palette,
-        int[] blocks
+        Position Position,
+        [property: JsonPropertyName("block_palette")] SubChunk.PaletteEntry[] BlockPalette,
+        int[] Blocks
     )
     {
         public sealed record PaletteEntry(
-            string name,
-            int data
+            string Name,
+            int Data
         );
     }
 
     public sealed record BlockEntity(
-        int type,
-        Position position,
-        JsonNbtConverter.JsonNbtTag data
+        int Type,
+        Position Position,
+        JsonNbtConverter.JsonNbtTag Data
     );
 
     public sealed record Entity(
-        string name,
-        Entity.Position position,
-        Entity.Rotation rotation,
-        Entity.Position shadowPosition,
-        float shadowSize,
-        int overlayColor,
-        int changeColor,
-        int multiplicitiveTintChangeColor,
-        Dictionary<string, object>? extraData,
-        string skinData,
-        bool isPersonaSkin
+        string Name,
+        Entity.PositionR Position,
+        Entity.RotationR Rotation,
+        Entity.PositionR ShadowPosition,
+        float ShadowSize,
+        int OverlayColor,
+        int ChangeColor,
+        int MultiplicitiveTintChangeColor,
+        Dictionary<string, object>? ExtraData,
+        string SkinData,
+        bool IsPersonaSkin
     )
     {
-        public sealed record Position(
-            float x,
-            float y,
-            float z
+        public sealed record PositionR(
+            float X,
+            float Y,
+            float Z
         );
 
-        public sealed record Rotation(
-            float x,
-            float y
+        public sealed record RotationR(
+            float X,
+            float Y
         );
     }
 }

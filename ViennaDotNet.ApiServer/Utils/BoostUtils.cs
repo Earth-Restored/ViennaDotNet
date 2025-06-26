@@ -3,48 +3,48 @@ using ViennaDotNet.ApiServer.Types.Common;
 using ViennaDotNet.DB.Models.Player;
 using ViennaDotNet.StaticData;
 
-using CICIBIEActivation = ViennaDotNet.StaticData.Catalog.ItemsCatalog.Item.BoostInfo.Effect.Activation;
-using CICIBIEType = ViennaDotNet.StaticData.Catalog.ItemsCatalog.Item.BoostInfo.Effect.Type;
+using CICIBIEActivation = ViennaDotNet.StaticData.Catalog.ItemsCatalogR.Item.BoostInfoR.Effect.ActivationE;
+using CICIBIEType = ViennaDotNet.StaticData.Catalog.ItemsCatalogR.Item.BoostInfoR.Effect.TypeE;
 
 namespace ViennaDotNet.ApiServer.Utils;
 
 public static class BoostUtils
 {
-    public static Catalog.ItemsCatalog.Item.BoostInfo.Effect[] GetActiveEffects(Boosts boosts, long currentTime, Catalog.ItemsCatalog itemsCatalog)
+    public static Catalog.ItemsCatalogR.Item.BoostInfoR.Effect[] GetActiveEffects(Boosts boosts, long currentTime, Catalog.ItemsCatalogR itemsCatalog)
     {
-        Dictionary<string, Catalog.ItemsCatalog.Item.BoostInfo> activeBoostsInfo = [];
-        foreach (var activeBoost in boosts.activeBoosts)
+        Dictionary<string, Catalog.ItemsCatalogR.Item.BoostInfoR> activeBoostsInfo = [];
+        foreach (var activeBoost in boosts.ActiveBoosts)
         {
             if (activeBoost is null)
             {
                 continue;
             }
 
-            if (activeBoost.startTime + activeBoost.duration < currentTime)
+            if (activeBoost.StartTime + activeBoost.Duration < currentTime)
             {
                 continue;
             }
 
-            Catalog.ItemsCatalog.Item? item = itemsCatalog.getItem(activeBoost.itemId);
-            if (item is null || item.boostInfo is null)
+            Catalog.ItemsCatalogR.Item? item = itemsCatalog.GetItem(activeBoost.ItemId);
+            if (item is null || item.BoostInfo is null)
             {
                 continue;
             }
 
-            Catalog.ItemsCatalog.Item.BoostInfo? existingBoostInfo = activeBoostsInfo.GetValueOrDefault(item.boostInfo.name);
-            if (existingBoostInfo is not null && existingBoostInfo.level > item.boostInfo.level)
+            Catalog.ItemsCatalogR.Item.BoostInfoR? existingBoostInfo = activeBoostsInfo.GetValueOrDefault(item.BoostInfo.Name);
+            if (existingBoostInfo is not null && existingBoostInfo.Level > item.BoostInfo.Level)
             {
                 continue;
             }
 
-            activeBoostsInfo[item.boostInfo.name] = item.boostInfo;
+            activeBoostsInfo[item.BoostInfo.Name] = item.BoostInfo;
         }
 
-        LinkedList<Catalog.ItemsCatalog.Item.BoostInfo.Effect> effects = [];
-        foreach (Catalog.ItemsCatalog.Item.BoostInfo boostInfo in activeBoostsInfo.Values)
+        LinkedList<Catalog.ItemsCatalogR.Item.BoostInfoR.Effect> effects = [];
+        foreach (Catalog.ItemsCatalogR.Item.BoostInfoR boostInfo in activeBoostsInfo.Values)
         {
-            foreach (var effect in boostInfo.effects
-                .Where(effect => effect.activation switch
+            foreach (var effect in boostInfo.Effects
+                .Where(effect => effect.Activation switch
                 {
                     CICIBIEActivation.INSTANT => false,
                     CICIBIEActivation.TRIGGERED => true,
@@ -73,7 +73,7 @@ public static class BoostUtils
         bool KeepXp
     );
 
-    public static StatModiferValues GetActiveStatModifiers(Boosts boosts, long currentTime, Catalog.ItemsCatalog itemsCatalog)
+    public static StatModiferValues GetActiveStatModifiers(Boosts boosts, long currentTime, Catalog.ItemsCatalogR itemsCatalog)
     {
         int maxPlayerHealth = 0;
         int attackMultiplier = 0;
@@ -89,31 +89,31 @@ public static class BoostUtils
 
         foreach (var effect in BoostUtils.GetActiveEffects(boosts, currentTime, itemsCatalog))
         {
-            switch (effect.type)
+            switch (effect.Type)
             {
                 case CICIBIEType.HEALTH:
-                    maxPlayerHealth += effect.value;
+                    maxPlayerHealth += effect.Value;
                     break;
                 case CICIBIEType.STRENGTH:
-                    attackMultiplier += effect.value;
+                    attackMultiplier += effect.Value;
                     break;
                 case CICIBIEType.DEFENSE:
-                    defenseMultiplier += effect.value;
+                    defenseMultiplier += effect.Value;
                     break;
                 case CICIBIEType.EATING:
-                    foodMultiplier += effect.value;
+                    foodMultiplier += effect.Value;
                     break;
                 case CICIBIEType.MINING_SPEED:
-                    miningSpeedMultiplier += effect.value;
+                    miningSpeedMultiplier += effect.Value;
                     break;
                 case CICIBIEType.CRAFTING:
-                    craftingMultiplier += effect.value;
+                    craftingMultiplier += effect.Value;
                     break;
                 case CICIBIEType.SMELTING:
-                    smeltingMultiplier += effect.value;
+                    smeltingMultiplier += effect.Value;
                     break;
                 case CICIBIEType.TAPPABLE_RADIUS:
-                    tappableInteractionRadius += effect.value;
+                    tappableInteractionRadius += effect.Value;
                     break;
                 case CICIBIEType.RETENTION_HOTBAR:
                     keepHotbar = true;
@@ -142,12 +142,12 @@ public static class BoostUtils
         );
     }
 
-    public static int GetMaxPlayerHealth(Boosts boosts, long currentTime, Catalog.ItemsCatalog itemsCatalog)
+    public static int GetMaxPlayerHealth(Boosts boosts, long currentTime, Catalog.ItemsCatalogR itemsCatalog)
         => 20 + (20 * BoostUtils.GetActiveStatModifiers(boosts, currentTime, itemsCatalog).MaxPlayerHealthMultiplier) / 100;
 
-    public static Effect BoostEffectToApiResponse(Catalog.ItemsCatalog.Item.BoostInfo.Effect effect, long boostDuration)
+    public static Effect BoostEffectToApiResponse(Catalog.ItemsCatalogR.Item.BoostInfoR.Effect effect, long boostDuration)
     {
-        string effectTypeString = effect.type switch
+        string effectTypeString = effect.Type switch
         {
             CICIBIEType.ADVENTURE_XP => "ItemExperiencePoints",
             CICIBIEType.CRAFTING => "CraftingSpeed",
@@ -166,7 +166,7 @@ public static class BoostUtils
             _ => throw new UnreachableException(),
         };
 
-        string activationString = effect.activation switch
+        string activationString = effect.Activation switch
         {
             CICIBIEActivation.INSTANT => "Instant",
             CICIBIEActivation.TIMED => "Timed",
@@ -176,26 +176,26 @@ public static class BoostUtils
 
         return new Effect(
             effectTypeString,
-            effect.activation == CICIBIEActivation.TIMED ? TimeFormatter.FormatDuration(boostDuration) : null,
-            effect.type == CICIBIEType.RETENTION_BACKPACK || effect.type == CICIBIEType.RETENTION_HOTBAR || effect.type == CICIBIEType.RETENTION_XP ? null : effect.value,
-            effect.type switch
+            effect.Activation == CICIBIEActivation.TIMED ? TimeFormatter.FormatDuration(boostDuration) : null,
+            effect.Type == CICIBIEType.RETENTION_BACKPACK || effect.Type == CICIBIEType.RETENTION_HOTBAR || effect.Type == CICIBIEType.RETENTION_XP ? null : effect.Value,
+            effect.Type switch
             {
                 CICIBIEType.HEALING or CICIBIEType.TAPPABLE_RADIUS => "Increment",
                 CICIBIEType.ADVENTURE_XP or CICIBIEType.CRAFTING or CICIBIEType.DEFENSE or CICIBIEType.EATING or CICIBIEType.HEALTH or CICIBIEType.ITEM_XP or CICIBIEType.MINING_SPEED or CICIBIEType.SMELTING or CICIBIEType.STRENGTH => "Percentage",
                 CICIBIEType.RETENTION_BACKPACK or CICIBIEType.RETENTION_HOTBAR or CICIBIEType.RETENTION_XP => null,
                 _ => throw new UnreachableException(),
             },
-            effect.type == CICIBIEType.CRAFTING || effect.type == CICIBIEType.SMELTING ? "UtilityBlock" : "Player",
-            effect.applicableItemIds,
+            effect.Type == CICIBIEType.CRAFTING || effect.Type == CICIBIEType.SMELTING ? "UtilityBlock" : "Player",
+            effect.ApplicableItemIds,
 
-            effect.type switch
+            effect.Type switch
             {
                 CICIBIEType.ITEM_XP => ["Tappable"],
                 CICIBIEType.ADVENTURE_XP => ["Encounter"],
                 _ => [],
             },
             activationString,
-            effect.type == CICIBIEType.EATING ? "Health" : null
+            effect.Type == CICIBIEType.EATING ? "Health" : null
         );
     }
 }

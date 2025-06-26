@@ -7,60 +7,57 @@ public sealed class SharedBuildplates
 {
     [JsonInclude, JsonPropertyName("sharedBuildplates")]
     public readonly Dictionary<string, SharedBuildplate> _sharedBuildplates = [];
-    public void addSharedBuildplate(string id, SharedBuildplate buildplate)
-    {
-        _sharedBuildplates[id] = buildplate;
-    }
 
-    public SharedBuildplate? getSharedBuildplate(string id)
-    {
-        return _sharedBuildplates.GetOrDefault(id);
-    }
+    public void AddSharedBuildplate(string id, SharedBuildplate buildplate)
+        => _sharedBuildplates[id] = buildplate;
+
+    public SharedBuildplate? GetSharedBuildplate(string id)
+        => _sharedBuildplates.GetOrDefault(id);
 
     public sealed class SharedBuildplate
     {
-        public readonly string playerId;
+        public string PlayerId { get; }
 
-        public readonly int size;
-        public readonly int offset;
-        public readonly int scale;
+        public int Size { get; }
+        public int Offset { get; }
+        public int Scale { get; }
 
-        public readonly bool night;
+        public bool Night { get; }
 
-        public readonly long created;
-        public readonly long buildplateLastModifed;
-        public long lastViewed;
-        public int numberOfTimesViewed;
+        public long Created { get; }
+        public long BuildplateLastModifed { get; }
+        public long LastViewed { get; set; }
+        public int NumberOfTimesViewed { get; set; }
 
-        public readonly HotbarItem?[] hotbar;
+        public HotbarItem?[] Hotbar { get; }
 
-        public readonly string serverDataObjectId;
+        public string ServerDataObjectId { get; }
 
         public SharedBuildplate(string playerId, int size, int offset, int scale, bool night, long created, long buildplateLastModifed, string serverDataObjectId)
         {
-            this.playerId = playerId;
+            PlayerId = playerId;
 
-            this.size = size;
-            this.offset = offset;
-            this.scale = scale;
+            Size = size;
+            Offset = offset;
+            Scale = scale;
 
-            this.night = night;
+            Night = night;
 
-            this.created = created;
-            this.buildplateLastModifed = buildplateLastModifed;
-            this.lastViewed = 0;
-            this.numberOfTimesViewed = 0;
+            Created = created;
+            BuildplateLastModifed = buildplateLastModifed;
+            LastViewed = 0;
+            NumberOfTimesViewed = 0;
 
-            this.hotbar = new HotbarItem[7];
+            Hotbar = new HotbarItem[7];
 
-            this.serverDataObjectId = serverDataObjectId;
+            ServerDataObjectId = serverDataObjectId;
         }
 
         public sealed record HotbarItem(
-                string uuid,
-                int count,
-                string? instanceId,
-                int wear
+            string Uuid,
+            int Count,
+            string? InstanceId,
+            int Wear
         );
     }
 }

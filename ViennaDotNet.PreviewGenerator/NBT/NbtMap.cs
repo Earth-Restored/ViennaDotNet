@@ -18,12 +18,6 @@ public class NbtMap// : IDictionary<string, object>
     public int Count => _map.Count;
 
     [JsonIgnore]
-    private ICollection<string> _keySet;
-    [JsonIgnore]
-    private ICollection<KeyValuePair<string, object>> _entrySet;
-    [JsonIgnore]
-    private ICollection<object> _values;
-    [JsonIgnore]
     private bool hashCodeGenerated;
     [JsonIgnore]
     private int hashCode;
@@ -35,63 +29,42 @@ public class NbtMap// : IDictionary<string, object>
 
     internal NbtMap(IDictionary<string, object> map)
     {
-        this._map = map;
+        _map = map;
     }
 
-    public static NbtMapBuilder builder()
-    {
-        return [];
-    }
+    public static NbtMapBuilder builder() => [];
 
-    public static NbtMap fromMap(IDictionary<string, object> map)
-    {
-        return new NbtMap(map.AsReadOnly());
-    }
+    public static NbtMap fromMap(IDictionary<string, object> map) => new NbtMap(map.AsReadOnly());
 
-    public NbtMapBuilder toBuilder()
-    {
-        return NbtMapBuilder.from(this);
-    }
+    public NbtMapBuilder toBuilder() => NbtMapBuilder.from(this);
 
-    public bool containsKey(string key)
+    public bool ContainsKey(string key)
         => _map.ContainsKey(key);
-    public bool containsKey(string key, NbtType type)
+
+    public bool ContainsKey(string key, NbtType type)
     {
         if (_map.TryGetValue(key, out object? o))
-            return o.GetType() == type.getTagClass();
+            return o.GetType() == type.TagType;
         else
             return false;
     }
 
-    public object get(string key)
-    {
-        return NbtUtils.copyObject(_map.GetOrDefault(key));
-    }
+    public object Get(string key)
+        => NbtUtils.Copy(_map.GetOrDefault(key));
 
-    public ICollection<string> keySet()
-    {
-        if (_keySet is null) _keySet = _map.Keys;
-        return _keySet;
-    }
+    public ICollection<string> KeySet()
+        => _map.Keys;
 
-    public ICollection<KeyValuePair<string, object>> entrySet()
-    {
-        if (_entrySet is null) _entrySet = _map;
-        return _entrySet;
-    }
+    public ICollection<KeyValuePair<string, object>> EntrySet()
+        => _map;
 
-    public ICollection<object> values()
-    {
-        if (_values is null) _values = _map.Values;
-        return _values;
-    }
+    public ICollection<object> Values()
+        => _map.Values;
 
-    public bool getbool(string key)
-    {
-        return getbool(key, false);
-    }
+    public bool Getbool(string key) 
+        => Getbool(key, false);
 
-    public bool getbool(string key, bool defaultValue)
+    public bool Getbool(string key, bool defaultValue)
     {
         object? tag = _map.GetOrDefault(key);
         if (tag is byte b)
@@ -100,19 +73,9 @@ public class NbtMap// : IDictionary<string, object>
         return defaultValue;
     }
 
-    public void listenForbool(string key, Action<bool> consumer)
-    {
-        object? tag = _map.GetOrDefault(key);
-        if (tag is byte b)
-            consumer.Invoke(b != 0);
-    }
+    public byte GetByte(string key) => GetByte(key, 0);
 
-    public byte getByte(string key)
-    {
-        return getByte(key, 0);
-    }
-
-    public byte getByte(string key, byte defaultValue)
+    public byte GetByte(string key, byte defaultValue)
     {
         object? tag = _map.GetOrDefault(key);
         if (tag is byte b)
@@ -121,19 +84,9 @@ public class NbtMap// : IDictionary<string, object>
         return defaultValue;
     }
 
-    public void listenForByte(string key, Action<byte> consumer)
-    {
-        object? tag = _map.GetOrDefault(key);
-        if (tag is byte b)
-            consumer.Invoke(b);
-    }
+    public short GetShort(string key) => GetShort(key, 0);
 
-    public short getShort(string key)
-    {
-        return getShort(key, 0);
-    }
-
-    public short getShort(string key, short defaultValue)
+    public short GetShort(string key, short defaultValue)
     {
         object? tag = _map.GetOrDefault(key);
         if (tag is short s)
@@ -142,19 +95,9 @@ public class NbtMap// : IDictionary<string, object>
         return defaultValue;
     }
 
-    public void listenForShort(string key, Action<short> consumer)
-    {
-        object? tag = _map.GetOrDefault(key);
-        if (tag is short s)
-            consumer.Invoke(s);
-    }
+    public int GetInt(string key) => GetInt(key, 0);
 
-    public int getInt(string key)
-    {
-        return getInt(key, 0);
-    }
-
-    public int getInt(string key, int defaultValue)
+    public int GetInt(string key, int defaultValue)
     {
         object? tag = _map.GetOrDefault(key);
         if (tag is int i)
@@ -163,19 +106,9 @@ public class NbtMap// : IDictionary<string, object>
         return defaultValue;
     }
 
-    public void listenForInt(string key, Action<int> consumer)
-    {
-        object? tag = _map.GetOrDefault(key);
-        if (tag is int i)
-            consumer.Invoke(i);
-    }
+    public long GetLong(string key) => GetLong(key, 0L);
 
-    public long getLong(string key)
-    {
-        return getLong(key, 0L);
-    }
-
-    public long getLong(string key, long defaultValue)
+    public long GetLong(string key, long defaultValue)
     {
         object? tag = _map.GetOrDefault(key);
         if (tag is long l)
@@ -184,19 +117,9 @@ public class NbtMap// : IDictionary<string, object>
         return defaultValue;
     }
 
-    public void listenForLong(string key, Action<long> consumer)
-    {
-        object? tag = _map.GetOrDefault(key);
-        if (tag is long l)
-            consumer.Invoke(l);
-    }
+    public float GetFloat(string key) => GetFloat(key, 0F);
 
-    public float getFloat(string key)
-    {
-        return getFloat(key, 0F);
-    }
-
-    public float getFloat(string key, float defaultValue)
+    public float GetFloat(string key, float defaultValue)
     {
         object? tag = _map.GetOrDefault(key);
         if (tag is float f)
@@ -205,19 +128,9 @@ public class NbtMap// : IDictionary<string, object>
         return defaultValue;
     }
 
-    public void listenForFloat(string key, Action<float> consumer)
-    {
-        object? tag = _map.GetOrDefault(key);
-        if (tag is float f)
-            consumer.Invoke(f);
-    }
+    public double GetDouble(string key) => GetDouble(key, 0.0);
 
-    public double getDouble(string key)
-    {
-        return getDouble(key, 0.0);
-    }
-
-    public double getDouble(string key, double defaultValue)
+    public double GetDouble(string key, double defaultValue)
     {
         object? tag = _map.GetOrDefault(key);
         if (tag is double d)
@@ -226,19 +139,9 @@ public class NbtMap// : IDictionary<string, object>
         return defaultValue;
     }
 
-    public void listenForDouble(string key, Action<double> consumer)
-    {
-        object? tag = _map.GetOrDefault(key);
-        if (tag is double d)
-            consumer.Invoke(d);
-    }
+    public string? GetString(string key) => Getstring(key, "");
 
-    public string? getString(string key)
-    {
-        return getstring(key, "");
-    }
-
-    public string? getstring(string key, string? defaultValue)
+    public string? Getstring(string key, string? defaultValue)
     {
         object? tag = _map.GetOrDefault(key);
         if (tag is string s)
@@ -247,19 +150,9 @@ public class NbtMap// : IDictionary<string, object>
         return defaultValue;
     }
 
-    public void listenForstring(string key, Action<string> consumer)
-    {
-        object? tag = _map.GetOrDefault(key);
-        if (tag is string s)
-            consumer.Invoke(s);
-    }
+    public byte[]? GetByteArray(string key) => GetByteArray(key, EMPTY_BYTE_ARRAY);
 
-    public byte[]? getByteArray(string key)
-    {
-        return getByteArray(key, EMPTY_BYTE_ARRAY);
-    }
-
-    public byte[]? getByteArray(string key, byte[]? defaultValue)
+    public byte[]? GetByteArray(string key, byte[]? defaultValue)
     {
         object? tag = _map.GetOrDefault(key);
         if (tag is byte[] bytes)
@@ -268,19 +161,9 @@ public class NbtMap// : IDictionary<string, object>
         return defaultValue;
     }
 
-    public void listenForByteArray(string key, Action<byte[]> consumer)
-    {
-        object? tag = _map.GetOrDefault(key);
-        if (tag is byte[] bytes)
-            consumer.Invoke((byte[])bytes.Clone());
-    }
+    public int[]? GetIntArray(string key) => GetIntArray(key, EMPTY_INT_ARRAY);
 
-    public int[]? getIntArray(string key)
-    {
-        return getIntArray(key, EMPTY_INT_ARRAY);
-    }
-
-    public int[]? getIntArray(string key, int[]? defaultValue)
+    public int[]? GetIntArray(string key, int[]? defaultValue)
     {
         object? tag = _map.GetOrDefault(key);
         if (tag is int[] ints)
@@ -289,19 +172,9 @@ public class NbtMap// : IDictionary<string, object>
         return defaultValue;
     }
 
-    public void listenForIntArray(string key, Action<int[]> consumer)
-    {
-        object? tag = _map.GetOrDefault(key);
-        if (tag is int[] ints)
-            consumer.Invoke((int[])ints.Clone());
-    }
+    public long[]? GetLongArray(string key) => GetLongArray(key, EMPTY_LONG_ARRAY);
 
-    public long[]? getLongArray(string key)
-    {
-        return getLongArray(key, EMPTY_LONG_ARRAY);
-    }
-
-    public long[]? getLongArray(string key, long[]? defaultValue)
+    public long[]? GetLongArray(string key, long[]? defaultValue)
     {
         object? tag = _map.GetOrDefault(key);
         if (tag is long[] longs)
@@ -310,19 +183,9 @@ public class NbtMap// : IDictionary<string, object>
         return defaultValue;
     }
 
-    public void listenForLongArray(string key, Action<long[]> consumer)
-    {
-        object? tag = _map.GetOrDefault(key);
-        if (tag is long[] longs)
-            consumer.Invoke((long[])longs.Clone());
-    }
+    public NbtMap? GetCompound(string key) => GetCompound(key, EMPTY);
 
-    public NbtMap? getCompound(string key)
-    {
-        return getCompound(key, EMPTY);
-    }
-
-    public NbtMap? getCompound(string key, NbtMap? defaultValue)
+    public NbtMap? GetCompound(string key, NbtMap? defaultValue)
     {
         object? tag = _map.GetOrDefault(key);
         if (tag is NbtMap nm)
@@ -331,20 +194,13 @@ public class NbtMap// : IDictionary<string, object>
         return defaultValue;
     }
 
-    public void listenForCompound(string key, Action<NbtMap> consumer)
-    {
-        object? tag = _map.GetOrDefault(key);
-        if (tag is NbtMap nm)
-            consumer.Invoke(nm);
-    }
-
-    //    public <T> List<T> getList(string key, NbtType<T> type)
+    //    public <T> List<T> GetList(string key, NbtType<T> type)
     //    {
     //        return this.getList(key, type, Collections.emptyList());
     //    }
 
     //    @SuppressWarnings("unchecked")
-    //public <T> List<T> getList(string key, NbtType<T> type, @Nullable List<T> defaultValue)
+    //public <T> List<T> GetList(string key, NbtType<T> type, @Nullable List<T> defaultValue)
     //    {
     //        object? tag = map.GetOrDefault(key);
     //        if (tag is NbtList && ((NbtList <?>) tag).getType() == type) {
@@ -353,35 +209,18 @@ public class NbtMap// : IDictionary<string, object>
     //        return defaultValue;
     //    }
 
-    //    @SuppressWarnings("unchecked")
-    //public <T> void listenForList(string key, NbtType<T> type, Consumer<List<T>> consumer)
-    //    {
-    //        object? tag = map.GetOrDefault(key);
-    //        if (tag is NbtList<?> && ((NbtList <?>) tag).getType() == type) {
-    //            consumer.accept((NbtList<T>)tag);
-    //        }
-    //    }
-
-    //    public Number getNumber(string key)
+    //    public Number GetNumber(string key)
     //    {
     //        return getNumber(key, 0);
     //    }
 
-    //    public Number getNumber(string key, Number defaultValue)
+    //    public Number GetNumber(string key, Number defaultValue)
     //    {
     //        object? tag = map.GetOrDefault(key);
     //        if (tag is Number) {
     //            return (Number)tag;
     //        }
     //        return defaultValue;
-    //    }
-
-    //    public void listenForNumber(string key, NumberConsumer consumer)
-    //    {
-    //        object? tag = map.GetOrDefault(key);
-    //        if (tag is Number) {
-    //            consumer.accept((Number)tag);
-    //        }
     //    }
 
     public override bool Equals(object? o)
@@ -399,18 +238,18 @@ public class NbtMap// : IDictionary<string, object>
 
         try
         {
-            foreach (var e in entrySet())
+            foreach (var e in EntrySet())
             {
                 string key = e.Key;
                 object value = e.Value;
                 if (value is null)
                 {
-                    if (!(m.get(key) is null && m.containsKey(key)))
+                    if (!(m.Get(key) is null && m.ContainsKey(key)))
                         return false;
                 }
                 else
                 {
-                    if (!ObjectExtensions.DeepEquals(value, m.get(key)))
+                    if (!ObjectExtensions.DeepEquals(value, m.Get(key)))
                         return false;
                 }
             }
@@ -438,11 +277,9 @@ public class NbtMap// : IDictionary<string, object>
     }
 
     public override string ToString()
-    {
-        return mapToString(_map);
-    }
+        => MapToString(_map);
 
-    internal static string mapToString(IDictionary<string, object> map)
+    internal static string MapToString(IDictionary<string, object> map)
     {
         if (map.Count == 0)
             return "{}";
@@ -456,9 +293,9 @@ public class NbtMap// : IDictionary<string, object>
         {
             var e = enumerator.Current;
             string key = e.Key;
-            string value = NbtUtils.toString(e.Value);
+            string value = NbtUtils.ToString(e.Value);
 
-            string str = NbtUtils.indent("\"" + key + "\": " + value);
+            string str = NbtUtils.Indent("\"" + key + "\": " + value);
             sb.Append(str);
             if (!enumerator.MoveNext())
                 return sb.Append('\n').Append('}').ToString();

@@ -5,34 +5,33 @@ namespace ViennaDotNet.DB.Models.Player;
 
 public sealed class Hotbar
 {
-    [JsonInclude]
-    public Item?[] items;
+    public Item?[] Items { get; set; }
 
     public Hotbar()
     {
-        items = new Item[7];
+        Items = new Item[7];
     }
 
-    public void limitToInventory(Inventory inventory)
+    public void LimitToInventory(Inventory inventory)
     {
         Dictionary<string, int?> usedStackableItemCounts = [];
         Dictionary<string, HashSet<string>> usedNonStackableItemInstances = [];
 
-        for (int index = 0; index < items.Length; index++)
+        for (int index = 0; index < Items.Length; index++)
         {
-            Item? item = items[index];
+            Item? item = Items[index];
             if (item is null)
             {
                 continue;
             }
 
-            if (item.instanceId is not null)
+            if (item.InstanceId is not null)
             {
-                if (inventory.getItemInstance(item.uuid, item.instanceId) is not null)
+                if (inventory.GetItemInstance(item.Uuid, item.InstanceId) is not null)
                 {
-                    var usedItemInstances = usedNonStackableItemInstances.ComputeIfAbsent(item.uuid, uuid => [])!;
+                    var usedItemInstances = usedNonStackableItemInstances.ComputeIfAbsent(item.Uuid, uuid => [])!;
 
-                    if (!usedItemInstances.Add(item.instanceId))
+                    if (!usedItemInstances.Add(item.InstanceId))
                     {
                         item = null;
                     }
@@ -44,18 +43,18 @@ public sealed class Hotbar
             }
             else
             {
-                int inventoryCount = inventory.getItemCount(item.uuid);
+                int inventoryCount = inventory.GetItemCount(item.Uuid);
 
-                int usedCount = usedStackableItemCounts.GetValueOrDefault(item.uuid) ?? 0;
+                int usedCount = usedStackableItemCounts.GetValueOrDefault(item.Uuid) ?? 0;
                 if (inventoryCount - usedCount > 0)
                 {
-                    if (inventoryCount - usedCount < item.count)
+                    if (inventoryCount - usedCount < item.Count)
                     {
-                        item = new Item(item.uuid, inventoryCount - usedCount, null);
+                        item = new Item(item.Uuid, inventoryCount - usedCount, null);
                     }
 
-                    usedCount += item.count;
-                    usedStackableItemCounts[item.uuid] = usedCount;
+                    usedCount += item.Count;
+                    usedStackableItemCounts[item.Uuid] = usedCount;
                 }
                 else
                 {
@@ -63,13 +62,13 @@ public sealed class Hotbar
                 }
             }
 
-            items[index] = item;
+            Items[index] = item;
         }
     }
 
     public sealed record Item(
-        string uuid,
-        int count,
-        string? instanceId
+        string Uuid,
+        int Count,
+        string? InstanceId
     );
 }

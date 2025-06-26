@@ -4,42 +4,44 @@ namespace ViennaDotNet.EventBus.Client;
 
 public sealed class RequestHandler
 {
-    private readonly EventBusClient client;
-    private readonly int channelId;
-    private readonly string queueName;
+    private readonly EventBusClient _client;
+    private readonly int _channelId;
+    private readonly string _queueName;
 
-    private readonly IHandler handler;
+    private readonly IHandler _handler;
 
-    private volatile bool closed = false;
+    private volatile bool _closed = false;
 
     internal RequestHandler(EventBusClient client, int channelId, string queueName, IHandler handler)
     {
-        this.client = client;
-        this.channelId = channelId;
-        this.queueName = queueName;
-        this.handler = handler;
+        _client = client;
+        _channelId = channelId;
+        _queueName = queueName;
+        _handler = handler;
     }
 
-    public void close()
+    public void Close()
     {
-        closed = true;
-        client.removeSubscriber(channelId);
-        client.sendMessage(channelId, "CLOSE");
+        _closed = true;
+        _client.RemoveSubscriber(_channelId);
+        _client.SendMessage(_channelId, "CLOSE");
     }
 
-    internal async Task<bool> handleMessage(string message)
+    internal async Task<bool> HandleMessage(string message)
     {
         if (message == "ERR")
         {
-            close();
-            handler.error();
+            Close();
+            _handler.Error();
             return true;
         }
         else
         {
             string[] fields = message.Split(':', 4);
             if (fields.Length != 4)
+            {
                 return false;
+            }
 
             string requestIdString = fields[0];
             int requestId;
@@ -53,7 +55,9 @@ public sealed class RequestHandler
             }
 
             if (requestId <= 0)
+            {
                 return false;
+            }
 
             string timestampString = fields[1];
             long timestamp;
@@ -67,21 +71,23 @@ public sealed class RequestHandler
             }
 
             if (timestamp < 0)
+            {
                 return false;
+            }
 
             string type = fields[2];
             string data = fields[3];
 
             // TODO: remove requestAsync, beware awating it causes problems
-            TaskCompletionSource<string?> responseCompletableFuture = handler.requestAsync(new Request(timestamp, type, data));
+            TaskCompletionSource<string?> responseCompletableFuture = _handler.RequestAsync(new Request(timestamp, type, data));
             responseCompletableFuture.Task.ContinueWith(task =>
             {
-                if (!closed)
+                if (!_closed)
                 {
                     if (task.Result is not null)
-                        client.sendMessage(channelId, "REP " + requestId + ":" + task.Result);
+                        _client.SendMessage(_channelId, "REP " + requestId + ":" + task.Result);
                     else
-                        client.sendMessage(channelId, "NREP " + requestId);
+                        _client.SendMessage(_channelId, "NREP " + requestId);
                 }
             }).Forget();
 
@@ -89,58 +95,58 @@ public sealed class RequestHandler
         }
     }
 
-    internal void error()
+    internal void Error()
     {
-        closed = true;
-        handler.error();
+        _closed = true;
+        _handler.Error();
     }
 
     public interface IHandler
     {
-        TaskCompletionSource<string?> requestAsync(Request request)
+        TaskCompletionSource<string?> RequestAsync(Request request)
         {
             TaskCompletionSource<string?> completableFuture = new();
             new Thread(() =>
             {
-                completableFuture.SetResult(this.request(request).Result);
+                completableFuture.SetResult(Request(request).Result);
             }).Start();
             return completableFuture;
         }
 
-        Task<string?> request(Request request);
+        Task<string?> Request(Request request);
 
-        void error();
+        void Error();
     }
 
     public class Handler : IHandler
     {
-        public Func<Request, Task<string?>>? Request;
-        public Action? Error;
+        public Func<Request, Task<string?>>? OnRequest;
+        public Action? OnError;
 
-        public Handler(Func<Request, Task<string?>>? _request, Action? _error)
+        public Handler(Func<Request, Task<string?>>? onRequest, Action? onError)
         {
-            Request = _request;
-            Error = _error;
+            OnRequest = onRequest;
+            OnError = onError;
         }
 
-        public Task<string?> request(Request request)
-            => Request?.Invoke(request) ?? Task.FromResult<string?>(null);
+        public Task<string?> Request(Request request)
+            => OnRequest?.Invoke(request) ?? Task.FromResult<string?>(null);
 
-        public void error()
-            => Error?.Invoke();
+        public void Error()
+            => OnError?.Invoke();
     }
 
     public sealed class Request
     {
-        public readonly long timestamp;
-        public readonly string type;
-        public readonly string data;
+        public readonly long Timestamp;
+        public readonly string Type;
+        public readonly string Data;
 
         public Request(long timestamp, string type, string data)
         {
-            this.timestamp = timestamp;
-            this.type = type;
-            this.data = data;
+            Timestamp = timestamp;
+            Type = type;
+            Data = data;
         }
     }
 }

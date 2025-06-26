@@ -4,39 +4,39 @@ namespace ViennaDotNet.EventBus.Client;
 
 public sealed partial class RequestSender
 {
-    private readonly EventBusClient client;
-    private readonly int channelId;
+    private readonly EventBusClient _client;
+    private readonly int _channelId;
 
     private readonly object _lock = new();
 
     private bool _closed = false;
 
-    private readonly LinkedList<string> queuedRequests = new();
-    private readonly LinkedList<TaskCompletionSource<string?>> queuedRequestResponses = new();
-    private TaskCompletionSource<string?>? currentPendingResponse = null;
+    private readonly LinkedList<string> _queuedRequests = new();
+    private readonly LinkedList<TaskCompletionSource<string?>> _queuedRequestResponses = new();
+    private TaskCompletionSource<string?>? _currentPendingResponse = null;
 
     internal RequestSender(EventBusClient client, int channelId)
     {
-        this.client = client;
-        this.channelId = channelId;
+        _client = client;
+        _channelId = channelId;
     }
 
-    public void close()
+    public void Close()
     {
-        client.removeRequestSender(channelId);
-        client.sendMessage(channelId, "CLOSE");
-        closed();
+        _client.RemoveRequestSender(_channelId);
+        _client.SendMessage(_channelId, "CLOSE");
+        Closed();
     }
 
-    public TaskCompletionSource<string?> request(string queueName, string type, string data)
+    public TaskCompletionSource<string?> Request(string queueName, string type, string data)
     {
-        if (!validateQueueName(queueName))
+        if (!ValidateQueueName(queueName))
             throw new ArgumentException("Queue name contains invalid characters");
 
-        if (!validateType(type))
+        if (!ValidateType(type))
             throw new ArgumentException("Type contains invalid characters");
 
-        if (!validateData(data))
+        if (!ValidateData(data))
             throw new ArgumentException("Data contains invalid characters");
 
         string requestMessage = "REQ " + queueName + ":" + type + ":" + data;
@@ -48,10 +48,10 @@ public sealed partial class RequestSender
             completableFuture.SetResult(null);
         else
         {
-            queuedRequests.AddLast(requestMessage);
-            queuedRequestResponses.AddLast(completableFuture);
-            if (currentPendingResponse is null)
-                sendNextRequest();
+            _queuedRequests.AddLast(requestMessage);
+            _queuedRequestResponses.AddLast(completableFuture);
+            if (_currentPendingResponse is null)
+                SendNextRequest();
         }
 
         Monitor.Exit(_lock);
@@ -59,20 +59,20 @@ public sealed partial class RequestSender
         return completableFuture;
     }
 
-    public void flush()
+    public void Flush()
     {
         Monitor.Enter(_lock);
-        var task = queuedRequestResponses.Count == 0 ? currentPendingResponse : queuedRequestResponses.Last!.Value;
+        var task = _queuedRequestResponses.Count == 0 ? _currentPendingResponse : _queuedRequestResponses.Last!.Value;
         Monitor.Exit(_lock);
 
         task?.Task.Wait();
     }
 
-    internal Task<bool> handleMessage(string message)
+    internal Task<bool> HandleMessage(string message)
     {
         if (message == "ERR")
         {
-            close();
+            Close();
             return Task.FromResult(true);
         }
         else if (message == "ACK")
@@ -102,12 +102,12 @@ public sealed partial class RequestSender
             try
             {
                 Monitor.Enter(_lock);
-                if (currentPendingResponse is not null)
+                if (_currentPendingResponse is not null)
                 {
-                    currentPendingResponse.SetResult(response);
-                    currentPendingResponse = null;
-                    if (queuedRequests.Count != 0)
-                        sendNextRequest();
+                    _currentPendingResponse.SetResult(response);
+                    _currentPendingResponse = null;
+                    if (_queuedRequests.Count != 0)
+                        SendNextRequest();
 
                     return Task.FromResult(true);
                 }
@@ -121,44 +121,44 @@ public sealed partial class RequestSender
         }
     }
 
-    private void sendNextRequest()
+    private void SendNextRequest()
     {
-        string message = queuedRequests.First!.Value;
-        queuedRequests.RemoveFirst();
-        client.sendMessage(channelId, message);
-        currentPendingResponse = queuedRequestResponses.First!.Value;
-        queuedRequestResponses.RemoveFirst();
+        string message = _queuedRequests.First!.Value;
+        _queuedRequests.RemoveFirst();
+        _client.SendMessage(_channelId, message);
+        _currentPendingResponse = _queuedRequestResponses.First!.Value;
+        _queuedRequestResponses.RemoveFirst();
     }
 
-    internal void closed()
+    internal void Closed()
     {
         Monitor.Enter(_lock);
 
         _closed = true;
 
-        if (currentPendingResponse is not null)
+        if (_currentPendingResponse is not null)
         {
-            currentPendingResponse.TrySetResult(null);
-            currentPendingResponse = null;
+            _currentPendingResponse.TrySetResult(null);
+            _currentPendingResponse = null;
         }
 
-        foreach (var completableFuture in queuedRequestResponses)
+        foreach (var completableFuture in _queuedRequestResponses)
         {
             completableFuture.TrySetResult(null);
         }
 
-        queuedRequestResponses.Clear();
-        queuedRequests.Clear();
+        _queuedRequestResponses.Clear();
+        _queuedRequests.Clear();
         Monitor.Exit(_lock);
     }
 
-    private static bool validateQueueName(string queueName)
+    private static bool ValidateQueueName(string queueName)
         => !string.IsNullOrWhiteSpace(queueName) && queueName.Length != 0 && !GetRegex1().IsMatch(queueName) && !GetRegex2().IsMatch(queueName);
 
-    private static bool validateType(string type)
+    private static bool ValidateType(string type)
         => !string.IsNullOrWhiteSpace(type) && type.Length != 0 && !GetRegex1().IsMatch(type) && !GetRegex2().IsMatch(type);
 
-    private static bool validateData(string str)
+    private static bool ValidateData(string str)
     {
         for (int i = 0; i < str.Length; i++)
         {

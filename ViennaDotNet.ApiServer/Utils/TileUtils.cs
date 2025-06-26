@@ -29,8 +29,8 @@ internal static class TileUtils
         }
 
         Log.Information("Generating preview");
-        _requestSender ??= Program.eventBus.addRequestSender();
-        string? tilePng64 = await _requestSender.request("tile", "renderTile", Json.Serialize(new RenderTileRequest(tileX, tileY, 16))).Task;
+        _requestSender ??= Program.eventBus.AddRequestSender();
+        string? tilePng64 = await _requestSender.Request("tile", "renderTile", Json.Serialize(new RenderTileRequest(tileX, tileY, 16))).Task;
 
         if (tilePng64 is null)
         {
@@ -40,7 +40,7 @@ internal static class TileUtils
 
         byte[] tilePng = Convert.FromBase64String(tilePng64);
 
-        tileObjectId = (await objectStore.store(tilePng).Task) as string;
+        tileObjectId = (await objectStore.Store(tilePng).Task) as string;
 
         if (string.IsNullOrEmpty(tileObjectId))
         {
@@ -61,7 +61,7 @@ internal static class TileUtils
 
     private static async Task<bool> TryWriteTileFromObject(string tileObjectId, Stream dest, CancellationToken cancellationToken)
     {
-        byte[]? tilePng = (await objectStore.get(tileObjectId).Task) as byte[];
+        byte[]? tilePng = (await objectStore.Get(tileObjectId).Task) as byte[];
 
         if (tilePng is null)
         {

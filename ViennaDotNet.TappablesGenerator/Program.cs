@@ -75,7 +75,7 @@ internal static class Program
         EventBusClient eventBusClient;
         try
         {
-            eventBusClient = EventBusClient.create(options.EventBusConnectionString);
+            eventBusClient = EventBusClient.Create(options.EventBusConnectionString);
         }
         catch (EventBusClientException ex)
         {
@@ -92,7 +92,7 @@ internal static class Program
         ActiveTiles activeTiles = new ActiveTiles(eventBusClient, new ActiveTiles.ActiveTileListener(
             async activeTiles =>
             {
-                await spawner[0].spawnTiles(activeTiles);
+                await spawner[0].SpawnTiles(activeTiles);
             },
             async activeTile =>
             {
@@ -100,7 +100,7 @@ internal static class Program
             }
         ));
         spawner[0] = new Spawner(eventBusClient, activeTiles, tappableGenerator, encounterGenerator);
-        await spawner[0].run();
+        await spawner[0].Run();
 
         return 0;
     }

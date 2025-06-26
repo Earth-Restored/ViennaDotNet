@@ -19,7 +19,7 @@ public static class JavaBlocks
 
     static JavaBlocks()
     {
-        DataFile.Load("./registry/blocks_java.json", jToken =>
+        DataFile.Load("./staticdata/registry/blocks_java.json", jToken =>
         {
             JsonArray jArray = (JsonArray)jToken;
 
@@ -37,7 +37,7 @@ public static class JavaBlocks
 
                 try
                 {
-                    BedrockMapping? bedrockMapping = readBedrockMapping((JsonObject)element["bedrock"]!, jArray);
+                    BedrockMapping? bedrockMapping = ReadBedrockMapping((JsonObject)element["bedrock"]!, jArray);
                     if (bedrockMapping is null)
                     {
                         Log.Debug($"Ignoring Java block {name}");
@@ -54,7 +54,7 @@ public static class JavaBlocks
             }
         });
 
-        DataFile.Load("./registry/blocks_java_nonvanilla.json", jToken =>
+        DataFile.Load("./staticdata/registry/blocks_java_nonvanilla.json", jToken =>
         {
             JsonArray jArray = (JsonArray)jToken;
 
@@ -79,7 +79,7 @@ public static class JavaBlocks
 
                     try
                     {
-                        BedrockMapping? bedrockMapping = readBedrockMapping((JsonObject)stateElement["bedrock"]!, null);
+                        BedrockMapping? bedrockMapping = ReadBedrockMapping((JsonObject)stateElement["bedrock"]!, null);
                         if (bedrockMapping is null)
                         {
                             Log.Debug($"Ignoring Java block {name}");
@@ -102,7 +102,7 @@ public static class JavaBlocks
         });
     }
 
-    private static BedrockMapping? readBedrockMapping(JsonObject bedrockMappingObject, JsonArray? javaBlocksArray)
+    private static BedrockMapping? ReadBedrockMapping(JsonObject bedrockMappingObject, JsonArray? javaBlocksArray)
     {
         if (bedrockMappingObject.TryGetPropertyValue("ignore", out var ignoreToken) && ignoreToken!.GetValue<bool>())
             return null;
@@ -131,7 +131,7 @@ public static class JavaBlocks
             }
         }
 
-        int id = BedrockBlocks.getId(name, state);
+        int id = BedrockBlocks.GetId(name, state);
         if (id == -1)
         {
             throw new BedrockMappingFailException("Cannot find Bedrock block with provided name and state");
@@ -139,7 +139,7 @@ public static class JavaBlocks
 
         bool waterlogged = bedrockMappingObject.TryGetPropertyValue("waterlogged", out var waterloggedToken) && waterloggedToken!.GetValue<bool>();
 
-        BedrockMapping.BlockEntity? blockEntity = null;
+        BedrockMapping.BlockEntityR? blockEntity = null;
         if (bedrockMappingObject.TryGetPropertyValue("block_entity", out var blockEntityToken))
         {
             JsonObject? blockEntityObject = blockEntityToken as JsonObject;
@@ -170,7 +170,7 @@ public static class JavaBlocks
                                     .FirstOrDefault()!.Map(element =>
                                     {
                                         NbtMapBuilder builder = NbtMap.builder();
-                                        builder.putString("name", element["name"]!.GetValue<string>()!);
+                                        builder.PutString("name", element["name"]!.GetValue<string>()!);
                                         if (element.TryGetPropertyValue("state", out var stateToken))
                                         {
                                             Debug.Assert(stateToken is not null);
@@ -182,18 +182,18 @@ public static class JavaBlocks
 
                                                 var stateElementType = stateElement.GetValueKind();
                                                 if (stateElementType == JsonValueKind.String)
-                                                    stateBuilder.putString(key, stateElement.GetValue<string>()!);
+                                                    stateBuilder.PutString(key, stateElement.GetValue<string>()!);
                                                 else if (stateElementType == JsonValueKind.True)
-                                                    stateBuilder.putInt(key, 1);
+                                                    stateBuilder.PutInt(key, 1);
                                                 else if (stateElementType == JsonValueKind.False)
-                                                    stateBuilder.putInt(key, 0);
+                                                    stateBuilder.PutInt(key, 0);
                                                 else
-                                                    stateBuilder.putInt(key, stateElement.GetValue<int>());
+                                                    stateBuilder.PutInt(key, stateElement.GetValue<int>());
                                             });
-                                            builder.putCompound("states", stateBuilder.build());
+                                            builder.PutCompound("states", stateBuilder.Build());
                                         }
 
-                                        return builder.build();
+                                        return builder.Build();
                                     });
                             }
 
@@ -207,7 +207,7 @@ public static class JavaBlocks
                     break;
                 case "moving_block":
                     {
-                        blockEntity = new BedrockMapping.BlockEntity(type);
+                        blockEntity = new BedrockMapping.BlockEntityR(type);
                     }
 
                     break;
@@ -222,7 +222,7 @@ public static class JavaBlocks
             }
         }
 
-        BedrockMapping.ExtraData? extraData = null;
+        BedrockMapping.ExtraDataR? extraData = null;
         if (bedrockMappingObject.TryGetPropertyValue("extra_data", out var extra_dataToken))
         {
             JsonObject? extraDataObject = extra_dataToken as JsonObject;
@@ -252,30 +252,25 @@ public static class JavaBlocks
         }
     }
 
-    public static int getMaxVanillaBlockId()
+    public static int GetMaxVanillaBlockId()
     {
         if (map.Count == 0) return -1;
         else return map.Keys.Max();
     }
 
-    public static string[]? getStatesForNonVanillaBlock(string name)
+    public static string[]? GetStatesForNonVanillaBlock(string name)
     {
         LinkedList<string>? states = nonVanillaStatesList.GetOrDefault(name, null);
         return states?.ToArray();
     }
 
     [Obsolete]
-    public static string? getName(int id)
-    {
-        return getName(id, null);
-    }
+    public static string? GetName(int id) => getName(id, null);
 
     [Obsolete]
-    public static BedrockMapping? getBedrockMapping(int javaId)
-    {
-        return getBedrockMapping(javaId, null);
-    }
+    public static BedrockMapping? GetBedrockMapping(int javaId) => GetBedrockMapping(javaId, null);
 
+    // TODO?: FabricRegistryManager
     public static string? getName(int id, /*FabricRegistryManager?*/object? fabricRegistryManager)
     {
         string? name = map.GetOrDefault(id, null);
@@ -285,7 +280,8 @@ public static class JavaBlocks
         return name;
     }
 
-    public static BedrockMapping? getBedrockMapping(int javaId, /*FabricRegistryManager?*/object? fabricRegistryManager)
+    // TODO?: FabricRegistryManager
+    public static BedrockMapping? GetBedrockMapping(int javaId, /*FabricRegistryManager?*/object? fabricRegistryManager)
     {
         BedrockMapping? bedrockMapping = bedrockMap.GetOrDefault(javaId, null);
         if (bedrockMapping is null && fabricRegistryManager is not null)
@@ -298,7 +294,7 @@ public static class JavaBlocks
         return bedrockMapping;
     }
 
-    public static BedrockMapping? getBedrockMapping(string javaName)
+    public static BedrockMapping? GetBedrockMapping(string javaName)
     {
         BedrockMapping? bedrockMapping = bedrockMapByName.GetOrDefault(javaName, null);
         if (bedrockMapping is null)
@@ -309,80 +305,80 @@ public static class JavaBlocks
 
     public sealed class BedrockMapping
     {
-        public readonly int id;
-        public readonly bool waterlogged;
-        public readonly BlockEntity? blockEntity;
-        public readonly ExtraData? extraData;
+        public readonly int Id;
+        public readonly bool Waterlogged;
+        public readonly BlockEntityR? BlockEntity;
+        public readonly ExtraDataR? ExtraData;
 
-        public BedrockMapping(int id, bool waterlogged, BlockEntity? blockEntity, ExtraData? extraData)
+        public BedrockMapping(int id, bool waterlogged, BlockEntityR? blockEntity, ExtraDataR? extraData)
         {
-            this.id = id;
-            this.waterlogged = waterlogged;
-            this.blockEntity = blockEntity;
-            this.extraData = extraData;
+            Id = id;
+            Waterlogged = waterlogged;
+            BlockEntity = blockEntity;
+            ExtraData = extraData;
         }
 
-        public class BlockEntity
+        public class BlockEntityR
         {
-            public readonly string type;
+            public readonly string Type;
 
-            public BlockEntity(string type)
+            public BlockEntityR(string type)
             {
-                this.type = type;
+                Type = type;
             }
         }
 
-        public class BedBlockEntity : BlockEntity
+        public class BedBlockEntity : BlockEntityR
         {
-            public readonly string color;
+            public readonly string Color;
 
             public BedBlockEntity(string type, string color)
                 : base(type)
             {
-                this.color = color;
+                Color = color;
             }
         }
 
-        public class FlowerPotBlockEntity : BlockEntity
+        public class FlowerPotBlockEntity : BlockEntityR
         {
-            public readonly NbtMap? contents;
+            public readonly NbtMap? Contents;
 
             public FlowerPotBlockEntity(string type, NbtMap? contents)
                 : base(type)
             {
-                this.contents = contents;
+                Contents = contents;
             }
         }
 
-        public class PistonBlockEntity : BlockEntity
+        public class PistonBlockEntity : BlockEntityR
         {
-            public readonly bool sticky;
-            public readonly bool extended;
+            public readonly bool Sticky;
+            public readonly bool Extended;
 
             public PistonBlockEntity(string type, bool sticky, bool extended)
                 : base(type)
             {
-                this.sticky = sticky;
-                this.extended = extended;
+                Sticky = sticky;
+                Extended = extended;
             }
         }
 
-        public abstract class ExtraData
+        public abstract class ExtraDataR
         {
-            protected ExtraData()
+            protected ExtraDataR()
             {
                 // empty
             }
         }
 
-        public class NoteBlockExtraData : ExtraData
+        public class NoteBlockExtraData : ExtraDataR
         {
-            public readonly int pitch;
+            public readonly int Pitch;
 
             public NoteBlockExtraData(int pitch)
                 : base()
             {
-                this.pitch = pitch;
+                Pitch = pitch;
             }
         }
     }

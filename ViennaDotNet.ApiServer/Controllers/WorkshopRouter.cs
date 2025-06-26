@@ -75,15 +75,15 @@ public class WorkshopRouter : ControllerBase
         {
             ["crafting"] = new Dictionary<string, object>()
             {
-                ["1"] = CraftingSlotModelToResponseIncludingLocked(craftingSlotsResult.GValue.slots[0], requestStartedOn, craftingSlotsResult.version, 1),
-                ["2"] = CraftingSlotModelToResponseIncludingLocked(craftingSlotsResult.GValue.slots[1], requestStartedOn, craftingSlotsResult.version, 2),
-                ["3"] = CraftingSlotModelToResponseIncludingLocked(craftingSlotsResult.GValue.slots[2], requestStartedOn, craftingSlotsResult.version, 3),
+                ["1"] = CraftingSlotModelToResponseIncludingLocked(craftingSlotsResult.GValue.Slots[0], requestStartedOn, craftingSlotsResult.version, 1),
+                ["2"] = CraftingSlotModelToResponseIncludingLocked(craftingSlotsResult.GValue.Slots[1], requestStartedOn, craftingSlotsResult.version, 2),
+                ["3"] = CraftingSlotModelToResponseIncludingLocked(craftingSlotsResult.GValue.Slots[2], requestStartedOn, craftingSlotsResult.version, 3),
             },
             ["smelting"] = new Dictionary<string, object>()
             {
-                ["1"] = SmeltingSlotModelToResponseIncludingLocked(smeltingSlotsResult.GValue.slots[0], requestStartedOn, smeltingSlotsResult.version, 1),
-                ["2"] = SmeltingSlotModelToResponseIncludingLocked(smeltingSlotsResult.GValue.slots[1], requestStartedOn, smeltingSlotsResult.version, 2),
-                ["3"] = SmeltingSlotModelToResponseIncludingLocked(smeltingSlotsResult.GValue.slots[2], requestStartedOn, smeltingSlotsResult.version, 3),
+                ["1"] = SmeltingSlotModelToResponseIncludingLocked(smeltingSlotsResult.GValue.Slots[0], requestStartedOn, smeltingSlotsResult.version, 1),
+                ["2"] = SmeltingSlotModelToResponseIncludingLocked(smeltingSlotsResult.GValue.Slots[1], requestStartedOn, smeltingSlotsResult.version, 2),
+                ["3"] = SmeltingSlotModelToResponseIncludingLocked(smeltingSlotsResult.GValue.Slots[2], requestStartedOn, smeltingSlotsResult.version, 3),
             },
         };
 
@@ -108,7 +108,7 @@ public class WorkshopRouter : ControllerBase
                 .ExecuteAsync(earthDB, cancellationToken);
             EarthDB.Results.GenericResult<CraftingSlots> craftingSlotsResult = results.GetGeneric<CraftingSlots>("crafting");
 
-            string resp = Json.Serialize(new EarthApiResponse(CraftingSlotModelToResponseIncludingLocked(craftingSlotsResult.GValue.slots[slotIndex - 1], requestStartedOn, craftingSlotsResult.version, slotIndex)));
+            string resp = Json.Serialize(new EarthApiResponse(CraftingSlotModelToResponseIncludingLocked(craftingSlotsResult.GValue.Slots[slotIndex - 1], requestStartedOn, craftingSlotsResult.version, slotIndex)));
             return Content(resp, "application/json");
         }
         catch (EarthDB.DatabaseException ex)
@@ -134,7 +134,7 @@ public class WorkshopRouter : ControllerBase
                 .ExecuteAsync(earthDB, cancellationToken);
             EarthDB.Results.GenericResult<SmeltingSlots> smeltingSlotsResult = results.GetGeneric<SmeltingSlots>("smelting");
 
-            string resp = Json.Serialize(new EarthApiResponse(SmeltingSlotModelToResponseIncludingLocked(smeltingSlotsResult.GValue.slots[slotIndex - 1], requestStartedOn, smeltingSlotsResult.version, slotIndex)));
+            string resp = Json.Serialize(new EarthApiResponse(SmeltingSlotModelToResponseIncludingLocked(smeltingSlotsResult.GValue.Slots[slotIndex - 1], requestStartedOn, smeltingSlotsResult.version, slotIndex)));
             return Content(resp, "application/json");
         }
         catch (EarthDB.DatabaseException ex)
@@ -166,14 +166,14 @@ public class WorkshopRouter : ControllerBase
             return BadRequest();
         }
 
-        Catalog.RecipesCatalog.CraftingRecipe? recipe = staticData.catalog.recipesCatalog.getCraftingRecipe(startRequest.RecipeId);
+        Catalog.RecipesCatalogR.CraftingRecipe? recipe = staticData.Catalog.RecipesCatalog.GetCraftingRecipe(startRequest.RecipeId);
 
         if (recipe is null)
         {
             return BadRequest();
         }
 
-        if (recipe.returnItems.Length > 0)
+        if (recipe.ReturnItems.Length > 0)
         {
             throw new UnsupportedOperationException(); // TODO: implement returnItems
         }
@@ -184,16 +184,16 @@ public class WorkshopRouter : ControllerBase
                 .Get("crafting", playerId, typeof(CraftingSlots))
                 .Get("inventory", playerId, typeof(Inventory))
                 .Get("hotbar", playerId, typeof(Hotbar))
-                .Then(results1 =>
+                .Then((Func<EarthDB.Results, EarthDB.Query>)(results1 =>
                 {
                     EarthDB.Query query = new EarthDB.Query(true);
 
-                    CraftingSlots craftingSlots = (CraftingSlots)results1.Get("crafting").Value;
-                    CraftingSlot craftingSlot = craftingSlots.slots[slotIndex - 1];
-                    Inventory inventory = (Inventory)results1.Get("inventory").Value;
-                    Hotbar hotbar = (Hotbar)results1.Get("hotbar").Value;
+                    var craftingSlots = (CraftingSlots)results1.Get("crafting").Value;
+                    CraftingSlot craftingSlot = craftingSlots.Slots[slotIndex - 1];
+                    var inventory = (Inventory)results1.Get("inventory").Value;
+                    var hotbar = (Hotbar)results1.Get("hotbar").Value;
 
-                    if (craftingSlot.locked || craftingSlot.activeJob is not null)
+                    if (craftingSlot.Locked || craftingSlot.ActiveJob is not null)
                     {
                         return query;
                     }
@@ -204,7 +204,7 @@ public class WorkshopRouter : ControllerBase
                         StartRequestCrafting.Item item = startRequest.Ingredients[index];
                         if (item.ItemInstanceIds is null || item.ItemInstanceIds.Length == 0)
                         {
-                            if (!inventory.takeItems(item.ItemId, item.Quantity))
+                            if (!inventory.TakeItems(item.ItemId, item.Quantity))
                             {
                                 return query;
                             }
@@ -213,7 +213,7 @@ public class WorkshopRouter : ControllerBase
                         }
                         else
                         {
-                            NonStackableItemInstance[]? instances = inventory.takeItems(item.ItemId, item.ItemInstanceIds);
+                            NonStackableItemInstance[]? instances = inventory.TakeItems(item.ItemId, item.ItemInstanceIds);
                             if (instances is null)
                             {
                                 return query;
@@ -223,40 +223,40 @@ public class WorkshopRouter : ControllerBase
                         }
                     }
 
-                    hotbar.limitToInventory(inventory);
+                    hotbar.LimitToInventory(inventory);
 
                     LinkedList<LinkedList<InputItem>> inputItems = [];
-                    foreach (Catalog.RecipesCatalog.CraftingRecipe.Ingredient ingredient in recipe.ingredients)
+                    foreach (Catalog.RecipesCatalogR.CraftingRecipe.Ingredient ingredient in recipe.Ingredients)
                     {
                         LinkedList<InputItem> ingredientItems = [];
-                        int requiredCount = ingredient.count * startRequest.Multiplier;
+                        int requiredCount = ingredient.Count * startRequest.Multiplier;
                         for (int index = 0; index < providedItems.Length; index++)
                         {
                             InputItem providedItem = providedItems[index];
-                            if (providedItem.count == 0)
+                            if (providedItem.Count == 0)
                             {
                                 continue;
                             }
 
-                            if (!ingredient.possibleItemIds.Any(id => id == providedItem.id))
+                            if (!ingredient.PossibleItemIds.Any(id => id == providedItem.Id))
                             {
                                 continue;
                             }
 
-                            if (requiredCount > providedItem.count)
+                            if (requiredCount > providedItem.Count)
                             {
-                                requiredCount -= providedItem.count;
+                                requiredCount -= providedItem.Count;
                                 ingredientItems.AddLast(providedItem);
-                                providedItems[index] = new InputItem(providedItem.id, 0, []);
+                                providedItems[index] = new InputItem(providedItem.Id, 0, []);
                             }
                             else
                             {
                                 NonStackableItemInstance[] takenInstances;
                                 NonStackableItemInstance[] remainingInstances;
-                                if (providedItem.instances.Length > 0)
+                                if (providedItem.Instances.Length > 0)
                                 {
-                                    takenInstances = ArrayExtensions.CopyOfRange(providedItem.instances, 0, requiredCount);
-                                    remainingInstances = ArrayExtensions.CopyOfRange(providedItem.instances, requiredCount, providedItem.count);
+                                    takenInstances = ArrayExtensions.CopyOfRange(providedItem.Instances, 0, requiredCount);
+                                    remainingInstances = ArrayExtensions.CopyOfRange(providedItem.Instances, requiredCount, providedItem.Count);
                                 }
                                 else
                                 {
@@ -264,8 +264,8 @@ public class WorkshopRouter : ControllerBase
                                     remainingInstances = [];
                                 }
 
-                                ingredientItems.AddLast(new InputItem(providedItem.id, requiredCount, takenInstances));
-                                providedItems[index] = new InputItem(providedItem.id, providedItem.count - requiredCount, remainingInstances);
+                                ingredientItems.AddLast(new InputItem(providedItem.Id, requiredCount, takenInstances));
+                                providedItems[index] = new InputItem(providedItem.Id, providedItem.Count - requiredCount, remainingInstances);
                                 requiredCount = 0;
                             }
 
@@ -288,22 +288,22 @@ public class WorkshopRouter : ControllerBase
                         inputItems.AddLast(ingredientItems);
                     }
 
-                    if (inputItems.Count != recipe.ingredients.Length)
+                    if (inputItems.Count != recipe.Ingredients.Length)
                     {
                         throw new UnreachableException();
                     }
 
-                    if (providedItems.Any(item => item.count > 0))
+                    if (providedItems.Any(item => item.Count > 0))
                     {
                         return query;
                     }
 
-                    craftingSlot.activeJob = new CraftingSlot.ActiveJob(startRequest.SessionId, recipe.id, requestStartedOn, inputItems.Select(inputItems1 => inputItems1.ToArray()).ToArray(), startRequest.Multiplier, 0, false);
+                    craftingSlot.ActiveJob = new CraftingSlot.ActiveJobR(startRequest.SessionId, recipe.Id, requestStartedOn, inputItems.Select(inputItems1 => inputItems1.ToArray()).ToArray(), startRequest.Multiplier, 0, false);
 
                     query.Update("crafting", playerId, craftingSlots).Update("inventory", playerId, inventory).Update("hotbar", playerId, hotbar);
 
                     return query;
-                })
+                }))
                 .ExecuteAsync(earthDB, cancellationToken);
 
             string resp = Json.Serialize(new EarthApiResponse(new Dictionary<string, object>(), new EarthApiResponse.UpdatesResponse(results)));
@@ -343,32 +343,32 @@ public class WorkshopRouter : ControllerBase
             return BadRequest();
         }
 
-        Catalog.RecipesCatalog.SmeltingRecipe? recipe = staticData.catalog.recipesCatalog.getSmeltingRecipe(startRequest.RecipeId);
-        Catalog.ItemsCatalog.Item? fuelCatalogItem = startRequest.Fuel is not null ? staticData.catalog.itemsCatalog.getItem(startRequest.Fuel.ItemId) : null;
+        Catalog.RecipesCatalogR.SmeltingRecipe? recipe = staticData.Catalog.RecipesCatalog.GetSmeltingRecipe(startRequest.RecipeId);
+        Catalog.ItemsCatalogR.Item? fuelCatalogItem = startRequest.Fuel is not null ? staticData.Catalog.ItemsCatalog.GetItem(startRequest.Fuel.ItemId) : null;
         if (recipe is null)
         {
             return BadRequest();
         }
 
-        if (startRequest.Fuel is not null && (fuelCatalogItem is null || fuelCatalogItem.fuelInfo is null))
+        if (startRequest.Fuel is not null && (fuelCatalogItem is null || fuelCatalogItem.FuelInfo is null))
         {
             return BadRequest();
         }
 
-        if (recipe.returnItemId is not null)
+        if (recipe.ReturnItemId is not null)
         {
             throw new UnsupportedOperationException(); // TODO: implement returnItems
         }
 
         Debug.Assert(fuelCatalogItem is not null);
-        Debug.Assert(fuelCatalogItem.fuelInfo is not null);
+        Debug.Assert(fuelCatalogItem.FuelInfo is not null);
 
-        if (startRequest.Fuel is not null && fuelCatalogItem.fuelInfo.returnItemId is not null)
+        if (startRequest.Fuel is not null && fuelCatalogItem.FuelInfo.ReturnItemId is not null)
         {
             throw new UnsupportedOperationException(); // TODO: implement returnItems
         }
 
-        if (startRequest.Input.ItemId != recipe.input || startRequest.Input.Quantity != startRequest.Multiplier)
+        if (startRequest.Input.ItemId != recipe.Input || startRequest.Input.Quantity != startRequest.Multiplier)
         {
             return BadRequest();
         }
@@ -379,16 +379,16 @@ public class WorkshopRouter : ControllerBase
                 .Get("smelting", playerId, typeof(SmeltingSlots))
                 .Get("inventory", playerId, typeof(Inventory))
                 .Get("hotbar", playerId, typeof(Hotbar))
-                .Then(results1 =>
+                .Then((Func<EarthDB.Results, EarthDB.Query>)(results1 =>
                 {
                     EarthDB.Query query = new EarthDB.Query(true);
 
-                    SmeltingSlots smeltingSlots = (SmeltingSlots)results1.Get("smelting").Value;
-                    SmeltingSlot smeltingSlot = smeltingSlots.slots[slotIndex - 1];
-                    Inventory inventory = (Inventory)results1.Get("inventory").Value;
-                    Hotbar hotbar = (Hotbar)results1.Get("hotbar").Value;
+                    var smeltingSlots = (SmeltingSlots)results1.Get("smelting").Value;
+                    SmeltingSlot smeltingSlot = smeltingSlots.Slots[slotIndex - 1];
+                    var inventory = (Inventory)results1.Get("inventory").Value;
+                    var hotbar = (Hotbar)results1.Get("hotbar").Value;
 
-                    if (smeltingSlot.locked || smeltingSlot.activeJob is not null)
+                    if (smeltingSlot.Locked || smeltingSlot.ActiveJob is not null)
                     {
                         return query;
                     }
@@ -396,14 +396,14 @@ public class WorkshopRouter : ControllerBase
                     InputItem input;
                     if (startRequest.Input.ItemInstanceIds is null || startRequest.Input.ItemInstanceIds.Length == 0)
                     {
-                        if (!inventory.takeItems(startRequest.Input.ItemId, startRequest.Input.Quantity))
+                        if (!inventory.TakeItems(startRequest.Input.ItemId, startRequest.Input.Quantity))
                             return query;
 
                         input = new InputItem(startRequest.Input.ItemId, startRequest.Input.Quantity, []);
                     }
                     else
                     {
-                        NonStackableItemInstance[]? instances = inventory.takeItems(startRequest.Input.ItemId, startRequest.Input.ItemInstanceIds);
+                        NonStackableItemInstance[]? instances = inventory.TakeItems(startRequest.Input.ItemId, startRequest.Input.ItemInstanceIds);
                         if (instances is null)
                             return query;
 
@@ -411,14 +411,14 @@ public class WorkshopRouter : ControllerBase
                     }
 
                     SmeltingSlot.Fuel? fuel;
-                    int requiredFuelHeat = recipe.heatRequired * startRequest.Multiplier - (smeltingSlot.burning is not null ? smeltingSlot.burning.remainingHeat : 0);
+                    int requiredFuelHeat = recipe.HeatRequired * startRequest.Multiplier - (smeltingSlot.Burning is not null ? smeltingSlot.Burning.RemainingHeat : 0);
                     if (startRequest.Fuel is not null && startRequest.Fuel.Quantity > 0)
                     {
                         int requiredFuelCount = 0;
                         while (requiredFuelHeat > 0)
                         {
                             requiredFuelCount += 1;
-                            requiredFuelHeat -= fuelCatalogItem.fuelInfo.heatPerSecond * fuelCatalogItem.fuelInfo.burnTime;
+                            requiredFuelHeat -= fuelCatalogItem.FuelInfo.HeatPerSecond * fuelCatalogItem.FuelInfo.BurnTime;
                         }
 
                         if (startRequest.Fuel.Quantity < requiredFuelCount)
@@ -431,7 +431,7 @@ public class WorkshopRouter : ControllerBase
                             InputItem fuelItem;
                             if (startRequest.Fuel.ItemInstanceIds is null || startRequest.Fuel.ItemInstanceIds.Length == 0)
                             {
-                                if (!inventory.takeItems(startRequest.Fuel.ItemId, requiredFuelCount))
+                                if (!inventory.TakeItems(startRequest.Fuel.ItemId, requiredFuelCount))
                                 {
                                     return query;
                                 }
@@ -440,7 +440,7 @@ public class WorkshopRouter : ControllerBase
                             }
                             else
                             {
-                                NonStackableItemInstance[]? instances = inventory.takeItems(startRequest.Fuel.ItemId, ArrayExtensions.CopyOfRange(startRequest.Fuel.ItemInstanceIds, 0, requiredFuelCount));
+                                NonStackableItemInstance[]? instances = inventory.TakeItems(startRequest.Fuel.ItemId, ArrayExtensions.CopyOfRange(startRequest.Fuel.ItemInstanceIds, 0, requiredFuelCount));
                                 if (instances is null)
                                 {
                                     return query;
@@ -449,7 +449,7 @@ public class WorkshopRouter : ControllerBase
                                 fuelItem = new InputItem(startRequest.Fuel.ItemId, requiredFuelCount, instances);
                             }
 
-                            fuel = new SmeltingSlot.Fuel(fuelItem, fuelCatalogItem.fuelInfo.burnTime, fuelCatalogItem.fuelInfo.heatPerSecond);
+                            fuel = new SmeltingSlot.Fuel(fuelItem, fuelCatalogItem.FuelInfo.BurnTime, fuelCatalogItem.FuelInfo.HeatPerSecond);
                         }
                         else
                         {
@@ -466,14 +466,14 @@ public class WorkshopRouter : ControllerBase
                         fuel = null;
                     }
 
-                    hotbar.limitToInventory(inventory);
+                    hotbar.LimitToInventory(inventory);
 
-                    smeltingSlot.activeJob = new SmeltingSlot.ActiveJob(startRequest.SessionId, recipe.id, requestStartedOn, input, fuel, startRequest.Multiplier, 0, false);
+                    smeltingSlot.ActiveJob = new SmeltingSlot.ActiveJobR(startRequest.SessionId, recipe.Id, requestStartedOn, input, fuel, startRequest.Multiplier, 0, false);
 
                     query.Update("smelting", playerId, smeltingSlots).Update("inventory", playerId, inventory).Update("hotbar", playerId, hotbar);
 
                     return query;
-                })
+                }))
                 .ExecuteAsync(earthDB, cancellationToken);
 
             string resp = Json.Serialize(new EarthApiResponse(new Dictionary<string, object>(), new EarthApiResponse.UpdatesResponse(results)));
@@ -499,26 +499,26 @@ public class WorkshopRouter : ControllerBase
         {
             EarthDB.Results results = await new EarthDB.Query(true)
                 .Get("crafting", playerId, typeof(CraftingSlots))
-                .Then(results1 =>
+                .Then((Func<EarthDB.Results, EarthDB.Query>)(results1 =>
                 {
-                    CraftingSlots craftingSlots = (CraftingSlots)results1.Get("crafting").Value;
-                    CraftingSlot craftingSlot = craftingSlots.slots[slotIndex - 1];
+                    var craftingSlots = (CraftingSlots)results1.Get("crafting").Value;
+                    CraftingSlot craftingSlot = craftingSlots.Slots[slotIndex - 1];
 
-                    Rewards rewards = new Rewards();
-                    if (craftingSlot.activeJob is not null)
+                    var rewards = new Rewards();
+                    if (craftingSlot.ActiveJob is not null)
                     {
-                        CraftingCalculator.State state = CraftingCalculator.CalculateState(requestStartedOn, craftingSlot.activeJob, staticData.catalog);
+                        CraftingCalculator.State state = CraftingCalculator.CalculateState(requestStartedOn, (CraftingSlot.ActiveJobR)craftingSlot.ActiveJob, staticData.Catalog);
 
                         int quantity = state.AvailableRounds * state.Output.Count;
                         if (quantity > 0)
                             rewards.addItem(state.Output.Id, quantity);
 
                         if (state.Completed)
-                            craftingSlot.activeJob = null;
+                            craftingSlot.ActiveJob = null;
                         else
                         {
-                            CraftingSlot.ActiveJob activeJob = craftingSlot.activeJob;
-                            craftingSlot.activeJob = new CraftingSlot.ActiveJob(activeJob.sessionId, activeJob.recipeId, activeJob.startTime, activeJob.input, activeJob.totalRounds, activeJob.collectedRounds + state.AvailableRounds, activeJob.finishedEarly);
+                            CraftingSlot.ActiveJobR activeJob = craftingSlot.ActiveJob;
+                            craftingSlot.ActiveJob = new CraftingSlot.ActiveJobR(activeJob.SessionId, activeJob.RecipeId, activeJob.StartTime, activeJob.Input, activeJob.TotalRounds, activeJob.CollectedRounds + state.AvailableRounds, activeJob.FinishedEarly);
                         }
                     }
 
@@ -526,12 +526,12 @@ public class WorkshopRouter : ControllerBase
                         .Update("crafting", playerId, craftingSlots)
                         .Then(ActivityLogUtils.AddEntry(playerId, new ActivityLog.CraftingCompletedEntry(requestStartedOn, rewards.ToDBRewardsModel())))
                         .Then(rewards.toRedeemQuery(playerId, requestStartedOn, staticData));
-                })
+                }))
                 .ExecuteAsync(earthDB, cancellationToken);
 
             string resp = Json.Serialize(new EarthApiResponse(new Dictionary<string, object>()
             {
-                { "rewards", ((Rewards) results.getExtra("rewards")).ToApiResponse() }
+                { "rewards", ((Rewards) results.GetExtra("rewards")).ToApiResponse() }
             }, new EarthApiResponse.UpdatesResponse(results)));
             return Content(resp, "application/json");
         }
@@ -555,15 +555,15 @@ public class WorkshopRouter : ControllerBase
         {
             EarthDB.Results results = await new EarthDB.Query(true)
                 .Get("smelting", playerId, typeof(SmeltingSlots))
-                .Then(results1 =>
+                .Then((Func<EarthDB.Results, EarthDB.Query>)(results1 =>
                 {
-                    SmeltingSlots smeltingSlots = (SmeltingSlots)results1.Get("smelting").Value;
-                    SmeltingSlot smeltingSlot = smeltingSlots.slots[slotIndex - 1];
+                    var smeltingSlots = (SmeltingSlots)results1.Get("smelting").Value;
+                    SmeltingSlot smeltingSlot = smeltingSlots.Slots[slotIndex - 1];
 
-                    Rewards rewards = new Rewards();
-                    if (smeltingSlot.activeJob is not null)
+                    var rewards = new Rewards();
+                    if (smeltingSlot.ActiveJob is not null)
                     {
-                        SmeltingCalculator.State state = SmeltingCalculator.CalculateState(requestStartedOn, smeltingSlot.activeJob, smeltingSlot.burning, staticData.catalog);
+                        SmeltingCalculator.State state = SmeltingCalculator.CalculateState(requestStartedOn, (SmeltingSlot.ActiveJobR)smeltingSlot.ActiveJob, smeltingSlot.Burning, staticData.Catalog);
 
                         int quantity = state.AvailableRounds * state.Output.Count;
                         if (quantity > 0)
@@ -571,19 +571,19 @@ public class WorkshopRouter : ControllerBase
 
                         if (state.Completed)
                         {
-                            smeltingSlot.activeJob = null;
+                            smeltingSlot.ActiveJob = null;
                             if (state.RemainingHeat > 0)
-                                smeltingSlot.burning = new SmeltingSlot.Burning(
+                                smeltingSlot.Burning = new SmeltingSlot.BurningR(
                                     state.CurrentBurningFuel,
                                     state.RemainingHeat
                                 );
                             else
-                                smeltingSlot.burning = null;
+                                smeltingSlot.Burning = null;
                         }
                         else
                         {
-                            SmeltingSlot.ActiveJob activeJob = smeltingSlot.activeJob;
-                            smeltingSlot.activeJob = new SmeltingSlot.ActiveJob(activeJob.sessionId, activeJob.recipeId, activeJob.startTime, activeJob.input, activeJob.addedFuel, activeJob.totalRounds, activeJob.collectedRounds + state.AvailableRounds, activeJob.finishedEarly);
+                            SmeltingSlot.ActiveJobR activeJob = smeltingSlot.ActiveJob;
+                            smeltingSlot.ActiveJob = new SmeltingSlot.ActiveJobR(activeJob.SessionId, activeJob.RecipeId, activeJob.StartTime, activeJob.Input, activeJob.AddedFuel, activeJob.TotalRounds, activeJob.CollectedRounds + state.AvailableRounds, activeJob.FinishedEarly);
                         }
                     }
 
@@ -591,12 +591,12 @@ public class WorkshopRouter : ControllerBase
                         .Update("smelting", playerId, smeltingSlots)
                         .Then(ActivityLogUtils.AddEntry(playerId, new ActivityLog.SmeltingCompletedEntry(requestStartedOn, rewards.ToDBRewardsModel())))
                         .Then(rewards.toRedeemQuery(playerId, requestStartedOn, staticData));
-                })
+                }))
                 .ExecuteAsync(earthDB, cancellationToken);
 
             string resp = Json.Serialize(new EarthApiResponse(new Dictionary<string, object>()
             {
-                { "rewards", ((Rewards) results.getExtra("rewards")).ToApiResponse() }
+                { "rewards", ((Rewards) results.GetExtra("rewards")).ToApiResponse() }
             }, new EarthApiResponse.UpdatesResponse(results)));
             return Content(resp, "application/json");
         }
@@ -622,51 +622,51 @@ public class WorkshopRouter : ControllerBase
                 .Get("crafting", playerId, typeof(CraftingSlots))
                 .Get("inventory", playerId, typeof(Inventory))
                 .Get("journal", playerId, typeof(Journal))
-                .Then(results1 =>
+                .Then((Func<EarthDB.Results, EarthDB.Query>)(results1 =>
                 {
                     EarthDB.Query query = new EarthDB.Query(true);
                     query.Get("crafting", playerId, typeof(CraftingSlots));
 
-                    CraftingSlots craftingSlots = (CraftingSlots)results1.Get("crafting").Value;
-                    CraftingSlot craftingSlot = craftingSlots.slots[slotIndex - 1];
-                    Inventory inventory = (Inventory)results1.Get("inventory").Value;
-                    Journal journal = (Journal)results1.Get("journal").Value;
+                    var craftingSlots = (CraftingSlots)results1.Get("crafting").Value;
+                    CraftingSlot craftingSlot = craftingSlots.Slots[slotIndex - 1];
+                    var inventory = (Inventory)results1.Get("inventory").Value;
+                    var journal = (Journal)results1.Get("journal").Value;
 
-                    if (craftingSlot.activeJob is null)
+                    if (craftingSlot.ActiveJob is null)
                         return query;
 
-                    CraftingCalculator.State state = CraftingCalculator.CalculateState(requestStartedOn, craftingSlot.activeJob, staticData.catalog);
+                    CraftingCalculator.State state = CraftingCalculator.CalculateState(requestStartedOn, (CraftingSlot.ActiveJobR)craftingSlot.ActiveJob, staticData.Catalog);
 
                     foreach (InputItem inputItem in state.Input)
                     {
-                        if (inputItem.instances.Length > 0)
-                            inventory.addItems(inputItem.id, [.. inputItem.instances.Select(instance => new NonStackableItemInstance(instance.instanceId, instance.wear))]);
-                        else if (inputItem.count > 0)
-                            inventory.addItems(inputItem.id, inputItem.count);
+                        if (inputItem.Instances.Length > 0)
+                            inventory.AddItems(inputItem.Id, [.. inputItem.Instances.Select(instance => new NonStackableItemInstance(instance.InstanceId, instance.Wear))]);
+                        else if (inputItem.Count > 0)
+                            inventory.AddItems(inputItem.Id, inputItem.Count);
 
-                        journal.addCollectedItem(inputItem.id, requestStartedOn, 0);
+                        journal.AddCollectedItem(inputItem.Id, requestStartedOn, 0);
                     }
 
-                    Rewards rewards = new Rewards();
+                    var rewards = new Rewards();
                     int outputQuantity = state.AvailableRounds * state.Output.Count;
                     if (outputQuantity > 0)
                     {
                         rewards.addItem(state.Output.Id, outputQuantity);
                     }
 
-                    craftingSlot.activeJob = null;
+                    craftingSlot.ActiveJob = null;
 
                     query.Update("crafting", playerId, craftingSlots).Update("inventory", playerId, inventory).Update("journal", playerId, journal);
                     query.Then(ActivityLogUtils.AddEntry(playerId, new ActivityLog.CraftingCompletedEntry(requestStartedOn, rewards.ToDBRewardsModel())), false);
                     query.Then(rewards.toRedeemQuery(playerId, requestStartedOn, staticData), false);
 
                     return query;
-                })
+                }))
                 .ExecuteAsync(earthDB, cancellationToken);
 
             EarthDB.Results.GenericResult<CraftingSlots> craftingSlotsResult = results.GetGeneric<CraftingSlots>("crafting");
 
-            string resp = Json.Serialize(new EarthApiResponse(CraftingSlotModelToResponse(craftingSlotsResult.GValue.slots[slotIndex - 1], requestStartedOn, craftingSlotsResult.version), new EarthApiResponse.UpdatesResponse(results)));
+            string resp = Json.Serialize(new EarthApiResponse(CraftingSlotModelToResponse(craftingSlotsResult.GValue.Slots[slotIndex - 1], requestStartedOn, craftingSlotsResult.version), new EarthApiResponse.UpdatesResponse(results)));
             return Content(resp, "application/json");
         }
         catch (EarthDB.DatabaseException ex)
@@ -691,62 +691,62 @@ public class WorkshopRouter : ControllerBase
                 .Get("smelting", playerId, typeof(SmeltingSlots))
                 .Get("inventory", playerId, typeof(Inventory))
                 .Get("journal", playerId, typeof(Journal))
-                .Then(results1 =>
+                .Then((Func<EarthDB.Results, EarthDB.Query>)(results1 =>
                 {
                     EarthDB.Query query = new EarthDB.Query(true);
                     query.Get("smelting", playerId, typeof(SmeltingSlots));
 
-                    SmeltingSlots smeltingSlots = (SmeltingSlots)results1.Get("smelting").Value;
-                    SmeltingSlot smeltingSlot = smeltingSlots.slots[slotIndex - 1];
-                    Inventory inventory = (Inventory)results1.Get("inventory").Value;
-                    Journal journal = (Journal)results1.Get("journal").Value;
+                    var smeltingSlots = (SmeltingSlots)results1.Get("smelting").Value;
+                    SmeltingSlot smeltingSlot = smeltingSlots.Slots[slotIndex - 1];
+                    var inventory = (Inventory)results1.Get("inventory").Value;
+                    var journal = (Journal)results1.Get("journal").Value;
 
-                    if (smeltingSlot.activeJob is null)
+                    if (smeltingSlot.ActiveJob is null)
                         return query;
 
-                    SmeltingCalculator.State state = SmeltingCalculator.CalculateState(requestStartedOn, smeltingSlot.activeJob, smeltingSlot.burning, staticData.catalog);
+                    SmeltingCalculator.State state = SmeltingCalculator.CalculateState(requestStartedOn, (SmeltingSlot.ActiveJobR)smeltingSlot.ActiveJob, smeltingSlot.Burning, staticData.Catalog);
 
-                    if (state.Input.instances.Length > 0)
-                        inventory.addItems(state.Input.id, [.. state.Input.instances.Select(instance => new NonStackableItemInstance(instance.instanceId, instance.wear))]);
-                    else if (state.Input.count > 0)
-                        inventory.addItems(state.Input.id, state.Input.count);
+                    if (state.Input.Instances.Length > 0)
+                        inventory.AddItems(state.Input.Id, [.. state.Input.Instances.Select(instance => new NonStackableItemInstance(instance.InstanceId, instance.Wear))]);
+                    else if (state.Input.Count > 0)
+                        inventory.AddItems(state.Input.Id, state.Input.Count);
 
-                    journal.addCollectedItem(state.Input.id, requestStartedOn, 0);
+                    journal.AddCollectedItem(state.Input.Id, requestStartedOn, 0);
 
                     if (state.RemainingAddedFuel is not null)
                     {
-                        if (state.RemainingAddedFuel.item.instances.Length > 0)
-                            inventory.addItems(state.RemainingAddedFuel.item.id, [.. state.RemainingAddedFuel.item.instances.Select(instance => new NonStackableItemInstance(instance.instanceId, instance.wear))]);
-                        else if (state.RemainingAddedFuel.item.count > 0)
-                            inventory.addItems(state.RemainingAddedFuel.item.id, state.RemainingAddedFuel.item.count);
+                        if (state.RemainingAddedFuel.Item.Instances.Length > 0)
+                            inventory.AddItems(state.RemainingAddedFuel.Item.Id, [.. state.RemainingAddedFuel.Item.Instances.Select(instance => new NonStackableItemInstance(instance.InstanceId, instance.Wear))]);
+                        else if (state.RemainingAddedFuel.Item.Count > 0)
+                            inventory.AddItems(state.RemainingAddedFuel.Item.Id, state.RemainingAddedFuel.Item.Count);
 
-                        journal.addCollectedItem(state.RemainingAddedFuel.item.id, requestStartedOn, 0);
+                        journal.AddCollectedItem(state.RemainingAddedFuel.Item.Id, requestStartedOn, 0);
                     }
 
-                    Rewards rewards = new Rewards();
+                    var rewards = new Rewards();
                     int outputQuantity = state.AvailableRounds * state.Output.Count;
                     if (outputQuantity > 0)
                     {
                         rewards.addItem(state.Output.Id, outputQuantity);
                     }
 
-                    smeltingSlot.activeJob = null;
+                    smeltingSlot.ActiveJob = null;
                     if (state.RemainingHeat > 0)
-                        smeltingSlot.burning = new SmeltingSlot.Burning(state.CurrentBurningFuel, state.RemainingHeat);
+                        smeltingSlot.Burning = new SmeltingSlot.BurningR(state.CurrentBurningFuel, state.RemainingHeat);
                     else
-                        smeltingSlot.burning = null;
+                        smeltingSlot.Burning = null;
 
                     query.Update("smelting", playerId, smeltingSlots).Update("inventory", playerId, inventory).Update("journal", playerId, journal);
                     query.Then(ActivityLogUtils.AddEntry(playerId, new ActivityLog.SmeltingCompletedEntry(requestStartedOn, rewards.ToDBRewardsModel())), false);
                     query.Then(rewards.toRedeemQuery(playerId, requestStartedOn, staticData), false);
 
                     return query;
-                })
+                }))
                 .ExecuteAsync(earthDB, cancellationToken);
 
             EarthDB.Results.GenericResult<SmeltingSlots> smeltingSlotsResult = results.GetGeneric<SmeltingSlots>("smelting");
 
-            string resp = Json.Serialize(new EarthApiResponse(SmeltingSlotModelToResponse(smeltingSlotsResult.GValue.slots[slotIndex - 1], requestStartedOn, smeltingSlotsResult.version), new EarthApiResponse.UpdatesResponse(results)));
+            string resp = Json.Serialize(new EarthApiResponse(SmeltingSlotModelToResponse(smeltingSlotsResult.GValue.Slots[slotIndex - 1], requestStartedOn, smeltingSlotsResult.version), new EarthApiResponse.UpdatesResponse(results)));
             return Content(resp, "application/json");
         }
         catch (EarthDB.DatabaseException ex)
@@ -774,19 +774,19 @@ public class WorkshopRouter : ControllerBase
             EarthDB.Results results = await new EarthDB.Query(true)
                 .Get("crafting", playerId, typeof(CraftingSlots))
                 .Get("profile", playerId, typeof(Profile))
-                .Then(results1 =>
+                .Then((Func<EarthDB.Results, EarthDB.Query>)(results1 =>
                 {
                     EarthDB.Query query = new EarthDB.Query(true);
                     query.Get("profile", playerId, typeof(Profile));
 
-                    CraftingSlots craftingSlots = (CraftingSlots)results1.Get("crafting").Value;
-                    CraftingSlot craftingSlot = craftingSlots.slots[slotIndex - 1];
-                    Profile profile = (Profile)results1.Get("profile").Value;
+                    var craftingSlots = (CraftingSlots)results1.Get("crafting").Value;
+                    CraftingSlot craftingSlot = craftingSlots.Slots[slotIndex - 1];
+                    var profile = (Profile)results1.Get("profile").Value;
 
-                    if (craftingSlot.activeJob is null)
+                    if (craftingSlot.ActiveJob is null)
                         return query;
 
-                    CraftingCalculator.State state = CraftingCalculator.CalculateState(requestStartedOn, craftingSlot.activeJob, staticData.catalog);
+                    CraftingCalculator.State state = CraftingCalculator.CalculateState(requestStartedOn, (CraftingSlot.ActiveJobR)craftingSlot.ActiveJob, staticData.Catalog);
                     if (state.Completed)
                         return query;
 
@@ -799,20 +799,20 @@ public class WorkshopRouter : ControllerBase
                     if (expectedPurchasePrice.ExpectedPurchasePrice < finishPrice.Price)
                         return query;
 
-                    if (!profile.rubies.spend(finishPrice.Price))
+                    if (!profile.Rubies.Spend(finishPrice.Price))
                         return query;
 
-                    CraftingSlot.ActiveJob activeJob = craftingSlot.activeJob;
-                    craftingSlot.activeJob = new CraftingSlot.ActiveJob(activeJob.sessionId, activeJob.recipeId, activeJob.startTime, activeJob.input, activeJob.totalRounds, activeJob.collectedRounds, true);
+                    CraftingSlot.ActiveJobR activeJob = craftingSlot.ActiveJob;
+                    craftingSlot.ActiveJob = new CraftingSlot.ActiveJobR(activeJob.SessionId, activeJob.RecipeId, activeJob.StartTime, activeJob.Input, activeJob.TotalRounds, activeJob.CollectedRounds, true);
                     query.Update("crafting", playerId, craftingSlots).Update("profile", playerId, profile);
 
                     return query;
-                })
+                }))
                 .ExecuteAsync(earthDB, cancellationToken);
 
             Profile profile = (Profile)results.Get("profile").Value;
 
-            string resp = Json.Serialize(new EarthApiResponse(new SplitRubies(profile.rubies.purchased, profile.rubies.earned), new EarthApiResponse.UpdatesResponse(results)));
+            string resp = Json.Serialize(new EarthApiResponse(new SplitRubies(profile.Rubies.Purchased, profile.Rubies.Earned), new EarthApiResponse.UpdatesResponse(results)));
             return Content(resp, "application/json");
         }
         catch (EarthDB.DatabaseException ex)
@@ -840,19 +840,19 @@ public class WorkshopRouter : ControllerBase
             EarthDB.Results results = await new EarthDB.Query(true)
                 .Get("smelting", playerId, typeof(SmeltingSlots))
                 .Get("profile", playerId, typeof(Profile))
-                .Then(results1 =>
+                .Then((Func<EarthDB.Results, EarthDB.Query>)(results1 =>
                 {
                     EarthDB.Query query = new EarthDB.Query(true);
                     query.Get("profile", playerId, typeof(Profile));
 
-                    SmeltingSlots smeltingSlots = (SmeltingSlots)results1.Get("smelting").Value;
-                    SmeltingSlot smeltingSlot = smeltingSlots.slots[slotIndex - 1];
-                    Profile profile = (Profile)results1.Get("profile").Value;
+                    var smeltingSlots = (SmeltingSlots)results1.Get("smelting").Value;
+                    SmeltingSlot smeltingSlot = smeltingSlots.Slots[slotIndex - 1];
+                    var profile = (Profile)results1.Get("profile").Value;
 
-                    if (smeltingSlot.activeJob is null)
+                    if (smeltingSlot.ActiveJob is null)
                         return query;
 
-                    SmeltingCalculator.State state = SmeltingCalculator.CalculateState(requestStartedOn, smeltingSlot.activeJob, smeltingSlot.burning, staticData.catalog);
+                    SmeltingCalculator.State state = SmeltingCalculator.CalculateState(requestStartedOn, (SmeltingSlot.ActiveJobR)smeltingSlot.ActiveJob, smeltingSlot.Burning, staticData.Catalog);
                     if (state.Completed)
                         return query;
 
@@ -865,21 +865,21 @@ public class WorkshopRouter : ControllerBase
                     if (expectedPurchasePrice.ExpectedPurchasePrice < finishPrice.Price)
                         return query;
 
-                    if (!profile.rubies.spend(finishPrice.Price))
+                    if (!profile.Rubies.Spend(finishPrice.Price))
                         return query;
 
-                    SmeltingSlot.ActiveJob activeJob = smeltingSlot.activeJob;
-                    smeltingSlot.activeJob = new SmeltingSlot.ActiveJob(activeJob.sessionId, activeJob.recipeId, activeJob.startTime, activeJob.input, activeJob.addedFuel, activeJob.totalRounds, activeJob.collectedRounds, true);
+                    SmeltingSlot.ActiveJobR activeJob = smeltingSlot.ActiveJob;
+                    smeltingSlot.ActiveJob = new SmeltingSlot.ActiveJobR(activeJob.SessionId, activeJob.RecipeId, activeJob.StartTime, activeJob.Input, activeJob.AddedFuel, activeJob.TotalRounds, activeJob.CollectedRounds, true);
 
                     query.Update("smelting", playerId, smeltingSlots).Update("profile", playerId, profile);
 
                     return query;
-                })
+                }))
                 .ExecuteAsync(earthDB, cancellationToken);
 
             Profile profile = (Profile)results.Get("profile").Value;
 
-            string resp = Json.Serialize(new EarthApiResponse(new SplitRubies(profile.rubies.purchased, profile.rubies.earned), new EarthApiResponse.UpdatesResponse(results)));
+            string resp = Json.Serialize(new EarthApiResponse(new SplitRubies(profile.Rubies.Purchased, profile.Rubies.Earned), new EarthApiResponse.UpdatesResponse(results)));
             return Content(resp, "application/json");
         }
         catch (EarthDB.DatabaseException ex)
@@ -961,10 +961,10 @@ public class WorkshopRouter : ControllerBase
                     EarthDB.Query query = new EarthDB.Query(true);
 
                     CraftingSlots craftingSlots = (CraftingSlots)results1.Get("crafting").Value;
-                    CraftingSlot craftingSlot = craftingSlots.slots[slotIndex - 1];
+                    CraftingSlot craftingSlot = craftingSlots.Slots[slotIndex - 1];
                     Profile profile = (Profile)results1.Get("profile").Value;
 
-                    if (!craftingSlot.locked)
+                    if (!craftingSlot.Locked)
                         return query;
 
                     int unlockPrice = CraftingCalculator.calculateUnlockPrice(slotIndex);
@@ -972,10 +972,10 @@ public class WorkshopRouter : ControllerBase
                     if (expectedPurchasePrice.ExpectedPurchasePrice != unlockPrice)
                         return query;
 
-                    if (!profile.rubies.spend(unlockPrice))
+                    if (!profile.Rubies.Spend(unlockPrice))
                         return query;
 
-                    craftingSlot.locked = false;
+                    craftingSlot.Locked = false;
 
                     query.Update("crafting", playerId, craftingSlots).Update("profile", playerId, profile);
 
@@ -1013,10 +1013,10 @@ public class WorkshopRouter : ControllerBase
                     EarthDB.Query query = new EarthDB.Query(true);
 
                     SmeltingSlots smeltingSlots = (SmeltingSlots)results1.Get("smelting").Value;
-                    SmeltingSlot smeltingSlot = smeltingSlots.slots[slotIndex - 1];
+                    SmeltingSlot smeltingSlot = smeltingSlots.Slots[slotIndex - 1];
                     Profile profile = (Profile)results1.Get("profile").Value;
 
-                    if (!smeltingSlot.locked)
+                    if (!smeltingSlot.Locked)
                         return query;
 
                     int unlockPrice = SmeltingCalculator.CalculateUnlockPrice(slotIndex);
@@ -1024,10 +1024,10 @@ public class WorkshopRouter : ControllerBase
                     if (expectedPurchasePrice.ExpectedPurchasePrice != unlockPrice)
                         return query;
 
-                    if (!profile.rubies.spend(unlockPrice))
+                    if (!profile.Rubies.Spend(unlockPrice))
                         return query;
 
-                    smeltingSlot.locked = false;
+                    smeltingSlot.Locked = false;
 
                     query.Update("smelting", playerId, smeltingSlots).Update("profile", playerId, profile);
 
@@ -1046,7 +1046,7 @@ public class WorkshopRouter : ControllerBase
 
     private Types.Workshop.CraftingSlot CraftingSlotModelToResponseIncludingLocked(CraftingSlot craftingSlotModel, long currentTime, int streamVersion, int slotIndex)
     {
-        if (craftingSlotModel.locked)
+        if (craftingSlotModel.Locked)
             return new Types.Workshop.CraftingSlot(null, null, null, null, 0, 0, 0, null, null, State.LOCKED, null, new UnlockPrice(CraftingCalculator.calculateUnlockPrice(slotIndex), 0), streamVersion);
         else
             return CraftingSlotModelToResponse(craftingSlotModel, currentTime, streamVersion);
@@ -1054,21 +1054,21 @@ public class WorkshopRouter : ControllerBase
 
     private static Types.Workshop.CraftingSlot CraftingSlotModelToResponse(CraftingSlot craftingSlotModel, long currentTime, int streamVersion)
     {
-        if (craftingSlotModel.locked)
+        if (craftingSlotModel.Locked)
             throw new ArgumentException(nameof(craftingSlotModel));
 
-        CraftingSlot.ActiveJob? activeJob = craftingSlotModel.activeJob;
+        CraftingSlot.ActiveJobR? activeJob = craftingSlotModel.ActiveJob;
         if (activeJob is not null)
         {
-            CraftingCalculator.State state = CraftingCalculator.CalculateState(currentTime, activeJob, staticData.catalog);
+            CraftingCalculator.State state = CraftingCalculator.CalculateState(currentTime, activeJob, staticData.Catalog);
             return new Types.Workshop.CraftingSlot(
-                activeJob.sessionId,
-                activeJob.recipeId,
+                activeJob.SessionId,
+                activeJob.RecipeId,
                 new OutputItem(state.Output.Id, state.Output.Count),
-                [.. activeJob.input.SelectMany(inputItems => inputItems).Select(item => new Types.Workshop.InputItem(
-                    item.id,
-                    item.count,
-                    [.. item.instances.Select(item => item.instanceId)]
+                [.. activeJob.Input.SelectMany(inputItems => inputItems).Select(item => new Types.Workshop.InputItem(
+                    item.Id,
+                    item.Count,
+                    [.. item.Instances.Select(item => item.InstanceId)]
                 ))],
                 state.CompletedRounds,
                 state.AvailableRounds,
@@ -1087,7 +1087,7 @@ public class WorkshopRouter : ControllerBase
 
     private static Types.Workshop.SmeltingSlot SmeltingSlotModelToResponseIncludingLocked(SmeltingSlot smeltingSlotModel, long currentTime, int streamVersion, int slotIndex)
     {
-        if (smeltingSlotModel.locked)
+        if (smeltingSlotModel.Locked)
             return new Types.Workshop.SmeltingSlot(null, null, null, null, null, null, 0, 0, 0, null, null, State.LOCKED, null, new UnlockPrice(SmeltingCalculator.CalculateUnlockPrice(slotIndex), 0), streamVersion);
         else
             return SmeltingSlotModelToResponse(smeltingSlotModel, currentTime, streamVersion);
@@ -1095,22 +1095,22 @@ public class WorkshopRouter : ControllerBase
 
     private static Types.Workshop.SmeltingSlot SmeltingSlotModelToResponse(SmeltingSlot smeltingSlotModel, long currentTime, int streamVersion)
     {
-        if (smeltingSlotModel.locked)
+        if (smeltingSlotModel.Locked)
             throw new ArgumentException(nameof(smeltingSlotModel));
 
-        SmeltingSlot.ActiveJob? activeJob = smeltingSlotModel.activeJob;
+        SmeltingSlot.ActiveJobR? activeJob = smeltingSlotModel.ActiveJob;
         if (activeJob is not null)
         {
-            SmeltingCalculator.State state = SmeltingCalculator.CalculateState(currentTime, activeJob, smeltingSlotModel.burning, staticData.catalog);
+            SmeltingCalculator.State state = SmeltingCalculator.CalculateState(currentTime, activeJob, smeltingSlotModel.Burning, staticData.Catalog);
 
             Types.Workshop.SmeltingSlot.FuelR? fuel;
-            if (state.RemainingAddedFuel is not null && state.RemainingAddedFuel.item.count > 0)
+            if (state.RemainingAddedFuel is not null && state.RemainingAddedFuel.Item.Count > 0)
             {
                 fuel = new Types.Workshop.SmeltingSlot.FuelR(
-                    new BurnRate(state.RemainingAddedFuel.burnDuration, state.RemainingAddedFuel.heatPerSecond),
-                    state.RemainingAddedFuel.item.id,
-                    state.RemainingAddedFuel.item.count,
-                    [.. state.RemainingAddedFuel.item.instances.Select(item => item.instanceId)]
+                    new BurnRate(state.RemainingAddedFuel.BurnDuration, state.RemainingAddedFuel.HeatPerSecond),
+                    state.RemainingAddedFuel.Item.Id,
+                    state.RemainingAddedFuel.Item.Count,
+                    [.. state.RemainingAddedFuel.Item.Instances.Select(item => item.InstanceId)]
                 );
             }
             else
@@ -1119,23 +1119,23 @@ public class WorkshopRouter : ControllerBase
             Types.Workshop.SmeltingSlot.BurningR burning = new Types.Workshop.SmeltingSlot.BurningR(
                 !state.Completed ? TimeFormatter.FormatTime(state.BurnStartTime) : null,
                 !state.Completed ? TimeFormatter.FormatTime(state.BurnEndTime) : null,
-                TimeFormatter.FormatDuration(state.RemainingHeat * 1000 / state.CurrentBurningFuel.heatPerSecond),
-                (float)state.CurrentBurningFuel.burnDuration * state.CurrentBurningFuel.heatPerSecond - state.RemainingHeat,
+                TimeFormatter.FormatDuration(state.RemainingHeat * 1000 / state.CurrentBurningFuel.HeatPerSecond),
+                (float)state.CurrentBurningFuel.BurnDuration * state.CurrentBurningFuel.HeatPerSecond - state.RemainingHeat,
                 new Types.Workshop.SmeltingSlot.FuelR(
-                    new BurnRate(state.CurrentBurningFuel.burnDuration, state.CurrentBurningFuel.heatPerSecond),
-                    state.CurrentBurningFuel.item.id,
-                    state.CurrentBurningFuel.item.count,
-                    [.. state.CurrentBurningFuel.item.instances.Select(item => item.instanceId)]
+                    new BurnRate(state.CurrentBurningFuel.BurnDuration, state.CurrentBurningFuel.HeatPerSecond),
+                    state.CurrentBurningFuel.Item.Id,
+                    state.CurrentBurningFuel.Item.Count,
+                    [.. state.CurrentBurningFuel.Item.Instances.Select(item => item.InstanceId)]
                 )
             );
 
             return new Types.Workshop.SmeltingSlot(
                 fuel,
                 burning,
-                activeJob.sessionId,
-                activeJob.recipeId,
+                activeJob.SessionId,
+                activeJob.RecipeId,
                 new OutputItem(state.Output.Id, state.Output.Count),
-                state.Input.count > 0 ? [new Types.Workshop.InputItem(state.Input.id, state.Input.count, state.Input.instances.Select(item => item.instanceId).ToArray())] : [],
+                state.Input.Count > 0 ? [new Types.Workshop.InputItem(state.Input.Id, state.Input.Count, state.Input.Instances.Select(item => item.InstanceId).ToArray())] : [],
                 state.CompletedRounds,
                 state.AvailableRounds,
                 state.TotalRounds,
@@ -1149,17 +1149,17 @@ public class WorkshopRouter : ControllerBase
         }
         else
         {
-            SmeltingSlot.Burning? burningModel = smeltingSlotModel.burning;
+            SmeltingSlot.BurningR? burningModel = smeltingSlotModel.Burning;
             Types.Workshop.SmeltingSlot.BurningR? burning = burningModel is not null ? new Types.Workshop.SmeltingSlot.BurningR(
                 null,
                 null,
-                TimeFormatter.FormatDuration(burningModel.remainingHeat * 1000 / burningModel.fuel.heatPerSecond),
-                (float)burningModel.fuel.burnDuration * burningModel.fuel.heatPerSecond * burningModel.fuel.item.count - burningModel.remainingHeat,
+                TimeFormatter.FormatDuration(burningModel.RemainingHeat * 1000 / burningModel.Fuel.HeatPerSecond),
+                (float)burningModel.Fuel.BurnDuration * burningModel.Fuel.HeatPerSecond * burningModel.Fuel.Item.Count - burningModel.RemainingHeat,
                 new Types.Workshop.SmeltingSlot.FuelR(
-                    new BurnRate(burningModel.fuel.burnDuration, burningModel.fuel.heatPerSecond),
-                    burningModel.fuel.item.id,
-                    burningModel.fuel.item.count,
-                    [.. burningModel.fuel.item.instances.Select(item => item.instanceId)]
+                    new BurnRate(burningModel.Fuel.BurnDuration, burningModel.Fuel.HeatPerSecond),
+                    burningModel.Fuel.Item.Id,
+                    burningModel.Fuel.Item.Count,
+                    [.. burningModel.Fuel.Item.Instances.Select(item => item.InstanceId)]
                 )
             ) : null;
             return new Types.Workshop.SmeltingSlot(null, burning, null, null, null, null, 0, 0, 0, null, null, State.EMPTY, null, null, streamVersion);

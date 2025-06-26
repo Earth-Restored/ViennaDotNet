@@ -2,6 +2,7 @@
 using Serilog;
 using SkiaSharp;
 using System.Text.Json;
+using ViennaDotNet.Common;
 using ViennaDotNet.EventBus.Client;
 
 namespace ViennaDotNet.TileRenderer;
@@ -16,19 +17,19 @@ internal sealed class EventBusTileRenderer : IDisposable
     {
         _tileDB = tileDB;
         _eventBus = eventBus;
-        _renderer = TileRenderer.Create(staticData.tileRenderer.TagMapJson, Log.Logger);
+        _renderer = TileRenderer.Create(staticData.TileRenderer.TagMapJson, Log.Logger);
     }
 
     public void Run()
     {
-        _eventBus.addRequestHandler("tile", new RequestHandler.Handler(async request =>
+        _eventBus.AddRequestHandler("tile", new RequestHandler.Handler(async request =>
         {
-            if (request.type == "renderTile")
+            if (request.Type == "renderTile")
             {
                 RenderTileRequest getTile;
                 try
                 {
-                    getTile = JsonSerializer.Deserialize<RenderTileRequest>(request.data)!;
+                    getTile = Json.Deserialize<RenderTileRequest>(request.Data)!;
                 }
                 catch (Exception ex)
                 {
@@ -75,5 +76,5 @@ internal sealed class EventBusTileRenderer : IDisposable
     }
 
     public void Dispose()
-        => _eventBus.close();
+        => _eventBus.Close();
 }

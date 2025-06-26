@@ -3,17 +3,17 @@
 namespace ViennaDotNet.TappablesGenerator;
 
 public record Tappable(
-    string id,
-    float lat,
-    float lon,
-    long spawnTime,
-    long validFor,
-    string icon,
-    Rarity rarity,
-    Item[] items
+    string Id,
+    float Lat,
+    float Lon,
+    long SpawnTime,
+    long ValidFor,
+    string Icon,
+    RarityE Rarity,
+    Item[] Items
 )
 {
-    public enum Rarity
+    public enum RarityE
     {
         COMMON,
         UNCOMMON,
@@ -23,7 +23,7 @@ public record Tappable(
     }
 
     public sealed record Item(
-        string id,
-        int count
+        string Id,
+        int Count
     );
 }

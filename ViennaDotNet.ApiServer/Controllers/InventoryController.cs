@@ -21,7 +21,7 @@ namespace ViennaDotNet.ApiServer.Controllers;
 public class InventoryController : ControllerBase
 {
     private static EarthDB earthDB => Program.DB;
-    private static Catalog catalog => Program.staticData.catalog;
+    private static Catalog catalog => Program.staticData.Catalog;
 
     [HttpGet]
     public async Task<IActionResult> GetInventory(CancellationToken cancellationToken)
@@ -53,33 +53,33 @@ public class InventoryController : ControllerBase
         }
 
         Dictionary<string, int?> hotbarItemCounts = [];
-        foreach (var item in hotbarModel.items)
+        foreach (var item in hotbarModel.Items)
         {
             if (item is not null)
-                hotbarItemCounts[item.uuid] = hotbarItemCounts.GetOrDefault(item.uuid, 0) + item.count;
+                hotbarItemCounts[item.Uuid] = hotbarItemCounts.GetOrDefault(item.Uuid, 0) + item.Count;
         }
 
         HashSet<string> hotbarItemInstances = [];
-        foreach (var item in hotbarModel.items)
+        foreach (var item in hotbarModel.Items)
         {
-            if (item is not null && item.instanceId is not null)
-                hotbarItemInstances.Add(item.instanceId);
+            if (item is not null && item.InstanceId is not null)
+                hotbarItemInstances.Add(item.InstanceId);
         }
 
         Types.Inventory.Inventory inventory = new Types.Inventory.Inventory(
-            [.. hotbarModel.items.Select(item => item is not null ? new HotbarItem(
-                item.uuid,
-                item.count,
-                item.instanceId,
-                item.instanceId is not null ? ItemWear.WearToHealth(item.uuid, inventoryModel.getItemInstance(item.uuid, item.instanceId)?.wear ?? 0, catalog.itemsCatalog) : 0.0f
+            [.. hotbarModel.Items.Select(item => item is not null ? new HotbarItem(
+                item.Uuid,
+                item.Count,
+                item.InstanceId,
+                item.InstanceId is not null ? ItemWear.WearToHealth(item.Uuid, inventoryModel.GetItemInstance(item.Uuid, item.InstanceId)?.Wear ?? 0, catalog.ItemsCatalog) : 0.0f
                     ) : null)],
-            [.. inventoryModel.getStackableItems().Select(item =>
+            [.. inventoryModel.StackableItems.Select(item =>
             {
-                string uuid = item.id;
-                int count = item.count - hotbarItemCounts.GetOrDefault(uuid, 0) ?? 0;
-                Journal.ItemJournalEntry itemJournalEntry = journalModel.getItem(uuid)!;
-                string firstSeen = TimeFormatter.FormatTime(itemJournalEntry.firstSeen);
-                string lastSeen = TimeFormatter.FormatTime(itemJournalEntry.lastSeen);
+                string uuid = item.Id;
+                int count = item.Count - hotbarItemCounts.GetOrDefault(uuid, 0) ?? 0;
+                Journal.ItemJournalEntry itemJournalEntry = journalModel.GetItem(uuid)!;
+                string firstSeen = TimeFormatter.FormatTime(itemJournalEntry.FirstSeen);
+                string lastSeen = TimeFormatter.FormatTime(itemJournalEntry.LastSeen);
 
                 return new StackableInventoryItem(
                     uuid,
@@ -89,15 +89,15 @@ public class InventoryController : ControllerBase
                     new StackableInventoryItem.OnR(lastSeen)
                 );
             })],
-            [.. inventoryModel.getNonStackableItems().Select(item =>
+            [.. inventoryModel.NonStackableItems.Select(item =>
             {
-                string uuid = item.id;
-                Journal.ItemJournalEntry itemJournalEntry = journalModel.getItem(uuid)!;
-                string firstSeen = TimeFormatter.FormatTime(itemJournalEntry.firstSeen);
-                string lastSeen = TimeFormatter.FormatTime(itemJournalEntry.lastSeen);
+                string uuid = item.Id;
+                Journal.ItemJournalEntry itemJournalEntry = journalModel.GetItem(uuid)!;
+                string firstSeen = TimeFormatter.FormatTime(itemJournalEntry.FirstSeen);
+                string lastSeen = TimeFormatter.FormatTime(itemJournalEntry.LastSeen);
                 return new NonStackableInventoryItem(
                     uuid,
-                    [.. item.instances.Where(instance => !hotbarItemInstances.Contains(instance.instanceId)).Select(instance => new NonStackableInventoryItem.Instance(instance.instanceId, ItemWear.WearToHealth(item.id, instance.wear, catalog.itemsCatalog)))],
+                    [.. item.Instances.Where(instance => !hotbarItemInstances.Contains(instance.InstanceId)).Select(instance => new NonStackableInventoryItem.Instance(instance.InstanceId, ItemWear.WearToHealth(item.Id, instance.Wear, catalog.ItemsCatalog)))],
                     1,
                     new NonStackableInventoryItem.OnR(firstSeen),
                     new NonStackableInventoryItem.OnR(lastSeen)
@@ -133,13 +133,13 @@ public class InventoryController : ControllerBase
                 .Then(results1 =>
                 {
                     Hotbar hotbar = new Hotbar();
-                    for (int index = 0; index < hotbar.items.Length; index++)
+                    for (int index = 0; index < hotbar.Items.Length; index++)
                     {
                         SetHotbarRequestItem item = setHotbarRequestItems[index];
-                        hotbar.items[index] = item is not null ? new Hotbar.Item(item.Id, item.Count, item.InstanceId) : null;
+                        hotbar.Items[index] = item is not null ? new Hotbar.Item(item.Id, item.Count, item.InstanceId) : null;
                     }
 
-                    hotbar.limitToInventory((DB.Models.Player.Inventory)results1.Get("inventory").Value);
+                    hotbar.LimitToInventory((DB.Models.Player.Inventory)results1.Get("inventory").Value);
                     return new EarthDB.Query(true)
                         .Update("hotbar", playerId, hotbar)
                         .Get("inventory", playerId, typeof(DB.Models.Player.Inventory))
@@ -155,11 +155,11 @@ public class InventoryController : ControllerBase
             throw new ServerErrorException(ex);
         }
 
-        HotbarItem?[] hotbarItems = [.. hotbarModel.items.Select(item => item is not null ? new HotbarItem(
-            item.uuid,
-            item.count,
-            item.instanceId,
-            item.instanceId is not null ? ItemWear.WearToHealth(item.uuid, inventoryModel.getItemInstance(item.uuid, item.instanceId)!.wear, catalog.itemsCatalog) : 0.0f
+        HotbarItem?[] hotbarItems = [.. hotbarModel.Items.Select(item => item is not null ? new HotbarItem(
+            item.Uuid,
+            item.Count,
+            item.InstanceId,
+            item.InstanceId is not null ? ItemWear.WearToHealth(item.Uuid, inventoryModel.GetItemInstance(item.Uuid, item.InstanceId)!.Wear, catalog.ItemsCatalog) : 0.0f
         ) : null)];
 
         string resp = Json.Serialize(hotbarItems);
@@ -178,9 +178,9 @@ public class InventoryController : ControllerBase
         // request.timestamp
         long requestStartedOn = HttpContext.GetTimestamp();
 
-        Catalog.ItemsCatalog.Item? item = catalog.itemsCatalog.getItem(itemId);
+        Catalog.ItemsCatalogR.Item? item = catalog.ItemsCatalog.GetItem(itemId);
 
-        if (item is null || item.consumeInfo is null)
+        if (item is null || item.ConsumeInfo is null)
         {
             return BadRequest();
         }
@@ -201,48 +201,48 @@ public class InventoryController : ControllerBase
 
                     EarthDB.Query query = new EarthDB.Query(true);
 
-                    if (!inventory.takeItems(itemId, 1))
+                    if (!inventory.TakeItems(itemId, 1))
                     {
                         return new EarthDB.Query(false);
                     }
 
-                    string? returnItemId = item.consumeInfo.returnItemId;
+                    string? returnItemId = item.ConsumeInfo.ReturnItemId;
                     if (returnItemId is not null)
                     {
-                        Catalog.ItemsCatalog.Item? returnItem = catalog.itemsCatalog.getItem(returnItemId);
+                        Catalog.ItemsCatalogR.Item? returnItem = catalog.ItemsCatalog.GetItem(returnItemId);
                         Debug.Assert(returnItem is not null);
 
-                        if (returnItem.stackable)
+                        if (returnItem.Stackable)
                         {
-                            inventory.addItems(returnItemId, 1);
+                            inventory.AddItems(returnItemId, 1);
                         }
                         else
                         {
-                            inventory.addItems(returnItemId, [new NonStackableItemInstance(U.RandomUuid().ToString(), 0)]);
+                            inventory.AddItems(returnItemId, [new NonStackableItemInstance(U.RandomUuid().ToString(), 0)]);
                         }
 
-                        if (journal.addCollectedItem(returnItemId, requestStartedOn, 1) == 0)
+                        if (journal.AddCollectedItem(returnItemId, requestStartedOn, 1) == 0)
                         {
-                            if (returnItem.journalEntry is not null)
+                            if (returnItem.JournalEntry is not null)
                             {
                                 query.Then(TokenUtils.AddToken(playerId, new Tokens.JournalItemUnlockedToken(returnItemId)));
                             }
                         }
                     }
 
-                    int healing = item.consumeInfo.heal;
+                    int healing = item.ConsumeInfo.Heal;
 
-                    int healingMultiplier = BoostUtils.GetActiveStatModifiers(boosts, requestStartedOn, catalog.itemsCatalog).FoodMultiplier;
+                    int healingMultiplier = BoostUtils.GetActiveStatModifiers(boosts, requestStartedOn, catalog.ItemsCatalog).FoodMultiplier;
                     if (healingMultiplier > 0)
                     {
                         healing = (healing * (healingMultiplier + 100)) / 100;
                     }
 
-                    int maxPlayerHealth = BoostUtils.GetMaxPlayerHealth(boosts, requestStartedOn, catalog.itemsCatalog);
-                    profile.health += healing;
-                    if (profile.health > maxPlayerHealth)
+                    int maxPlayerHealth = BoostUtils.GetMaxPlayerHealth(boosts, requestStartedOn, catalog.ItemsCatalog);
+                    profile.Health += healing;
+                    if (profile.Health > maxPlayerHealth)
                     {
-                        profile.health = maxPlayerHealth;
+                        profile.Health = maxPlayerHealth;
                     }
 
                     query.Update("inventory", playerId, inventory).Update("journal", playerId, journal).Update("profile", playerId, profile);

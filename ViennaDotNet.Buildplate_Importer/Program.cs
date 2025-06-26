@@ -5,6 +5,7 @@ using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using ViennaDotNet.Common;
 using ViennaDotNet.Common.Utils;
 using ViennaDotNet.DB;
 using ViennaDotNet.DB.Models.Player;
@@ -96,7 +97,7 @@ internal static class Program
         ObjectStoreClient objectStoreClient;
         try
         {
-            objectStoreClient = ObjectStoreClient.create(options.ObjectStoreConnectionString);
+            objectStoreClient = ObjectStoreClient.Create(options.ObjectStoreConnectionString);
         }
         catch (ObjectStoreClientException ex)
         {
@@ -112,7 +113,7 @@ internal static class Program
         EventBusClient? eventBusClient;
         try
         {
-            eventBusClient = EventBusClient.create(options.EventBusConnectionString);
+            eventBusClient = EventBusClient.Create(options.EventBusConnectionString);
             Log.Information("Connected to event bus");
         }
         catch (EventBusClientException ex)
@@ -121,7 +122,7 @@ internal static class Program
             eventBusClient = null;
         }
 
-        WorldData? worldData = readWorldFile(options.WorldPath);
+        WorldData? worldData = ReadWorldFile(options.WorldPath);
         if (worldData is null)
         {
             Log.Fatal("Could not get world data");
@@ -134,7 +135,7 @@ internal static class Program
 
         string playerId = options.PlayerId.ToLowerInvariant();
 
-        if (!await storeBuildplate(earthDB, eventBusClient, objectStoreClient, playerId, buildplateId, worldData, U.CurrentTimeMillis()))
+        if (!await StoreBuildplate(earthDB, eventBusClient, objectStoreClient, playerId, buildplateId, worldData, U.CurrentTimeMillis()))
         {
             Log.Fatal("Could not add buildplate");
             Log.CloseAndFlush();
@@ -157,7 +158,7 @@ internal static class Program
         [property: JsonPropertyName("night")] bool Night
     );
 
-    private static WorldData? readWorldFile(string worldFileName)
+    private static WorldData? ReadWorldFile(string worldFileName)
     {
         Dictionary<string, byte[]> worldFileContents = [];
 
@@ -269,7 +270,7 @@ internal static class Program
             }
             else
             {
-                var buildplateMetadataVersion = JsonSerializer.Deserialize<BuildplateMetadataVersion>(buildplateMetadataString);
+                var buildplateMetadataVersion = Json.Deserialize<BuildplateMetadataVersion>(buildplateMetadataString);
 
                 if (buildplateMetadataVersion is null)
                 {
@@ -281,7 +282,7 @@ internal static class Program
                 {
                     case 1:
                         {
-                            var buildplateMetadata = JsonSerializer.Deserialize<BuildplateMetadataV1>(buildplateMetadataString);
+                            var buildplateMetadata = Json.Deserialize<BuildplateMetadataV1>(buildplateMetadataString);
 
                             if (buildplateMetadata is null)
                             {
@@ -323,15 +324,15 @@ internal static class Program
         bool night
     );
 
-    private static async Task<bool> storeBuildplate(EarthDB earthDB, EventBusClient? eventBusClient, ObjectStoreClient objectStoreClient, string playerId, string buildplateId, WorldData worldData, long timestamp)
+    private static async Task<bool> StoreBuildplate(EarthDB earthDB, EventBusClient? eventBusClient, ObjectStoreClient objectStoreClient, string playerId, string buildplateId, WorldData worldData, long timestamp)
     {
         string? preview;
         if (eventBusClient is not null)
         {
             Log.Information("Generating preview");
-            RequestSender requestSender = eventBusClient.addRequestSender();
-            preview = await requestSender.request("buildplates", "preview", JsonSerializer.Serialize(new PreviewRequest(Convert.ToBase64String(worldData.ServerData), worldData.Night))).Task;
-            requestSender.close();
+            RequestSender requestSender = eventBusClient.AddRequestSender();
+            preview = await requestSender.Request("buildplates", "preview", JsonSerializer.Serialize(new PreviewRequest(Convert.ToBase64String(worldData.ServerData), worldData.Night))).Task;
+            requestSender.Close();
 
             if (preview is null)
             {
@@ -345,7 +346,7 @@ internal static class Program
         }
 
         Log.Information("Storing world");
-        string? serverDataObjectId = (string?)await objectStoreClient.store(worldData.ServerData).Task;
+        string? serverDataObjectId = (string?)await objectStoreClient.Store(worldData.ServerData).Task;
         if (serverDataObjectId is null)
         {
             Log.Error("Could not store data object in object store");
@@ -353,7 +354,7 @@ internal static class Program
         }
 
         Log.Information("Storing preview");
-        string? previewObjectId = (string?)await objectStoreClient.store(preview is not null ? Encoding.ASCII.GetBytes(preview) : []).Task;
+        string? previewObjectId = (string?)await objectStoreClient.Store(preview is not null ? Encoding.ASCII.GetBytes(preview) : []).Task;
         if (previewObjectId is null)
         {
             Log.Error("Could not store preview object in object store");
@@ -378,7 +379,7 @@ internal static class Program
 
                     Buildplates.Buildplate buildplate = new Buildplates.Buildplate(worldData.Size, worldData.Offset, scale, worldData.Night, timestamp, serverDataObjectId, previewObjectId);
 
-                    buildplates.addBuildplate(buildplateId, buildplate);
+                    buildplates.AddBuildplate(buildplateId, buildplate);
 
                     return new EarthDB.Query(true)
                         .Update("buildplates", playerId, buildplates);
@@ -389,8 +390,8 @@ internal static class Program
         catch (EarthDB.DatabaseException ex)
         {
             Log.Error($"Failed to store buildplate in database: {ex}");
-            objectStoreClient.delete(serverDataObjectId);
-            objectStoreClient.delete(previewObjectId);
+            objectStoreClient.Delete(serverDataObjectId);
+            objectStoreClient.Delete(previewObjectId);
             return false;
         }
     }

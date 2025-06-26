@@ -43,15 +43,16 @@ public class JournalController : ControllerBase
         }
 
         Dictionary<string, Types.Journal.JournalRecord.InventoryJournalEntry> inventoryJournal = [];
-        journalModel.getItems().ForEach((uuid, itemJournalEntry) => inventoryJournal[uuid] = new Types.Journal.JournalRecord.InventoryJournalEntry(
-            TimeFormatter.FormatTime(itemJournalEntry.firstSeen),
-            TimeFormatter.FormatTime(itemJournalEntry.lastSeen),
-            itemJournalEntry.amountCollected
+        journalModel.Items.ForEach((uuid, itemJournalEntry) => inventoryJournal[uuid] = new Types.Journal.JournalRecord.InventoryJournalEntry(
+            TimeFormatter.FormatTime(itemJournalEntry.FirstSeen),
+            TimeFormatter.FormatTime(itemJournalEntry.LastSeen),
+            itemJournalEntry.AmountCollected
         ));
 
-        LinkedList<Types.Journal.JournalRecord.ActivityLogEntry> _activityLogList = activityLogModel.getEntries()
+        LinkedList<Types.Journal.JournalRecord.ActivityLogEntry> _activityLogList = activityLogModel.Entries
             .Select(ActivityLogEntryToApiResponse)
             .Collect(() => new LinkedList<Types.Journal.JournalRecord.ActivityLogEntry>(), (list, val) => list.AddLast(val), (list1, list2) => list1.AddRange(list1));
+
         var activityLogList = _activityLogList.Reverse().ToArray();
         Types.Journal.JournalRecord.ActivityLogEntry[] activityLog = activityLogList;
 
@@ -61,31 +62,31 @@ public class JournalController : ControllerBase
 
     private static Types.Journal.JournalRecord.ActivityLogEntry ActivityLogEntryToApiResponse(ActivityLog.Entry entry)
     {
-        Rewards rewards = entry.type switch
+        Rewards rewards = entry.Type switch
         {
-            ActivityLog.Entry.Type.LEVEL_UP => new Rewards().setLevel(((ActivityLog.LevelUpEntry)entry).level),
-            ActivityLog.Entry.Type.TAPPABLE => Rewards.FromDBRewardsModel(((ActivityLog.TappableEntry)entry).rewards),
-            ActivityLog.Entry.Type.JOURNAL_ITEM_UNLOCKED => new Rewards().addItem(((ActivityLog.JournalItemUnlockedEntry)entry).itemId, 0),
-            ActivityLog.Entry.Type.CRAFTING_COMPLETED => Rewards.FromDBRewardsModel(((ActivityLog.CraftingCompletedEntry)entry).rewards),
-            ActivityLog.Entry.Type.SMELTING_COMPLETED => Rewards.FromDBRewardsModel(((ActivityLog.SmeltingCompletedEntry)entry).rewards),
-            ActivityLog.Entry.Type.BOOST_ACTIVATED => new Rewards(),
-            _ => throw new InvalidDataException($"Unknown ActivityLog.Entry.Type '{entry.type}'"),
+            ActivityLog.Entry.TypeE.LEVEL_UP => new Rewards().setLevel(((ActivityLog.LevelUpEntry)entry).Level),
+            ActivityLog.Entry.TypeE.TAPPABLE => Rewards.FromDBRewardsModel(((ActivityLog.TappableEntry)entry).Rewards),
+            ActivityLog.Entry.TypeE.JOURNAL_ITEM_UNLOCKED => new Rewards().addItem(((ActivityLog.JournalItemUnlockedEntry)entry).ItemId, 0),
+            ActivityLog.Entry.TypeE.CRAFTING_COMPLETED => Rewards.FromDBRewardsModel(((ActivityLog.CraftingCompletedEntry)entry).Rewards),
+            ActivityLog.Entry.TypeE.SMELTING_COMPLETED => Rewards.FromDBRewardsModel(((ActivityLog.SmeltingCompletedEntry)entry).Rewards),
+            ActivityLog.Entry.TypeE.BOOST_ACTIVATED => new Rewards(),
+            _ => throw new InvalidDataException($"Unknown ActivityLog.Entry.Type '{entry.Type}'"),
         };
 
         Dictionary<string, string> properties = [];
-        switch (entry.type)
+        switch (entry.Type)
         {
-            case ActivityLog.Entry.Type.BOOST_ACTIVATED:
+            case ActivityLog.Entry.TypeE.BOOST_ACTIVATED:
                 {
-                    properties["boostId"] = ((ActivityLog.BoostActivatedEntry)entry).itemId;
+                    properties["boostId"] = ((ActivityLog.BoostActivatedEntry)entry).ItemId;
                 }
 
                 break;
         }
 
         return new Types.Journal.JournalRecord.ActivityLogEntry(
-            Enum.Parse<Types.Journal.JournalRecord.ActivityLogEntry.Type>(entry.type.ToString()),
-            TimeFormatter.FormatTime(entry.timestamp),
+            Enum.Parse<Types.Journal.JournalRecord.ActivityLogEntry.Type>(entry.Type.ToString()),
+            TimeFormatter.FormatTime(entry.Timestamp),
             rewards.ToApiResponse(),
             properties
         );

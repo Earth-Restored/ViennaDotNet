@@ -1,6 +1,6 @@
 ﻿namespace ViennaDotNet.DB.Models.Common;
 
 public sealed record NonStackableItemInstance(
-    string instanceId,
-    int wear
+    string InstanceId,
+    int Wear
 );

@@ -4,39 +4,38 @@ namespace ViennaDotNet.DB.Models.Player.Workshop;
 
 public sealed class SmeltingSlot
 {
-    [JsonInclude]
-    public ActiveJob? activeJob;
-    [JsonInclude]
-    public Burning? burning;
-    [JsonInclude]
-    public bool locked;
+    public ActiveJobR? ActiveJob { get; set; }
+
+    public BurningR? Burning { get; set; }
+
+    public bool Locked { get; set; }
 
     public SmeltingSlot()
     {
-        activeJob = null;
-        burning = null;
-        locked = false;
+        ActiveJob = null;
+        Burning = null;
+        Locked = false;
     }
 
-    public sealed record ActiveJob(
-        string sessionId,
-        string recipeId,
-        long startTime,
-        InputItem input,
-        Fuel? addedFuel,
-        int totalRounds,
-        int collectedRounds,
-        bool finishedEarly
+    public sealed record ActiveJobR(
+        string SessionId,
+        string RecipeId,
+        long StartTime,
+        InputItem Input,
+        Fuel? AddedFuel,
+        int TotalRounds,
+        int CollectedRounds,
+        bool FinishedEarly
     );
 
     public sealed record Fuel(
-        InputItem item,
-        int burnDuration,
-        int heatPerSecond
+        InputItem Item,
+        int BurnDuration,
+        int HeatPerSecond
     );
 
-    public sealed record Burning(
-        Fuel fuel,
-        int remainingHeat
+    public sealed record BurningR(
+        Fuel Fuel,
+        int RemainingHeat
     );
 }

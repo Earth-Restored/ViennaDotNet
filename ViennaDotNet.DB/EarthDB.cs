@@ -226,7 +226,7 @@ public sealed class EarthDB : IDisposable
 
             foreach (WriteObjectsEntry entry in writeObjects)
             {
-                string json = toJson(entry.value);
+                string json = ToJson(entry.value);
 
                 using (var command = transaction.Connection!.CreateCommand())
                 {
@@ -302,8 +302,8 @@ public sealed class EarthDB : IDisposable
                 }
                 else
                 {
-                    object value = createNewInstance(entry.valueType);
-                    string json = toJson(value);
+                    object value = CreateNewInstance(entry.valueType);
+                    string json = ToJson(value);
 
                     using (var command = transaction.Connection!.CreateCommand())
                     {
@@ -337,13 +337,13 @@ public sealed class EarthDB : IDisposable
                         {
                             string json = reader.GetString(0);
                             int version = reader.GetInt32(1);
-                            object? value = fromJson(json, entry.valueType);
+                            object? value = FromJson(json, entry.valueType);
                             Debug.Assert(value is not null);
                             results.getValues[entry.type] = new Results.Result(value, version);
                         }
                         else
                         {
-                            results.getValues[entry.type] = new Results.Result(createNewInstance(entry.valueType), 1);
+                            results.getValues[entry.type] = new Results.Result(CreateNewInstance(entry.valueType), 1);
                         }
                     }
                 }
@@ -374,7 +374,7 @@ public sealed class EarthDB : IDisposable
 
             foreach (WriteObjectsEntry entry in writeObjects)
             {
-                string json = toJson(entry.value);
+                string json = ToJson(entry.value);
 
                 using (var command = transaction.Connection!.CreateCommand())
                 {
@@ -448,8 +448,8 @@ public sealed class EarthDB : IDisposable
                 }
                 else
                 {
-                    object value = createNewInstance(entry.valueType);
-                    string json = toJson(value);
+                    object value = CreateNewInstance(entry.valueType);
+                    string json = ToJson(value);
 
                     using (var command = transaction.Connection!.CreateCommand())
                     {
@@ -483,13 +483,13 @@ public sealed class EarthDB : IDisposable
                         {
                             string json = reader.GetString(0);
                             int version = reader.GetInt32(1);
-                            object? value = fromJson(json, entry.valueType);
+                            object? value = FromJson(json, entry.valueType);
                             Debug.Assert(value is not null);
                             results.getValues[entry.type] = new Results.Result(value, version);
                         }
                         else
                         {
-                            results.getValues[entry.type] = new Results.Result(createNewInstance(entry.valueType), 1);
+                            results.getValues[entry.type] = new Results.Result(CreateNewInstance(entry.valueType), 1);
                         }
                     }
                 }
@@ -737,13 +737,13 @@ public sealed class EarthDB : IDisposable
         }
     }
 
-    private static object? fromJson(string json, Type valueType)
+    private static object? FromJson(string json, Type valueType)
         => Json.Deserialize(json, valueType, jsonOptions);
 
-    private static string toJson(object value)
+    private static string ToJson(object value)
         => Json.Serialize(value);
 
-    private static object createNewInstance(Type valueType)
+    private static object CreateNewInstance(Type valueType)
     {
         try
         {
@@ -779,10 +779,10 @@ public sealed class EarthDB : IDisposable
                 ? throw new KeyNotFoundException()
                 : new GenericResult<T>((T)value.Value, value.version);
 
-        public Dictionary<string, int?> getUpdates()
+        public Dictionary<string, int?> GetUpdates()
             => new Dictionary<string, int?>(updates);
 
-        public object getExtra(string name)
+        public object GetExtra(string name)
             => !extras.TryGetValue(name, out object? value) || value is null
             ? throw new KeyNotFoundException()
             : value;
@@ -808,17 +808,31 @@ public sealed class EarthDB : IDisposable
             ? throw new KeyNotFoundException($"Pos '{pos}' was not found.")
             : objectId;
 
-        public object getExtra(string name)
+        public object GetExtra(string name)
             => !extras.TryGetValue(name, out object? value) || value is null
             ? throw new KeyNotFoundException()
             : value;
     }
 
-    public class DatabaseException : Exception
+    public sealed class DatabaseException : Exception
     {
-        public DatabaseException() { }
-        public DatabaseException(string message) : base(message) { }
-        public DatabaseException(string message, Exception innerException) : base(message, innerException) { }
-        public DatabaseException(Exception innerException) : base("Database operation failed.", innerException) { }
+        public DatabaseException()
+        { 
+        }
+
+        public DatabaseException(string message) 
+            : base(message) 
+        { 
+        }
+
+        public DatabaseException(string message, Exception innerException) 
+            : base(message, innerException) 
+        { 
+        }
+
+        public DatabaseException(Exception innerException) 
+            : base("Database operation failed.", innerException)
+        { 
+        }
     }
 }

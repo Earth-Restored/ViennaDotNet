@@ -4,23 +4,23 @@ namespace ViennaDotNet.ObjectStore.Server;
 
 public class DataStore
 {
-    private readonly DirectoryInfo rootDirectory;
+    private readonly DirectoryInfo _rootDirectory;
 
-    public DataStore(DirectoryInfo _rootDirectory)
+    public DataStore(DirectoryInfo rootDirectory)
     {
-        rootDirectory = _rootDirectory;
+        _rootDirectory = rootDirectory;
 
-        if (!rootDirectory.Exists)
+        if (!_rootDirectory.Exists)
         {
-            rootDirectory.Create();
+            _rootDirectory.Create();
         }
     }
 
-    public string store(byte[] data)
+    public string Store(byte[] data)
     {
         string id = U.RandomUuid().ToString();
 
-        DirectoryInfo dir = new DirectoryInfo(Path.Combine(rootDirectory.FullName, id[..2]));
+        DirectoryInfo dir = new DirectoryInfo(Path.Combine(_rootDirectory.FullName, id[..2]));
         if (!dir.Exists)
         {
             dir.Create();
@@ -44,9 +44,9 @@ public class DataStore
         return id;
     }
 
-    public byte[]? load(string id)
+    public byte[]? Load(string id)
     {
-        FileInfo file = new FileInfo(Path.Combine(rootDirectory.FullName, id[..2], id));
+        FileInfo file = new FileInfo(Path.Combine(_rootDirectory.FullName, id[..2], id));
         if (!file.Exists)
         {
             return null;
@@ -78,9 +78,9 @@ public class DataStore
         return data;
     }
 
-    public void delete(string id)
+    public void Delete(string id)
     {
-        FileInfo file = new FileInfo(Path.Combine(rootDirectory.FullName, id.Substring(0, 2), id));
+        FileInfo file = new FileInfo(Path.Combine(_rootDirectory.FullName, id.Substring(0, 2), id));
         file.Delete();
     }
 

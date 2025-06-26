@@ -3,18 +3,18 @@
 namespace ViennaDotNet.TappablesGenerator;
 
 public sealed record Encounter(
-    string id,
-    float lat,
-    float lon,
-    long spawnTime,
-    long validFor,
-    string icon,
-    Encounter.Rarity rarity,
-    string encounterBuildplateId
+    string Id,
+    float Lat,
+    float Lon,
+    long SpawnTime,
+    long ValidFor,
+    string Icon,
+    Encounter.RarityE Rarity,
+    string EncounterBuildplateId
 )
 {
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    public enum Rarity
+    public enum RarityE
     {
         COMMON,
         UNCOMMON,

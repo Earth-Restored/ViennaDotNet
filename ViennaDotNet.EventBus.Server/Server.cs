@@ -7,74 +7,74 @@ namespace ViennaDotNet.EventBus.Server;
 
 public partial class Server
 {
-    private readonly ReaderWriterLockSlim subscribersLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
-    private readonly Dictionary<string, HashSet<Subscriber>> subscribers = [];
+    private readonly ReaderWriterLockSlim _subscribersLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
+    private readonly Dictionary<string, HashSet<Subscriber>> _subscribers = [];
 
-    private readonly ReaderWriterLockSlim requestHandlersLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
-    private readonly Dictionary<string, HashSet<RequestHandler>> requestHandlers = [];
+    private readonly ReaderWriterLockSlim _requestHandlersLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
+    private readonly Dictionary<string, HashSet<RequestHandler>> _requestHandlers = [];
 
-    public Subscriber? addSubscriber(string queueName, Action<Subscriber.Message> consumer)
+    public Subscriber? AddSubscriber(string queueName, Action<Subscriber.Message> consumer)
     {
-        if (!validateQueueName(queueName))
+        if (!ValidateQueueName(queueName))
             return null;
 
         Log.Debug($"Adding subscriber for {queueName}");
 
-        subscribersLock.EnterWriteLock();
+        _subscribersLock.EnterWriteLock();
 
         Subscriber subscriber = new Subscriber(this, queueName, consumer);
-        subscribers.ComputeIfAbsent(queueName, name => [])!.Add(subscriber);
+        _subscribers.ComputeIfAbsent(queueName, name => [])!.Add(subscriber);
 
-        subscribersLock.ExitWriteLock();
+        _subscribersLock.ExitWriteLock();
 
         return subscriber;
     }
 
     public sealed class Subscriber
     {
-        private readonly Server server;
+        private readonly Server _server;
 
-        private readonly string queueName;
-        private readonly Action<Message> consumer;
-        private bool ended = false;
+        private readonly string _queueName;
+        private readonly Action<Message> _consumer;
+        private bool _ended = false;
 
         internal Subscriber(Server server, string queueName, Action<Message> consumer)
         {
-            this.server = server;
-            this.queueName = queueName;
-            this.consumer = consumer;
+            _server = server;
+            _queueName = queueName;
+            _consumer = consumer;
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public void remove()
+        public void Remove()
         {
-            ended = true;
+            _ended = true;
 
             new Thread(() =>
             {
                 Log.Debug("Removing subscriber");
-                server.subscribersLock.EnterWriteLock();
-                HashSet<Subscriber>? subscribers = server.subscribers.GetOrDefault(queueName, null);
+                _server._subscribersLock.EnterWriteLock();
+                HashSet<Subscriber>? subscribers = _server._subscribers.GetOrDefault(_queueName, null);
                 subscribers?.Remove(this);
 
-                server.subscribersLock.ExitWriteLock();
+                _server._subscribersLock.ExitWriteLock();
             }).Start();
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        internal void push(EntryMessage entryMessage)
+        internal void Push(EntryMessage entryMessage)
         {
-            if (!ended)
-                consumer.Invoke(entryMessage);
+            if (!_ended)
+                _consumer.Invoke(entryMessage);
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        internal void error()
+        internal void Error()
         {
-            if (!ended)
+            if (!_ended)
             {
-                consumer.Invoke(new ErrorMessage());
-                ended = true;
+                _consumer.Invoke(new ErrorMessage());
+                _ended = true;
             }
         }
 
@@ -88,19 +88,19 @@ public partial class Server
 
         public sealed class EntryMessage : Message
         {
-            public readonly long timestamp;
-            public readonly string type;
-            public readonly string data;
+            public readonly long Timestamp;
+            public readonly string Type;
+            public readonly string Data;
 
             internal EntryMessage(long timestamp, string type, string data)
             {
-                this.timestamp = timestamp;
-                this.type = type;
-                this.data = data;
+                Timestamp = timestamp;
+                Type = type;
+                Data = data;
             }
         }
 
-        public class ErrorMessage : Message
+        public sealed class ErrorMessage : Message
         {
             internal ErrorMessage()
             {
@@ -109,15 +109,15 @@ public partial class Server
         }
     }
 
-    private HashSet<Subscriber> getSubscribers(string queueName)
+    private HashSet<Subscriber> GetSubscribers(string queueName)
     {
-        HashSet<Subscriber>? subscribers = this.subscribers.GetOrDefault(queueName, null);
+        HashSet<Subscriber>? subscribers = _subscribers.GetOrDefault(queueName, null);
         return subscribers is not null
             ? subscribers
             : [];
     }
 
-    public Publisher addPublisher()
+    public Publisher AddPublisher()
     {
         Log.Debug("Adding publisher");
         return new Publisher(this);
@@ -125,103 +125,103 @@ public partial class Server
 
     public sealed class Publisher
     {
-        private readonly Server server;
-        private bool closed = false;
+        private readonly Server _server;
+        private bool _closed = false;
 
         public Publisher(Server server)
         {
-            this.server = server;
+            _server = server;
         }
 
-        public void remove()
+        public void Remove()
         {
             Log.Debug("Removing publisher");
-            closed = true;
+            _closed = true;
         }
 
-        public bool publish(string queueName, long timestamp, string type, string data)
+        public bool Publish(string queueName, long timestamp, string type, string data)
         {
-            if (closed)
+            if (_closed)
                 throw new Exception();
 
-            if (!validateQueueName(queueName))
+            if (!ValidateQueueName(queueName))
                 return false;
 
-            if (!validateType(type))
+            if (!ValidateType(type))
                 return false;
 
-            if (!validateData(data))
+            if (!ValidateData(data))
                 return false;
 
-            server.subscribersLock.EnterReadLock();
+            _server._subscribersLock.EnterReadLock();
 
             Subscriber.EntryMessage message = new Subscriber.EntryMessage(timestamp, type, data);
-            foreach (var subscriber in server.getSubscribers(queueName))
+            foreach (var subscriber in _server.GetSubscribers(queueName))
             {
-                subscriber.push(message);
+                subscriber.Push(message);
             }
 
-            server.subscribersLock.ExitReadLock();
+            _server._subscribersLock.ExitReadLock();
 
             return true;
         }
     }
 
-    public Server.RequestHandler? addRequestHandler(string queueName, Func<RequestHandler.Request, TaskCompletionSource<string?>> requestHandler, Action<RequestHandler.ErrorMessage> errorConsumer)
+    public Server.RequestHandler? AddRequestHandler(string queueName, Func<RequestHandler.RequestR, TaskCompletionSource<string?>> requestHandler, Action<RequestHandler.ErrorMessage> errorConsumer)
     {
-        if (!validateQueueName(queueName))
+        if (!ValidateQueueName(queueName))
             return null;
 
         Log.Debug($"Adding request handler for {queueName}");
 
-        requestHandlersLock.EnterWriteLock();
+        _requestHandlersLock.EnterWriteLock();
 
         RequestHandler handler = new RequestHandler(this, queueName, requestHandler, errorConsumer);
-        requestHandlers.ComputeIfAbsent(queueName, name => [])!.Add(handler);
+        _requestHandlers.ComputeIfAbsent(queueName, name => [])!.Add(handler);
 
-        requestHandlersLock.ExitWriteLock();
+        _requestHandlersLock.ExitWriteLock();
 
         return handler;
     }
 
     public sealed class RequestHandler
     {
-        private readonly Server server;
+        private readonly Server _server;
 
-        private readonly string queueName;
-        private readonly Func<Request, TaskCompletionSource<string?>> requestHandler;
-        private readonly Action<ErrorMessage> errorConsumer;
-        private bool ended = false;
+        private readonly string _queueName;
+        private readonly Func<RequestR, TaskCompletionSource<string?>> _requestHandler;
+        private readonly Action<ErrorMessage> _errorConsumer;
+        private bool _ended = false;
 
-        internal RequestHandler(Server server, string queueName, Func<Request, TaskCompletionSource<string?>> requestHandler, Action<ErrorMessage> errorConsumer)
+        internal RequestHandler(Server server, string queueName, Func<RequestR, TaskCompletionSource<string?>> requestHandler, Action<ErrorMessage> errorConsumer)
         {
-            this.server = server;
-            this.queueName = queueName;
-            this.requestHandler = requestHandler;
-            this.errorConsumer = errorConsumer;
+            _server = server;
+            _queueName = queueName;
+            _requestHandler = requestHandler;
+            _errorConsumer = errorConsumer;
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public void remove()
+        public void Remove()
         {
-            ended = true;
+            _ended = true;
 
             new Thread(() =>
             {
                 Log.Debug("Removing handler");
-                server.requestHandlersLock.EnterWriteLock();
-                HashSet<RequestHandler>? requestHandlers = server.requestHandlers.GetOrDefault(queueName, null);
+                _server._requestHandlersLock.EnterWriteLock();
+                HashSet<RequestHandler>? requestHandlers = _server._requestHandlers.GetOrDefault(_queueName, null);
                 requestHandlers?.Remove(this);
 
-                server.requestHandlersLock.ExitWriteLock();
+                _server._requestHandlersLock.ExitWriteLock();
             }).Start();
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        internal TaskCompletionSource<string?> request(Request request)
+        internal TaskCompletionSource<string?> Request(RequestR request)
         {
-            if (!ended)
-                return requestHandler.Invoke(request);
+            if (!_ended)
+                return _requestHandler.Invoke(request);
             else
             {
                 var source = new TaskCompletionSource<string?>();
@@ -231,26 +231,26 @@ public partial class Server
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        private void error()
+        private void Error()
         {
-            if (!ended)
+            if (!_ended)
             {
-                errorConsumer.Invoke(new ErrorMessage());
-                ended = true;
+                _errorConsumer.Invoke(new ErrorMessage());
+                _ended = true;
             }
         }
 
-        public sealed class Request
+        public sealed class RequestR
         {
-            public readonly long timestamp;
-            public readonly string type;
-            public readonly string data;
+            public readonly long Timestamp;
+            public readonly string Type;
+            public readonly string Data;
 
-            internal Request(long timestamp, string type, string data)
+            internal RequestR(long timestamp, string type, string data)
             {
-                this.timestamp = timestamp;
-                this.type = type;
-                this.data = data;
+                Timestamp = timestamp;
+                Type = type;
+                Data = data;
             }
         }
 
@@ -263,15 +263,15 @@ public partial class Server
         }
     }
 
-    private HashSet<RequestHandler> getHandlers(string queueName)
+    private HashSet<RequestHandler> GetHandlers(string queueName)
     {
-        HashSet<RequestHandler>? requestHandlers = this.requestHandlers.GetOrDefault(queueName, null);
+        HashSet<RequestHandler>? requestHandlers = _requestHandlers.GetOrDefault(queueName, null);
         return requestHandlers is not null
             ? requestHandlers
             : [];
     }
 
-    public RequestSender addRequestSender()
+    public RequestSender AddRequestSender()
     {
         Log.Debug("Adding request sender");
         return new RequestSender(this);
@@ -279,47 +279,47 @@ public partial class Server
 
     public sealed class RequestSender
     {
-        private readonly Server server;
+        private readonly Server _server;
 
-        private bool closed = false;
+        private bool _closed = false;
 
         internal RequestSender(Server server)
         {
-            this.server = server;
+            _server = server;
         }
 
-        public void remove()
+        public void Remove()
         {
             Log.Debug("Removing request sender");
-            closed = true;
+            _closed = true;
         }
 
-        public TaskCompletionSource<string?>? request(string queueName, long timestamp, string type, string data)
+        public TaskCompletionSource<string?>? Request(string queueName, long timestamp, string type, string data)
         {
-            if (closed)
+            if (_closed)
                 throw new InvalidOperationException();
 
-            if (!validateQueueName(queueName))
+            if (!ValidateQueueName(queueName))
                 return null;
 
-            if (!validateType(type))
+            if (!ValidateType(type))
                 return null;
 
-            if (!validateData(data))
+            if (!ValidateData(data))
                 return null;
 
-            server.requestHandlersLock.EnterReadLock();
-            LinkedList<RequestHandler> requestHandlers = server.getHandlers(queueName).Collect(() => new LinkedList<RequestHandler>(), (list, item) => list.AddLast(item), (l1, l2) => l1.AddRange(l2));
-            server.requestHandlersLock.ExitReadLock();
+            _server._requestHandlersLock.EnterReadLock();
+            LinkedList<RequestHandler> requestHandlers = _server.GetHandlers(queueName).Collect(() => new LinkedList<RequestHandler>(), (list, item) => list.AddLast(item), (l1, l2) => l1.AddRange(l2));
+            _server._requestHandlersLock.ExitReadLock();
 
-            RequestHandler.Request request = new RequestHandler.Request(timestamp, type, data);
+            RequestHandler.RequestR request = new RequestHandler.RequestR(timestamp, type, data);
             TaskCompletionSource<string?> responseCompletableFuture = new();
 
             new Thread(() =>
             {
                 foreach (RequestHandler requestHandler in requestHandlers)
                 {
-                    TaskCompletionSource<string?> completableFuture = requestHandler.request(request);
+                    TaskCompletionSource<string?> completableFuture = requestHandler.Request(request);
                     string? response = completableFuture.Task.Result;
                     if (response is not null)
                     {
@@ -335,13 +335,13 @@ public partial class Server
         }
     }
 
-    private static bool validateQueueName(string queueName)
+    private static bool ValidateQueueName(string queueName)
         => !string.IsNullOrWhiteSpace(queueName) && queueName.Length != 0 && !GetValitationRegex1().IsMatch(queueName) && !GetValitationRegex2().IsMatch(queueName);
 
-    private static bool validateType(string type)
+    private static bool ValidateType(string type)
         => !string.IsNullOrWhiteSpace(type) && type.Length != 0 && !GetValitationRegex1().IsMatch(type) && !GetValitationRegex2().IsMatch(type);
 
-    private static bool validateData(string str)
+    private static bool ValidateData(string str)
     {
         for (int i = 0; i < str.Length; i++)
             if (str[i] < 32 || str[i] >= 127)

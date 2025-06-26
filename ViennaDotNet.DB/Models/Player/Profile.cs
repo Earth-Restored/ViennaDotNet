@@ -4,20 +4,16 @@ namespace ViennaDotNet.DB.Models.Player;
 
 public sealed class Profile
 {
-    [JsonInclude]
-    public int health;
-    [JsonInclude]
-    public int experience;
-    [JsonInclude]
-    public int level;
-    [JsonInclude]
-    public Rubies rubies;
+    public int Health { get; set; }
+    public int Experience { get; set; }
+    public int Level { get; set; }
+    public Rubies Rubies { get; set; }
 
     public Profile()
     {
-        health = 20;
-        experience = 0;
-        level = 1;
-        rubies = new Rubies();
+        Health = 20;
+        Experience = 0;
+        Level = 1;
+        Rubies = new Rubies();
     }
 }

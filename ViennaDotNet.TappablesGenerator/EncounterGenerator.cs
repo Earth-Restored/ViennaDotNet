@@ -1,4 +1,5 @@
 ﻿using Serilog;
+using System.Diagnostics;
 using ViennaDotNet.Common.Utils;
 using ViennaDotNet.StaticData;
 
@@ -20,23 +21,22 @@ public class EncounterGenerator
     {
         _staticData = staticData;
 
-        if (_staticData.encountersConfig.encounters.Length == 0)
+        if (_staticData.EncountersConfig.Encounters.Length == 0)
         {
             Log.Warning("No encounter configs provided");
         }
-        _maxDuration = _staticData.encountersConfig.encounters.Select(encounterConfig => encounterConfig.duration).DefaultIfEmpty().Max() * 1000;
+
+        _maxDuration = _staticData.EncountersConfig.Encounters.Select(encounterConfig => encounterConfig.Duration).DefaultIfEmpty().Max() * 1000;
 
         _random = new Random();
     }
 
-    public long getMaxEncounterLifetime()
-    {
-        return MAX_DELAY + this._maxDuration + 30 * 1000;
-    }
+    public long GetMaxEncounterLifetime()
+        => MAX_DELAY + _maxDuration + 30 * 1000;
 
-    public Encounter[] generateEncounters(int tileX, int tileY, long currentTime)
+    public Encounter[] GenerateEncounters(int tileX, int tileY, long currentTime)
     {
-        if (_staticData.encountersConfig.encounters.Length == 0)
+        if (_staticData.EncountersConfig.Encounters.Length == 0)
         {
             return [];
         }
@@ -46,45 +46,43 @@ public class EncounterGenerator
         {
             long spawnDelay = _random.NextInt64(MIN_DELAY, MAX_DELAY + 1);
 
-            EncountersConfig.EncounterConfig encounterConfig = _staticData.encountersConfig.encounters[_random.Next(0, _staticData.encountersConfig.encounters.Length)];
+            EncountersConfig.EncounterConfig encounterConfig = _staticData.EncountersConfig.Encounters[_random.Next(0, _staticData.EncountersConfig.Encounters.Length)];
 
-            float[] tileBounds = getTileBounds(tileX, tileY);
+            Span<float> tileBounds = stackalloc float[4];
+            GetTileBounds(tileX, tileY, tileBounds);
             float lat = _random.NextSingle(tileBounds[1], tileBounds[0]);
             float lon = _random.NextSingle(tileBounds[2], tileBounds[3]);
 
             Encounter encounter = new Encounter(
-                    U.RandomUuid().ToString(),
-                    lat,
-                    lon,
-                    currentTime + spawnDelay,
-                    encounterConfig.duration * 1000,
-                    encounterConfig.icon,
-                    Enum.Parse<Encounter.Rarity>(encounterConfig.rarity.ToString()),
-                    encounterConfig.encounterBuildplateId
+                U.RandomUuid().ToString(),
+                lat,
+                lon,
+                currentTime + spawnDelay,
+                encounterConfig.Duration * 1000,
+                encounterConfig.Icon,
+                Enum.Parse<Encounter.RarityE>(encounterConfig.Rarity.ToString()),
+                encounterConfig.EncounterBuildplateId
             );
+
             encounters.Add(encounter);
         }
 
         return [.. encounters];
     }
 
-    private static float[] getTileBounds(int tileX, int tileY)
+    private static void GetTileBounds(int tileX, int tileY, Span<float> dest)
     {
-        return [
-                yToLat((float) tileY / (1 << 16)),
-                yToLat((float) (tileY + 1) / (1 << 16)),
-                xToLon((float) tileX / (1 << 16)),
-                xToLon((float) (tileX + 1) / (1 << 16))
-        ];
+        Debug.Assert(dest.Length >= 4);
+
+        dest[0]=YToLat((float)tileY / (1 << 16));
+        dest[1] = YToLat((float)(tileY + 1) / (1 << 16));
+        dest[2] = XToLon((float)tileX / (1 << 16));
+        dest[3] = XToLon((float)(tileX + 1) / (1 << 16));
     }
 
-    private static float xToLon(float x)
-    {
-        return ((x * 2.0f - 1.0f) * float.Pi) * (180f / float.Pi);
-    }
+    private static float XToLon(float x)
+        => ((x * 2.0f - 1.0f) * float.Pi) * (180f / float.Pi);
 
-    private static float yToLat(float y)
-    {
-        return (float.Atan(float.Sinh((1.0f - y * 2.0f) * float.Pi))) * (180f / float.Pi);
-    }
+    private static float YToLat(float y)
+        => (float.Atan(float.Sinh((1.0f - y * 2.0f) * float.Pi))) * (180f / float.Pi);
 }

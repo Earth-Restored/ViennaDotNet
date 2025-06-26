@@ -56,12 +56,12 @@ public class InstanceManager
     {
         _starter = starter;
 
-        _publisher = eventBusClient.addPublisher();
+        _publisher = eventBusClient.AddPublisher();
 
-        _requestHandler = eventBusClient.addRequestHandler("buildplates", new RequestHandler.Handler(
+        _requestHandler = eventBusClient.AddRequestHandler("buildplates", new RequestHandler.Handler(
            async request =>
             {
-                if (request.type == "start")
+                if (request.Type == "start")
                 {
                     Monitor.Enter(_lock);
                     if (_shuttingDown)
@@ -76,7 +76,7 @@ public class InstanceManager
                     StartRequest startRequest;
                     try
                     {
-                        startRequest = Json.Deserialize<StartRequest>(request.data)!;
+                        startRequest = Json.Deserialize<StartRequest>(request.Data)!;
                     }
                     catch (Exception ex)
                     {
@@ -134,13 +134,13 @@ public class InstanceManager
 
                     return instanceId;
                 }
-                else if (request.type == "preview")
+                else if (request.Type == "preview")
                 {
                     PreviewRequest previewRequest;
                     byte[] serverData;
                     try
                     {
-                        previewRequest = Json.Deserialize<PreviewRequest>(request.data)!;
+                        previewRequest = Json.Deserialize<PreviewRequest>(request.Data)!;
                         serverData = Convert.FromBase64String(previewRequest.ServerDataBase64);
                     }
                     catch (Exception ex)
@@ -172,7 +172,7 @@ public class InstanceManager
     }
 
     private void SendEventBusMessage(string type, string message)
-        => _publisher.publish("buildplates", type, message).ContinueWith(task =>
+        => _publisher.Publish("buildplates", type, message).ContinueWith(task =>
         {
             if (!task.Result)
                 Log.Error("Event bus publisher error");
@@ -180,7 +180,7 @@ public class InstanceManager
 
     public void Shutdown()
     {
-        _requestHandler.close();
+        _requestHandler.Close();
 
         Monitor.Enter(_lock);
         _shuttingDown = true;
@@ -208,7 +208,7 @@ public class InstanceManager
 
         Monitor.Exit(_lock);
 
-        _publisher.flush();
-        _publisher.close();
+        _publisher.Flush();
+        _publisher.Close();
     }
 }

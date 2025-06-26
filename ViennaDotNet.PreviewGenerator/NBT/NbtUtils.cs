@@ -7,85 +7,65 @@ public static class NbtUtils
     public static readonly int MAX_DEPTH = 16;
     public static readonly long MAX_READ_SIZE = 0; // Disabled by default
 
-    public static string toString(object o)
+    public static string ToString(object o)
     {
-        if (o is byte)
+        if (o is byte @byte)
         {
-            return ((byte)o) + "b";
+            return @byte + "b";
         }
-        else if (o is short)
+        else if (o is short @short)
         {
-            return ((short)o) + "s";
+            return @short + "s";
         }
-        else if (o is int)
+        else if (o is int @int)
         {
-            return ((int)o) + "i";
+            return @int + "i";
         }
-        else if (o is long)
+        else if (o is long @long)
         {
-            return ((long)o) + "l";
+            return @long + "l";
         }
-        else if (o is float)
+        else if (o is float @float)
         {
-            return ((float)o) + "f";
+            return @float + "f";
         }
-        else if (o is double)
+        else if (o is double @double)
         {
-            return ((double)o) + "d";
+            return @double + "d";
         }
-        else if (o is byte[])
+        else if (o is byte[] byteArr)
         {
-            return "0x" + printHexBinary((byte[])o);
+            return "0x" + ToHexString(byteArr);
         }
-        else if (o is string)
+        else if (o is string @string)
         {
-            return "\"" + o + "\"";
+            return "\"" + @string + "\"";
         }
-        else if (o is int[] intAr)
+        else if (o is int[] intArr)
         {
-            List<string> joined = [];
-            foreach (int i in intAr)
-                joined.Add(i + "i");
-
-            return "[ " + string.Join(", ", joined) + " ]";
+            return "[ " + string.Join(", ", intArr.Select(i => i + "i")) + " ]";
         }
-        else if (o is long[] longAr)
+        else if (o is long[] longArr)
         {
-            List<string> joined = [];
-            foreach (long l in longAr)
-                joined.Add(l + "l");
-
-            return "[ " + string.Join(", ", joined) + " ]";
+            return "[ " + string.Join(", ", longArr.Select(l => l + "l")) + " ]";
         }
 
         return o.ToString()!;
     }
 
-    public static T copy<T>(T val)
+    public static object Copy(object val)
     {
-        if (val is byte[] bytes)
-            return (T)bytes.Clone();
-        else if (val is int[] ints)
-            return (T)ints.Clone();
-        else if (val is long[] longs)
-            return (T)longs.Clone();
+        if (val is byte[] byteArr)
+            return byteArr.Clone();
+        else if (val is int[] intArr)
+            return intArr.Clone();
+        else if (val is long[] longArr)
+            return longArr.Clone();
 
         return val;
     }
 
-    public static object copyObject(object val)
-    {
-        if (val is byte[] bytes)
-            return bytes.Clone();
-        else if (val is int[] ints)
-            return ints.Clone();
-        else if (val is long[] longs)
-            return longs.Clone();
-
-        return val;
-    }
-
-    public static string indent(string str)
+    public static string Indent(string str)
     {
         StringBuilder builder = new StringBuilder("  " + str);
         for (int i = 2; i < builder.Length; i++)
@@ -100,9 +80,9 @@ public static class NbtUtils
         return builder.ToString();
     }
 
-    private static readonly char[] HEX_CODE = [.. "0123456789ABCDEF"];
+    private static readonly string HEX_CODE = "0123456789ABCDEF";
 
-    public static string printHexBinary(byte[] data)
+    public static string ToHexString(byte[] data)
     {
         StringBuilder r = new StringBuilder(data.Length << 1);
         foreach (byte b in data)

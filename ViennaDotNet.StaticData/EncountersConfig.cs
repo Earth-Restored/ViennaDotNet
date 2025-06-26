@@ -1,12 +1,14 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using ViennaDotNet.Common;
 
 namespace ViennaDotNet.StaticData;
 
 public sealed class EncountersConfig
 {
-    public readonly EncounterConfig[] encounters;
+    public readonly ImmutableArray<EncounterConfig> Encounters;
 
     internal EncountersConfig(string dir)
     {
@@ -22,7 +24,7 @@ public sealed class EncountersConfig
 
                 using (var stream = File.OpenRead(file))
                 {
-                    var encounter = JsonSerializer.Deserialize<EncounterConfig>(stream);
+                    var encounter = Json.Deserialize<EncounterConfig>(stream);
 
                     Debug.Assert(encounter is not null);
 
@@ -30,7 +32,7 @@ public sealed class EncountersConfig
                 }
             }
 
-            this.encounters = [.. encounters];
+            Encounters = [.. encounters];
         }
         catch (Exception exception)
         {
@@ -39,14 +41,14 @@ public sealed class EncountersConfig
     }
 
     public record EncounterConfig(
-        string icon,
-        EncounterConfig.Rarity rarity,
-        string encounterBuildplateId,
-        int duration
+        string Icon,
+        EncounterConfig.RarityE Rarity,
+        string EncounterBuildplateId,
+        int Duration
     )
     {
         [JsonConverter(typeof(JsonStringEnumConverter))]
-        public enum Rarity
+        public enum RarityE
         {
             COMMON,
             UNCOMMON,

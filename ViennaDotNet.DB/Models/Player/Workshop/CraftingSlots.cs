@@ -4,11 +4,10 @@ namespace ViennaDotNet.DB.Models.Player.Workshop;
 
 public sealed class CraftingSlots
 {
-    [JsonInclude]
-    public readonly CraftingSlot[] slots;
+    public CraftingSlot[] Slots { get; init; }
 
     public CraftingSlots()
     {
-        slots = [new CraftingSlot(), new CraftingSlot(), new CraftingSlot()];
+        Slots = [new CraftingSlot(), new CraftingSlot(), new CraftingSlot()];
     }
 }

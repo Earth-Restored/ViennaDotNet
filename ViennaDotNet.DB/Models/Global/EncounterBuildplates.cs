@@ -12,26 +12,24 @@ public sealed class EncounterBuildplates
     {
     }
 
-    public EncounterBuildplate? getEncounterBuildplate(string id)
-    {
-        return _encounterBuildplates.GetOrDefault(id);
-    }
+    public EncounterBuildplate? GetEncounterBuildplate(string id)
+        => _encounterBuildplates.GetOrDefault(id);
 
     public sealed class EncounterBuildplate
     {
-        public readonly int size;
-        public readonly int offset;
-        public readonly int scale;
+        public int Size {get;}
+        public int Offset {get;}
+        public int Scale { get; }
 
-        public readonly string serverDataObjectId;
+        public string ServerDataObjectId { get; }
 
         public EncounterBuildplate(int size, int offset, int scale, string serverDataObjectId)
         {
-            this.size = size;
-            this.offset = offset;
-            this.scale = scale;
+            Size = size;
+            Offset = offset;
+            Scale = scale;
 
-            this.serverDataObjectId = serverDataObjectId;
+            ServerDataObjectId = serverDataObjectId;
         }
     }
 }

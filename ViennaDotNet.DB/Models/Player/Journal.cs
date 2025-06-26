@@ -13,20 +13,20 @@ public sealed class Journal
         _items = [];
     }
 
-    public Journal copy()
+    [JsonIgnore]
+    public Dictionary<string, ItemJournalEntry> Items => _items;
+
+    public Journal Copy()
     {
         Journal journal = new Journal();
         journal._items.AddRange(_items);
         return journal;
     }
 
-    public Dictionary<string, ItemJournalEntry> getItems()
-        => new(_items);
-
-    public ItemJournalEntry? getItem(string uuid)
+    public ItemJournalEntry? GetItem(string uuid)
         => _items.GetValueOrDefault(uuid);
 
-    public int addCollectedItem(string uuid, long timestamp, int count)
+    public int AddCollectedItem(string uuid, long timestamp, int count)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(count);
 
@@ -38,16 +38,14 @@ public sealed class Journal
         }
         else
         {
-            _items[uuid] = new ItemJournalEntry(itemJournalEntry.firstSeen, itemJournalEntry.lastSeen, itemJournalEntry.amountCollected + count);
-            return itemJournalEntry.amountCollected;
+            _items[uuid] = new ItemJournalEntry(itemJournalEntry.FirstSeen, itemJournalEntry.LastSeen, itemJournalEntry.AmountCollected + count);
+            return itemJournalEntry.AmountCollected;
         }
     }
 
-    public record ItemJournalEntry(
-        long firstSeen,
-        long lastSeen,
-        int amountCollected
-    )
-    {
-    }
+    public sealed record ItemJournalEntry(
+        long FirstSeen,
+        long LastSeen,
+        int AmountCollected
+    );
 }

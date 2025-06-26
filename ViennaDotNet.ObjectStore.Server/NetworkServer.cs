@@ -6,29 +6,29 @@ using System.Text.RegularExpressions;
 
 namespace ViennaDotNet.ObjectStore.Server;
 
-public class NetworkServer
+public sealed partial class NetworkServer
 {
-    private readonly Server server;
-    private readonly TcpListener serverSocket;
+    private readonly Server _server;
+    private readonly TcpListener _serverSocket;
 
     public NetworkServer(Server server, int port)
     {
-        this.server = server;
-        serverSocket = new TcpListener(IPAddress.Loopback, port);
-        serverSocket.Start();
+        _server = server;
+        _serverSocket = new TcpListener(IPAddress.Loopback, port);
+        _serverSocket.Start();
         Log.Information($"Created server on port {port}");
     }
 
-    public void run()
+    public void Run()
     {
-        for (; ; )
+        while (true)
         {
             try
             {
-                Socket socket = serverSocket.AcceptSocket();
+                Socket socket = _serverSocket.AcceptSocket();
                 Log.Information($"Connection from {socket.RemoteEndPoint}");
                 Connection connection = new Connection(this, socket);
-                new Thread(connection.run).Start();
+                new Thread(connection.Run).Start();
             }
             catch (SocketException ex)
             {
@@ -39,17 +39,17 @@ public class NetworkServer
 
     private sealed class Connection
     {
-        private readonly NetworkServer networkServer;
+        private readonly NetworkServer _networkServer;
 
-        private readonly Socket socket;
+        private readonly Socket _socket;
 
         public Connection(NetworkServer networkServer, Socket socket)
         {
-            this.networkServer = networkServer;
-            this.socket = socket;
+            _networkServer = networkServer;
+            _socket = socket;
         }
 
-        public void run()
+        public void Run()
         {
             try
             {
@@ -60,7 +60,7 @@ public class NetworkServer
                 int binaryReadLength = 0;
                 while (!close)
                 {
-                    int readLength = socket.Receive(readBuffer);
+                    int readLength = _socket.Receive(readBuffer);
                     if (readLength > 0)
                     {
                         int startOffset = 0;
@@ -77,7 +77,7 @@ public class NetworkServer
                                 else
                                 {
                                     byteArrayOutputStream.Write(readBuffer, startOffset, binaryReadLength);
-                                    if (!handleBinaryData(lastCommand, byteArrayOutputStream.ToArray()))
+                                    if (!HandleBinaryData(lastCommand, byteArrayOutputStream.ToArray()))
                                     {
                                         close = true;
                                         break;
@@ -97,7 +97,7 @@ public class NetworkServer
                                     {
                                         byteArrayOutputStream.Write(readBuffer, startOffset, offset - startOffset);
                                         lastCommand = Encoding.ASCII.GetString(byteArrayOutputStream.ToArray());
-                                        binaryReadLength = handleCommand(lastCommand);
+                                        binaryReadLength = HandleCommand(lastCommand);
                                         if (binaryReadLength == -1)
                                         {
                                             close = true;
@@ -131,18 +131,18 @@ public class NetworkServer
             Log.Information("Connection closed");
         }
 
-        private void sendMessage(string message)
+        private void SendMessage(string message)
         {
             try
             {
-                socket.Send(Encoding.ASCII.GetBytes(message + "\n"));
+                _socket.Send(Encoding.ASCII.GetBytes(message + "\n"));
             }
             catch (SocketException ex)
             {
                 Log.Warning($"Exception while sending: {ex}");
                 try
                 {
-                    socket.Shutdown(SocketShutdown.Both);
+                    _socket.Shutdown(SocketShutdown.Both);
                 }
                 catch (SocketException shutdownEx)
                 {
@@ -150,23 +150,23 @@ public class NetworkServer
                 }
                 finally
                 {
-                    socket.Close();
+                    _socket.Close();
                 }
             }
         }
 
-        private void sendData(byte[] data)
+        private void SendData(byte[] data)
         {
             try
             {
-                socket.Send(data);
+                _socket.Send(data);
             }
             catch (SocketException ex)
             {
                 Log.Warning($"Exception while sending: {ex}");
                 try
                 {
-                    socket.Shutdown(SocketShutdown.Both);
+                    _socket.Shutdown(SocketShutdown.Both);
                 }
                 catch (SocketException shutdownEx)
                 {
@@ -174,12 +174,12 @@ public class NetworkServer
                 }
                 finally
                 {
-                    socket.Close();
+                    _socket.Close();
                 }
             }
         }
 
-        private int handleCommand(string command)
+        private int HandleCommand(string command)
         {
             string[] parts = command.Split(' ', 2);
             if (parts.Length != 2)
@@ -194,11 +194,11 @@ public class NetworkServer
 
                         if (length == 0)
                         {
-                            string? id = networkServer.server.store([]);
+                            string? id = _networkServer._server.Store([]);
                             if (id is not null)
-                                sendMessage("OK " + id);
+                                SendMessage("OK " + id);
                             else
-                                sendMessage("ERR");
+                                SendMessage("ERR");
                         }
 
                         return length;
@@ -206,30 +206,30 @@ public class NetworkServer
                 case "GET":
                     {
                         string id = parts[1];
-                        if (!validateObjectId(id))
+                        if (!ValidateObjectId(id))
                             return -1;
 
-                        byte[]? data = networkServer.server.load(id);
+                        byte[]? data = _networkServer._server.Load(id);
                         if (data is not null)
                         {
-                            sendMessage("OK " + data.Length.ToString());
-                            sendData(data);
+                            SendMessage("OK " + data.Length.ToString());
+                            SendData(data);
                         }
                         else
-                            sendMessage("ERR");
+                            SendMessage("ERR");
 
                         return 0;
                     }
                 case "DEL":
                     {
                         string id = parts[1];
-                        if (!validateObjectId(id))
+                        if (!ValidateObjectId(id))
                             return -1;
 
-                        if (networkServer.server.delete(id))
-                            sendMessage("OK");
+                        if (_networkServer._server.Delete(id))
+                            SendMessage("OK");
                         else
-                            sendMessage("ERR");
+                            SendMessage("ERR");
 
                         return 0;
                     }
@@ -238,7 +238,7 @@ public class NetworkServer
             }
         }
 
-        private bool handleBinaryData(string? command, byte[] data)
+        private bool HandleBinaryData(string? command, byte[] data)
         {
             if (command is null)
                 throw new InvalidOperationException();
@@ -251,11 +251,11 @@ public class NetworkServer
             {
                 case "STORE":
                     {
-                        string? id = networkServer.server.store(data);
+                        string? id = _networkServer._server.Store(data);
                         if (id is not null)
-                            sendMessage("OK " + id);
+                            SendMessage("OK " + id);
                         else
-                            sendMessage("ERR");
+                            SendMessage("ERR");
 
                         return true;
                     }
@@ -265,11 +265,14 @@ public class NetworkServer
         }
     }
 
-    private static bool validateObjectId(string id)
+    private static bool ValidateObjectId(string id)
     {
-        if (!Regex.IsMatch(id, "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"))
+        if (!GetRegex1().IsMatch(id))
             return false;
 
         return true;
     }
+
+    [GeneratedRegex("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+    private static partial Regex GetRegex1();
 }

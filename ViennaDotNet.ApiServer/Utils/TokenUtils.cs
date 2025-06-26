@@ -14,7 +14,7 @@ public static class TokenUtils
         {
             Tokens tokens = (Tokens)results.Get("tokens").Value;
             string id = U.RandomUuid().ToString();
-            tokens.addToken(id, token);
+            tokens.AddToken(id, token);
             EarthDB.Query updateQuery = new EarthDB.Query(true);
             updateQuery.Update("tokens", playerId, tokens);
             updateQuery.Extra("tokenId", id);
@@ -28,9 +28,9 @@ public static class TokenUtils
     {
         EarthDB.Query getQuery = new EarthDB.Query(true);
 
-        switch (token.type)
+        switch (token.Type)
         {
-            case Tokens.Token.Type.LEVEL_UP:
+            case Tokens.Token.TypeE.LEVEL_UP:
                 {
                     Tokens.LevelUpToken levelUpToken = (Tokens.LevelUpToken)token;
 
@@ -38,23 +38,23 @@ public static class TokenUtils
                     {
                         EarthDB.Query updateQuery = new EarthDB.Query(true);
 
-                        updateQuery.Then(ActivityLogUtils.AddEntry(playerId, new ActivityLog.LevelUpEntry(currentTime, levelUpToken.level)));
+                        updateQuery.Then(ActivityLogUtils.AddEntry(playerId, new ActivityLog.LevelUpEntry(currentTime, levelUpToken.Level)));
 
-                        updateQuery.Then(Rewards.FromDBRewardsModel(levelUpToken.rewards).toRedeemQuery(playerId, currentTime, staticData));
+                        updateQuery.Then(Rewards.FromDBRewardsModel(levelUpToken.Rewards).toRedeemQuery(playerId, currentTime, staticData));
 
                         return updateQuery;
                     }, false);
                 }
 
                 break;
-            case Tokens.Token.Type.JOURNAL_ITEM_UNLOCKED:
+            case Tokens.Token.TypeE.JOURNAL_ITEM_UNLOCKED:
                 {
                     Tokens.JournalItemUnlockedToken journalItemUnlockedToken = (Tokens.JournalItemUnlockedToken)token;
                     getQuery.Then(results =>
                     {
                         EarthDB.Query updateQuery = new EarthDB.Query(true);
 
-                        updateQuery.Then(ActivityLogUtils.AddEntry(playerId, new ActivityLog.JournalItemUnlockedEntry(currentTime, journalItemUnlockedToken.itemId)));
+                        updateQuery.Then(ActivityLogUtils.AddEntry(playerId, new ActivityLog.JournalItemUnlockedEntry(currentTime, journalItemUnlockedToken.ItemId)));
 
                         /*int experiencePoints = staticData.catalog.itemsCatalog.getItem(journalItemUnlockedToken.itemId).experience().journal();
                         if (experiencePoints > 0)

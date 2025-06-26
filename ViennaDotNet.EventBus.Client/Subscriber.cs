@@ -2,33 +2,33 @@
 
 public sealed class Subscriber
 {
-    private EventBusClient client;
-    int channelId;
+    private readonly EventBusClient _client;
+    private readonly int _channelId;
 
-    string queueName;
+    private readonly string _queueName;
 
-    private ISubscriberListener listener;
+    private readonly ISubscriberListener _listener;
 
     internal Subscriber(EventBusClient client, int channelId, string queueName, ISubscriberListener listener)
     {
-        this.client = client;
-        this.channelId = channelId;
-        this.queueName = queueName;
-        this.listener = listener;
+        _client = client;
+        _channelId = channelId;
+        _queueName = queueName;
+        _listener = listener;
     }
 
-    public void close()
+    public void Close()
     {
-        client.removeSubscriber(channelId);
-        client.sendMessage(channelId, "CLOSE");
+        _client.RemoveSubscriber(_channelId);
+        _client.SendMessage(_channelId, "CLOSE");
     }
 
-    internal async Task<bool> handleMessage(string message)
+    internal async Task<bool> HandleMessage(string message)
     {
         if (message == "ERR")
         {
-            close();
-            listener.Error();
+            Close();
+            _listener.Error();
             return true;
         }
         else
@@ -43,16 +43,14 @@ public sealed class Subscriber
             string type = fields[1];
             string data = fields[2];
 
-            await listener.Event(new Event(timestamp, type, data));
+            await _listener.Event(new Event(timestamp, type, data));
 
             return true;
         }
     }
 
-    internal void error()
-    {
-        listener.Error();
-    }
+    internal void Error()
+        => _listener.Error();
 
     public interface ISubscriberListener
     {
@@ -69,10 +67,10 @@ public sealed class Subscriber
         public SubscriberListener()
         {
         }
-        public SubscriberListener(Func<Event, Task>? _onEvent = null, Action? _onError = null)
+        public SubscriberListener(Func<Event, Task>? onEvent = null, Action? onError = null)
         {
-            OnEvent = _onEvent;
-            OnError = _onError;
+            OnEvent = onEvent;
+            OnError = onError;
         }
 
         public void Error()
@@ -84,15 +82,15 @@ public sealed class Subscriber
 
     public sealed class Event
     {
-        public long timestamp;
-        public string type;
-        public string data;
+        public long Timestamp;
+        public string Type;
+        public string Data;
 
         internal Event(long timestamp, string type, string data)
         {
-            this.timestamp = timestamp;
-            this.type = type;
-            this.data = data;
+            Timestamp = timestamp;
+            Type = type;
+            Data = data;
         }
     }
 }

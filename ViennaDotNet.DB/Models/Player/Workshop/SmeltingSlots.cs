@@ -4,11 +4,10 @@ namespace ViennaDotNet.DB.Models.Player.Workshop;
 
 public sealed class SmeltingSlots
 {
-    [JsonInclude]
-    public readonly SmeltingSlot[] slots;
+    public SmeltingSlot[] Slots { get; init; }
 
     public SmeltingSlots()
     {
-        slots = [new SmeltingSlot(), new SmeltingSlot(), new SmeltingSlot()];
+        Slots = [new SmeltingSlot(), new SmeltingSlot(), new SmeltingSlot()];
     }
 }

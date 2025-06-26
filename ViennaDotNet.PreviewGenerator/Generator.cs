@@ -20,7 +20,7 @@ public static class Generator
         {
             for (int chunkZ = -CHUNK_RADIUS; chunkZ < CHUNK_RADIUS; chunkZ++)
             {
-                Chunk? chunk = Chunk.read(serverDataZip.getChunkNBT(chunkX, chunkZ));
+                Chunk? chunk = Chunk.Read(serverDataZip.GetChunkNBT(chunkX, chunkZ));
                 if (chunk is null)
                     Log.Error($"Could not convert chunk {chunkX}, {chunkZ}");
                 else
@@ -42,24 +42,24 @@ public static class Generator
                             {
                                 for (int z = 0; z < 16; z++)
                                 {
-                                    int blockId = chunk.blocks[(x * 256 + y + subchunkY * 16) * 16 + z];
+                                    int blockId = chunk.Blocks[(x * 256 + y + subchunkY * 16) * 16 + z];
                                     blocks[(x * 16 + y) * 16 + z] = palette.ComputeIfAbsent(blockId, blockId1 => palette.Count);
                                 }
                             }
                         }
 
-                        if (palette.Count == 1 && palette.ContainsKey(BedrockBlocks.AIR))
+                        if (palette.Count == 1 && palette.ContainsKey(BedrockBlocks.AirId))
                             return null;
                         else
                         {
                             return new PreviewModel.SubChunk(
-                                new PreviewModel.Position(chunk.chunkX, subchunkY, chunk.chunkZ),
+                                new PreviewModel.Position(chunk.ChunkX, subchunkY, chunk.ChunkZ),
                                 [.. palette.Keys
                                     .Select(blockId =>
                                         {
-                                            string? name = BedrockBlocks.getName(blockId) ?? throw new InvalidOperationException();
+                                            string? name = BedrockBlocks.GetName(blockId) ?? throw new InvalidOperationException();
                                             int data = 0;
-                                            while (blockId - data - 1 >= 0 && name == BedrockBlocks.getName(blockId - data - 1))
+                                            while (blockId - data - 1 >= 0 && name == BedrockBlocks.GetName(blockId - data - 1))
                                                 data++;
 
                                             return new PreviewModel.SubChunk.PaletteEntry(name, data);
@@ -74,12 +74,12 @@ public static class Generator
 
         // block entities seem to not be used by the client when rendering the preview anyway?
         PreviewModel.BlockEntity[] blockEntities = [.. chunks
-            .SelectMany(chunk => chunk.blockEntities)
+            .SelectMany(chunk => chunk.BlockEntities)
             .Where(blockEntity => blockEntity is not null)
             .Select(blockEntity =>
             {
                 int type;
-                switch (blockEntity!.getString("id"))
+                switch (blockEntity!.GetString("id"))
                 {
                     case "Bed":
                         type = 27;
@@ -89,7 +89,7 @@ public static class Generator
                         break;
                     default:
                         {
-                            Log.Warning($"No block entity type code mapping for {blockEntity.getString("id")}");
+                            Log.Warning($"No block entity type code mapping for {blockEntity.GetString("id")}");
                             type = -1;
                         }
 
@@ -98,12 +98,12 @@ public static class Generator
 
                 return new PreviewModel.BlockEntity(
                     type,
-                    new PreviewModel.Position(blockEntity.getInt("x"), blockEntity.getInt("y"), blockEntity.getInt("z")),
-                    JsonNbtConverter.convert(blockEntity)
+                    new PreviewModel.Position(blockEntity.GetInt("x"), blockEntity.GetInt("y"), blockEntity.GetInt("z")),
+                    JsonNbtConverter.Convert(blockEntity)
                 );
 
             })
-            .Where(blockEntity => blockEntity.type != -1)];
+            .Where(blockEntity => blockEntity.Type != -1)];
 
         // TODO: entities
         PreviewModel previewModel = new PreviewModel(

@@ -121,8 +121,8 @@ public class Instance
             });
             Log.Information($"Using port {Port} internal port {_serverInternalPort}");
 
-            _publisher = _eventBusClient.addPublisher();
-            _requestSender = _eventBusClient.addRequestSender();
+            _publisher = _eventBusClient.AddPublisher();
+            _requestSender = _eventBusClient.AddRequestSender();
 
             Log.Information("Setting up server");
 
@@ -179,7 +179,7 @@ public class Instance
 
             Log.Information("Running server");
 
-            _subscriber = _eventBusClient.addSubscriber(_eventBusQueueName, new Subscriber.SubscriberListener(
+            _subscriber = _eventBusClient.AddSubscriber(_eventBusQueueName, new Subscriber.SubscriberListener(
                 async @event => await HandleConnectorEvent(@event),
                 () =>
                 {
@@ -187,7 +187,7 @@ public class Instance
                     BeginShutdown();
                 }
             ));
-            _requestHandler = _eventBusClient.addRequestHandler(_eventBusQueueName, new RequestHandler.Handler(
+            _requestHandler = _eventBusClient.AddRequestHandler(_eventBusQueueName, new RequestHandler.Handler(
                 request =>
                 {
                     object? responseObject = HandleConnectorRequest(request);
@@ -240,20 +240,20 @@ public class Instance
         }
         finally
         {
-            _subscriber?.close();
+            _subscriber?.Close();
 
-            _requestHandler?.close();
+            _requestHandler?.Close();
 
             if (_publisher is not null)
             {
-                _publisher.flush();
-                _publisher.close();
+                _publisher.Flush();
+                _publisher.Close();
             }
 
             if (_requestSender is not null)
             {
-                _requestSender.flush();
-                _requestSender.close();
+                _requestSender.Flush();
+                _requestSender.Close();
             }
 
             CleanupBaseDir();
@@ -264,7 +264,7 @@ public class Instance
 
     private async Task HandleConnectorEvent(Subscriber.Event @event)
     {
-        switch (@event.type)
+        switch (@event.Type)
         {
             case "started":
                 {
@@ -286,7 +286,7 @@ public class Instance
                 {
                     if (_saveEnabled)
                     {
-                        WorldSavedMessage? worldSavedMessage = ReadJson<WorldSavedMessage>(@event.data);
+                        WorldSavedMessage? worldSavedMessage = ReadJson<WorldSavedMessage>(@event.Data);
                         if (worldSavedMessage is not null)
                         {
                             if (_hostPlayerConnected)
@@ -311,7 +311,7 @@ public class Instance
 
             case "inventoryAdd":
                 {
-                    InventoryAddItemMessage? inventoryAddItemMessage = ReadJson<InventoryAddItemMessage>(@event.data);
+                    InventoryAddItemMessage? inventoryAddItemMessage = ReadJson<InventoryAddItemMessage>(@event.Data);
                     if (inventoryAddItemMessage is not null)
                         await SendEventBusRequest<object>("inventoryAdd", inventoryAddItemMessage, false);
                 }
@@ -319,7 +319,7 @@ public class Instance
                 break;
             case "inventoryUpdateWear":
                 {
-                    InventoryUpdateItemWearMessage? inventoryUpdateItemWearMessage = ReadJson<InventoryUpdateItemWearMessage>(@event.data);
+                    InventoryUpdateItemWearMessage? inventoryUpdateItemWearMessage = ReadJson<InventoryUpdateItemWearMessage>(@event.Data);
                     if (inventoryUpdateItemWearMessage is not null)
                         await SendEventBusRequest<object>("inventoryUpdateWear", inventoryUpdateItemWearMessage, false);
                 }
@@ -327,7 +327,7 @@ public class Instance
                 break;
             case "inventorySetHotbar":
                 {
-                    InventorySetHotbarMessage? inventorySetHotbarMessage = ReadJson<InventorySetHotbarMessage>(@event.data);
+                    InventorySetHotbarMessage? inventorySetHotbarMessage = ReadJson<InventorySetHotbarMessage>(@event.Data);
                     if (inventorySetHotbarMessage is not null)
                         await SendEventBusRequest<object>("inventorySetHotbar", inventorySetHotbarMessage, false);
                 }
@@ -338,25 +338,25 @@ public class Instance
 
     private async Task<object?> HandleConnectorRequest(RequestHandler.Request request)
     {
-        switch (request.type)
+        switch (request.Type)
         {
             case "playerConnected":
                 {
-                    PlayerConnectedRequest? playerConnectedRequest = ReadJson<PlayerConnectedRequest>(request.data);
+                    PlayerConnectedRequest? playerConnectedRequest = ReadJson<PlayerConnectedRequest>(request.Data);
                     if (playerConnectedRequest is not null)
                     {
-                        if (_playerId is not null && !_hostPlayerConnected && playerConnectedRequest.uuid != _playerId)
+                        if (_playerId is not null && !_hostPlayerConnected && playerConnectedRequest.Uuid != _playerId)
                         {
-                            Log.Information($"Rejecting player connection for player {playerConnectedRequest.uuid} because the host player must connect first");
+                            Log.Information($"Rejecting player connection for player {playerConnectedRequest.Uuid} because the host player must connect first");
                             return new PlayerConnectedResponse(false, null);
                         }
 
                         PlayerConnectedResponse? playerConnectedResponse = await SendEventBusRequest<PlayerConnectedResponse>("playerConnected", playerConnectedRequest, true);
                         if (playerConnectedResponse is not null)
                         {
-                            Log.Information($"Player {playerConnectedRequest.uuid} has connected");
+                            Log.Information($"Player {playerConnectedRequest.Uuid} has connected");
 
-                            if (_playerId is not null && !_hostPlayerConnected && playerConnectedRequest.uuid == _playerId)
+                            if (_playerId is not null && !_hostPlayerConnected && playerConnectedRequest.Uuid == _playerId)
                             {
                                 _hostPlayerConnected = true;
                             }
@@ -370,15 +370,15 @@ public class Instance
             case "playerDisconnected":
                 {
                     Log.Debug("Player dicconnecting...");
-                    PlayerDisconnectedRequest? playerDisconnectedRequest = ReadJson<PlayerDisconnectedRequest>(request.data);
+                    PlayerDisconnectedRequest? playerDisconnectedRequest = ReadJson<PlayerDisconnectedRequest>(request.Data);
                     if (playerDisconnectedRequest is not null)
                     {
                         PlayerDisconnectedResponse? playerDisconnectedResponse = await SendEventBusRequest<PlayerDisconnectedResponse>("playerDisconnected", playerDisconnectedRequest, true);
                         if (playerDisconnectedResponse is not null)
                         {
-                            Log.Information($"Player {playerDisconnectedRequest.playerId} has disconnected");
+                            Log.Information($"Player {playerDisconnectedRequest.PlayerId} has disconnected");
 
-                            if (_shutdownTime is null && _playerId is not null && playerDisconnectedRequest.playerId == _playerId)
+                            if (_shutdownTime is null && _playerId is not null && playerDisconnectedRequest.PlayerId == _playerId)
                             {
                                 Log.Information("Host player has disconnected, beginning shutdown");
                                 BeginShutdown();
@@ -392,7 +392,7 @@ public class Instance
                 break;
             case "playerDead":
                 {
-                    string? playerId = ReadJson<string>(request.data);
+                    string? playerId = ReadJson<string>(request.Data);
                     if (playerId is not null)
                     {
                         bool? respawn = await SendEventBusRequest<bool?>("playerDead", playerId, true);
@@ -406,7 +406,7 @@ public class Instance
                 break;
             case "getInventory":
                 {
-                    string? playerId = ReadJson<string>(request.data);
+                    string? playerId = ReadJson<string>(request.Data);
                     if (playerId is not null)
                     {
                         InventoryResponse? inventoryResponse = await SendEventBusRequest<InventoryResponse>("getInventory", playerId, true);
@@ -419,10 +419,10 @@ public class Instance
                 break;
             case "inventoryRemove":
                 {
-                    InventoryRemoveItemRequest? inventoryRemoveItemRequest = ReadJson<InventoryRemoveItemRequest>(request.data);
+                    InventoryRemoveItemRequest? inventoryRemoveItemRequest = ReadJson<InventoryRemoveItemRequest>(request.Data);
                     if (inventoryRemoveItemRequest is not null)
                     {
-                        if (inventoryRemoveItemRequest.instanceId is not null)
+                        if (inventoryRemoveItemRequest.InstanceId is not null)
                         {
                             bool? success = await SendEventBusRequest<bool>("inventoryRemove", inventoryRemoveItemRequest, true);
 
@@ -441,18 +441,18 @@ public class Instance
                 break;
             case "findPlayer":
                 {
-                    FindPlayerIdRequest? findPlayerIdRequest = ReadJson<FindPlayerIdRequest>(request.data);
+                    FindPlayerIdRequest? findPlayerIdRequest = ReadJson<FindPlayerIdRequest>(request.Data);
                     if (findPlayerIdRequest is not null)
                     {
                         // TODO
-                        return findPlayerIdRequest.minecraftName;
+                        return findPlayerIdRequest.MinecraftName;
                     }
                 }
 
                 break;
             case "getInitialPlayerState":
                 {
-                    string? playerId = ReadJson<string>(request.data);
+                    string? playerId = ReadJson<string>(request.Data);
                     if (playerId is not null)
                     {
                         InitialPlayerStateResponse? initialPlayerStateResponse = await SendEventBusRequest<InitialPlayerStateResponse>("getInitialPlayerState", playerId, true);
@@ -492,7 +492,7 @@ public class Instance
     {
         Debug.Assert(_publisher is not null);
 
-        bool result = await _publisher.publish("buildplates", status, InstanceId);
+        bool result = await _publisher.Publish("buildplates", status, InstanceId);
 
         if (!result)
         {
@@ -512,7 +512,7 @@ public class Instance
     {
         try
         {
-            string? response = await _requestSender!.request("buildplates", type, Json.Serialize(obj)).Task;
+            string? response = await _requestSender!.Request("buildplates", type, Json.Serialize(obj)).Task;
 
             if (response is null)
             {

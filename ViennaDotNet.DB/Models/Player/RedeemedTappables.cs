@@ -13,12 +13,12 @@ public sealed class RedeemedTappables
         // empty
     }
 
-    public bool isRedeemed(string id)
+    public bool IsRedeemed(string id)
         => _tappables.ContainsKey(id);
 
-    public void add(string id, long expiresAt)
+    public void Add(string id, long expiresAt)
         => _tappables[id] = expiresAt;
 
-    public void prune(long currentTime)
+    public void Prune(long currentTime)
         => _tappables.RemoveIf(entry => entry.Value < currentTime);
 }

@@ -16,12 +16,12 @@ public sealed class LevelUtils
             Profile profile = (Profile)results.Get("profile").Value;
             EarthDB.Query updateQuery = new EarthDB.Query(true);
             bool changed = false;
-            while (profile.level - 1 < staticData.levels.levels.Length && profile.experience >= staticData.levels.levels[profile.level - 1].experienceRequired)
+            while (profile.Level - 1 < staticData.Levels.Levels.Length && profile.Experience >= staticData.Levels.Levels[profile.Level - 1].ExperienceRequired)
             {
                 changed = true;
-                profile.level++;
-                Rewards rewards = MakeLevelRewards(staticData.levels.levels[profile.level - 2]);
-                updateQuery.Then(TokenUtils.AddToken(playerId, new LevelUpToken(profile.level, rewards.ToDBRewardsModel())), false);
+                profile.Level++;
+                Rewards rewards = MakeLevelRewards(staticData.Levels.Levels[profile.Level - 2]);
+                updateQuery.Then(TokenUtils.AddToken(playerId, new LevelUpToken(profile.Level, rewards.ToDBRewardsModel())), false);
             }
 
             if (changed)
@@ -33,20 +33,20 @@ public sealed class LevelUtils
         return getQuery;
     }
 
-    public static Rewards MakeLevelRewards(Levels.Level level)
+    public static Rewards MakeLevelRewards(PlayerLevels.Level level)
     {
         Rewards rewards = new Rewards();
-        if (level.rubies > 0)
+        if (level.Rubies > 0)
         {
-            rewards.addRubies(level.rubies);
+            rewards.addRubies(level.Rubies);
         }
 
-        foreach (var item in level.items)
+        foreach (var item in level.Items)
         {
-            rewards.addItem(item.id, item.count);
+            rewards.addItem(item.Id, item.Count);
         }
 
-        foreach (string buildplate in level.buildplates)
+        foreach (string buildplate in level.Buildplates)
         {
             rewards.addBuildplate(buildplate);
         }

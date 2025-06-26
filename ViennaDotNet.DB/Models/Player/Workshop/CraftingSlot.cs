@@ -4,24 +4,22 @@ namespace ViennaDotNet.DB.Models.Player.Workshop;
 
 public sealed class CraftingSlot
 {
-    [JsonInclude]
-    public ActiveJob? activeJob;
-    [JsonInclude]
-    public bool locked;
+    public ActiveJobR? ActiveJob { get; set; }
+    public bool Locked { get; set; }
 
     public CraftingSlot()
     {
-        activeJob = null;
-        locked = false;
+        ActiveJob = null;
+        Locked = false;
     }
 
-    public sealed record ActiveJob(
-        string sessionId,
-        string recipeId,
-        long startTime,
-        InputItem[][] input,
-        int totalRounds,
-        int collectedRounds,
-        bool finishedEarly
+    public sealed record ActiveJobR(
+        string SessionId,
+        string RecipeId,
+        long StartTime,
+        InputItem[][] Input,
+        int TotalRounds,
+        int CollectedRounds,
+        bool FinishedEarly
     );
 }

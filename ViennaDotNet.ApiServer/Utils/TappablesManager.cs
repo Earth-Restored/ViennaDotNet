@@ -20,13 +20,13 @@ public sealed class TappablesManager
 
     public TappablesManager(EventBusClient eventBusClient)
     {
-        _subscriber = eventBusClient.addSubscriber("tappables", new Subscriber.SubscriberListener(HandleEvent, () =>
+        _subscriber = eventBusClient.AddSubscriber("tappables", new Subscriber.SubscriberListener(HandleEvent, () =>
         {
             Log.Fatal("Tappables event bus subscriber error");
             Log.CloseAndFlush();
             Environment.Exit(1);
         }));
-        _requestSender = eventBusClient.addRequestSender();
+        _requestSender = eventBusClient.AddRequestSender();
     }
 
     public Tappable[] GetTappablesAround(double lat, double lon, double radius)
@@ -135,7 +135,7 @@ public sealed class TappablesManager
     {
         int tileX = XToTile(LonToX(lon));
         int tileY = YToTile(LatToY(lat));
-        string? response = _requestSender.request("tappables", "activeTile", Json.Serialize(new ActiveTileNotification(tileX, tileY, playerId))).Task.Result;
+        string? response = _requestSender.Request("tappables", "activeTile", Json.Serialize(new ActiveTileNotification(tileX, tileY, playerId))).Task.Result;
         if (response is null)
         {
             Log.Warning("Active tile notification event was rejected/ignored");
@@ -150,14 +150,14 @@ public sealed class TappablesManager
 
     private Task HandleEvent(Subscriber.Event @event)
     {
-        switch (@event.type)
+        switch (@event.Type)
         {
             case "tappableSpawn":
                 {
                     Tappable[]? tappables;
                     try
                     {
-                        tappables = Json.Deserialize<Tappable[]>(@event.data);
+                        tappables = Json.Deserialize<Tappable[]>(@event.Data);
                     }
                     catch (Exception ex)
                     {
@@ -175,7 +175,7 @@ public sealed class TappablesManager
                     if (_pruneCounter++ == 10)
                     {
                         _pruneCounter = 0;
-                        Prune(@event.timestamp);
+                        Prune(@event.Timestamp);
                     }
                 }
 
@@ -186,7 +186,7 @@ public sealed class TappablesManager
 
                     try
                     {
-                        encounters = Json.Deserialize<Encounter[]>(@event.data);
+                        encounters = Json.Deserialize<Encounter[]>(@event.Data);
                     }
                     catch (Exception exception)
                     {
@@ -204,7 +204,7 @@ public sealed class TappablesManager
                     if (_pruneCounter++ == 10)
                     {
                         _pruneCounter = 0;
-                        Prune(@event.timestamp);
+                        Prune(@event.Timestamp);
                     }
                 }
 

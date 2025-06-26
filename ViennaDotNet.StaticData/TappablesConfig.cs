@@ -1,11 +1,13 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Text.Json;
+using ViennaDotNet.Common;
 
 namespace ViennaDotNet.StaticData;
 
 public sealed class TappablesConfig
 {
-    public readonly TappableConfig[] tappables;
+    public readonly ImmutableArray< TappableConfig> Tappables;
 
     internal TappablesConfig(string dir)
     {
@@ -21,7 +23,7 @@ public sealed class TappablesConfig
 
                 using (var stream = File.OpenRead(file))
                 {
-                    var tappable = JsonSerializer.Deserialize<TappableConfig>(stream);
+                    var tappable = Json.Deserialize<TappableConfig>(stream);
 
                     Debug.Assert(tappable is not null);
 
@@ -29,18 +31,18 @@ public sealed class TappablesConfig
                 }
             }
 
-            this.tappables = [.. tappables];
+            Tappables = [.. tappables];
 
-            foreach (TappableConfig tappableConfig in this.tappables)
+            foreach (TappableConfig tappableConfig in Tappables)
 
             {
-                foreach (TappableConfig.DropSet dropSet in tappableConfig.dropSets)
+                foreach (TappableConfig.DropSetR dropSet in tappableConfig.DropSets)
                 {
-                    foreach (string itemId in dropSet.items)
+                    foreach (string itemId in dropSet.Items)
                     {
-                        if (!tappableConfig.itemCounts.ContainsKey(itemId))
+                        if (!tappableConfig.ItemCounts.ContainsKey(itemId))
                         {
-                            throw new StaticDataException($"Tappable config {tappableConfig.icon} has no item count for item {itemId}");
+                            throw new StaticDataException($"Tappable config {tappableConfig.Icon} has no item count for item {itemId}");
                         }
                     }
                 }
@@ -57,19 +59,19 @@ public sealed class TappablesConfig
     }
 
     public record TappableConfig(
-        string icon,
-        TappableConfig.DropSet[] dropSets,
-        Dictionary<string, TappableConfig.ItemCount> itemCounts
+        string Icon,
+        TappableConfig.DropSetR[] DropSets,
+        Dictionary<string, TappableConfig.ItemCount> ItemCounts
     )
     {
-        public record DropSet(
-            string[] items,
-            int chance
+        public record DropSetR(
+            string[] Items,
+            int Chance
         );
 
         public record ItemCount(
-            int min,
-            int max
+            int Min,
+            int Max
         );
     }
 }

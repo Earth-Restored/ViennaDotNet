@@ -37,28 +37,28 @@ public class ProfileController : ControllerBase
         Profile profile = (Profile)results.Get("profile").Value;
         Boosts boosts = (Boosts)results.Get("boosts").Value;
 
-        Levels.Level[] levels = staticData.levels.levels;
-        int currentLevelExperience = profile.experience - (profile.level > 1 ? (profile.level - 2 < levels.Length ? levels[profile.level - 2].experienceRequired : levels[^1].experienceRequired) : 0);
-        int experienceRemaining = profile.level - 1 < levels.Length ? levels[profile.level - 1].experienceRequired - profile.experience : 0;
+        var levels = staticData.Levels.Levels;
+        int currentLevelExperience = profile.Experience - (profile.Level > 1 ? (profile.Level - 2 < levels.Length ? levels[profile.Level - 2].ExperienceRequired : levels[^1].ExperienceRequired) : 0);
+        int experienceRemaining = profile.Level - 1 < levels.Length ? levels[profile.Level - 1].ExperienceRequired - profile.Experience : 0;
 
-        int maxPlayerHealth = BoostUtils.GetMaxPlayerHealth(boosts, requestStartedOn, staticData.catalog.itemsCatalog);
-        if (profile.health > maxPlayerHealth)
+        int maxPlayerHealth = BoostUtils.GetMaxPlayerHealth(boosts, requestStartedOn, staticData.Catalog.ItemsCatalog);
+        if (profile.Health > maxPlayerHealth)
         {
-            profile.health = maxPlayerHealth;
+            profile.Health = maxPlayerHealth;
         }
 
         string resp = Json.Serialize(new EarthApiResponse(new Types.Profile.Profile(
             Java.IntStream.Range(0, levels.Length).Collect(() => new Dictionary<int, Types.Profile.Profile.LevelR>(), (hashMap, levelIndex) =>
             {
-                Levels.Level level = levels[levelIndex];
-                hashMap[levelIndex + 1] = new Types.Profile.Profile.LevelR(level.experienceRequired, LevelUtils.MakeLevelRewards(level).ToApiResponse());
+                PlayerLevels.Level level = levels[levelIndex];
+                hashMap[levelIndex + 1] = new Types.Profile.Profile.LevelR(level.ExperienceRequired, LevelUtils.MakeLevelRewards(level).ToApiResponse());
             }, DictionaryExtensions.AddRange),
-            profile.experience,
-            profile.level,
+            profile.Experience,
+            profile.Level,
             currentLevelExperience,
             experienceRemaining,
-            profile.health,
-            (profile.health / (float)maxPlayerHealth) * 100.0f)));
+            profile.Health,
+            (profile.Health / (float)maxPlayerHealth) * 100.0f)));
 
         return Content(resp, "application/json");
     }
@@ -78,7 +78,7 @@ public class ProfileController : ControllerBase
                 .ExecuteAsync(earthDB, cancellationToken))
                 .Get("profile").Value;
 
-            string resp = Json.Serialize(new EarthApiResponse(profile.rubies.purchased + profile.rubies.earned));
+            string resp = Json.Serialize(new EarthApiResponse(profile.Rubies.Purchased + profile.Rubies.Earned));
             return Content(resp, "application/json");
         }
         catch (EarthDB.DatabaseException ex)
@@ -103,7 +103,7 @@ public class ProfileController : ControllerBase
                 .ExecuteAsync(earthDB, cancellationToken))
                 .Get("profile").Value;
 
-            string resp = Json.Serialize(new EarthApiResponse(new Types.Profile.SplitRubies(profile.rubies.purchased, profile.rubies.earned)));
+            string resp = Json.Serialize(new EarthApiResponse(new Types.Profile.SplitRubies(profile.Rubies.Purchased, profile.Rubies.Earned)));
             return Content(resp, "application/json");
         }
         catch (EarthDB.DatabaseException ex)

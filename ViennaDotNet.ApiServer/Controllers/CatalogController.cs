@@ -6,15 +6,15 @@ using ViennaDotNet.ApiServer.Types.Catalog;
 using ViennaDotNet.ApiServer.Utils;
 using ViennaDotNet.Common;
 using ViennaDotNet.StaticData;
-using CICIBIEType = ViennaDotNet.StaticData.Catalog.ItemsCatalog.Item.BoostInfo.Effect.Type;
-using CICIBIType = ViennaDotNet.StaticData.Catalog.ItemsCatalog.Item.BoostInfo.Type;
-using CICICategory = ViennaDotNet.StaticData.Catalog.ItemsCatalog.Item.Category;
-using CICIJEBehavior = ViennaDotNet.StaticData.Catalog.ItemsCatalog.Item.JournalEntry.Behavior;
-using CICIJEBiome = ViennaDotNet.StaticData.Catalog.ItemsCatalog.Item.JournalEntry.Biome;
-using CICIType = ViennaDotNet.StaticData.Catalog.ItemsCatalog.Item.Type;
-using CICIUseType = ViennaDotNet.StaticData.Catalog.ItemsCatalog.Item.UseType;
-using CIJGCJGParentCollection = ViennaDotNet.StaticData.Catalog.ItemJournalGroupsCatalog.JournalGroup.ParentCollection;
-using CRCCRCategory = ViennaDotNet.StaticData.Catalog.RecipesCatalog.CraftingRecipe.Category;
+using CICIBIEType = ViennaDotNet.StaticData.Catalog.ItemsCatalogR.Item.BoostInfoR.Effect.TypeE;
+using CICIBIType = ViennaDotNet.StaticData.Catalog.ItemsCatalogR.Item.BoostInfoR.TypeE;
+using CICICategory = ViennaDotNet.StaticData.Catalog.ItemsCatalogR.Item.CategoryE;
+using CICIJEBehavior = ViennaDotNet.StaticData.Catalog.ItemsCatalogR.Item.JournalEntryR.BehaviorE;
+using CICIJEBiome = ViennaDotNet.StaticData.Catalog.ItemsCatalogR.Item.JournalEntryR.BiomeE;
+using CICIType = ViennaDotNet.StaticData.Catalog.ItemsCatalogR.Item.TypeE;
+using CICIUseType = ViennaDotNet.StaticData.Catalog.ItemsCatalogR.Item.UseTypeE;
+using CIJGCJGParentCollection = ViennaDotNet.StaticData.Catalog.ItemJournalGroupsCatalogR.JournalGroup.ParentCollectionE;
+using CRCCRCategory = ViennaDotNet.StaticData.Catalog.RecipesCatalogR.CraftingRecipe.CategoryE;
 using ItemsCatalog = ViennaDotNet.ApiServer.Types.Catalog.ItemsCatalog;
 
 namespace ViennaDotNet.ApiServer.Controllers;
@@ -24,7 +24,7 @@ namespace ViennaDotNet.ApiServer.Controllers;
 [Route("1/api/v{version:apiVersion}")]
 public class CatalogController : ControllerBase
 {
-    private static Catalog catalog => Program.staticData.catalog;
+    private static Catalog catalog => Program.staticData.Catalog;
 
     [HttpGet("inventory/catalogv3")]
     public IActionResult GetItemsCatalog()
@@ -45,9 +45,9 @@ public class CatalogController : ControllerBase
     // TODO: cache these?
     private static ItemsCatalog MakeItemsCatalogApiResponse(Catalog catalog)
     {
-        ItemsCatalog.ItemR[] items = [.. catalog.itemsCatalog.items.Select(item =>
+        ItemsCatalog.ItemR[] items = [.. catalog.ItemsCatalog.Items.Select(item =>
         {
-            string categoryString = item.category switch
+            string categoryString = item.Category switch
             {
                 CICICategory.CONSTRUCTION => "Construction",
                 CICICategory.EQUIPMENT => "Equipment",
@@ -69,7 +69,7 @@ public class CatalogController : ControllerBase
                 _ => throw new UnreachableException(),
             };
 
-            string typeString = item.type switch
+            string typeString = item.Type switch
             {
                 CICIType.BLOCK => "Block",
                 CICIType.ITEM => "Item",
@@ -81,7 +81,7 @@ public class CatalogController : ControllerBase
                 _ => throw new UnreachableException(),
             };
 
-            string useTypeString = item.useType switch
+            string useTypeString = item.UseType switch
             {
                 CICIUseType.NONE => "None",
 
@@ -95,7 +95,7 @@ public class CatalogController : ControllerBase
                 _ => throw new UnreachableException(),
             };
 
-            string alternativeUseTypeString = item.alternativeUseType switch
+            string alternativeUseTypeString = item.AlternativeUseType switch
             {
                 CICIUseType.NONE => "None",
 
@@ -110,17 +110,17 @@ public class CatalogController : ControllerBase
             };
 
             int health;
-            if (item.blockInfo is not null)
+            if (item.BlockInfo is not null)
             {
-                health = item.blockInfo.breakingHealth;
+                health = item.BlockInfo.BreakingHealth;
             }
-            else if (item.toolInfo is not null)
+            else if (item.ToolInfo is not null)
             {
-                health = item.toolInfo.maxWear;
+                health = item.ToolInfo.MaxWear;
             }
-            else if (item.mobInfo is not null)
+            else if (item.MobInfo is not null)
             {
-                health = item.mobInfo.health;
+                health = item.MobInfo.Health;
             }
             else
             {
@@ -128,9 +128,9 @@ public class CatalogController : ControllerBase
             }
 
             int blockDamage;
-            if (item.toolInfo is not null)
+            if (item.ToolInfo is not null)
             {
-                blockDamage = item.toolInfo.blockDamage;
+                blockDamage = item.ToolInfo.BlockDamage;
             }
             else
             {
@@ -138,13 +138,13 @@ public class CatalogController : ControllerBase
             }
 
             int mobDamage;
-            if (item.toolInfo is not null)
+            if (item.ToolInfo is not null)
             {
-                mobDamage = item.toolInfo.mobDamage;
+                mobDamage = item.ToolInfo.MobDamage;
             }
-            else if (item.projectileInfo is not null)
+            else if (item.ProjectileInfo is not null)
             {
-                mobDamage = item.projectileInfo.mobDamage;
+                mobDamage = item.ProjectileInfo.MobDamage;
             }
             else
             {
@@ -152,13 +152,13 @@ public class CatalogController : ControllerBase
             }
 
             ItemsCatalog.ItemR.ItemData.BlockMetadataR? blockMetadata;
-            if (item.blockInfo is not null)
+            if (item.BlockInfo is not null)
             {
-                blockMetadata = new ItemsCatalog.ItemR.ItemData.BlockMetadataR(item.blockInfo.breakingHealth, item.blockInfo.efficiencyCategory);
+                blockMetadata = new ItemsCatalog.ItemR.ItemData.BlockMetadataR(item.BlockInfo.BreakingHealth, item.BlockInfo.EfficiencyCategory);
             }
-            else if (item.mobInfo is not null)
+            else if (item.MobInfo is not null)
             {
-                blockMetadata = new ItemsCatalog.ItemR.ItemData.BlockMetadataR(item.mobInfo.health, "instant");
+                blockMetadata = new ItemsCatalog.ItemR.ItemData.BlockMetadataR(item.MobInfo.Health, "instant");
             }
             else
             {
@@ -166,16 +166,16 @@ public class CatalogController : ControllerBase
             }
 
             BoostMetadata? boostMetadata;
-            if (item.boostInfo is not null)
+            if (item.BoostInfo is not null)
             {
-                string boostTypeString = item.boostInfo.type switch
+                string boostTypeString = item.BoostInfo.Type switch
                 {
                     CICIBIType.POTION => "Potion",
                     CICIBIType.INVENTORY_ITEM => "InventoryItem",
                     _ => throw new UnreachableException(),
                 };
 
-                string boostAttributeString = item.boostInfo.effects[0].type switch
+                string boostAttributeString = item.BoostInfo.Effects[0].Type switch
                 {
                     CICIBIEType.ADVENTURE_XP => "ItemExperiencePoints",
                     CICIBIEType.CRAFTING => "Crafting",
@@ -193,16 +193,16 @@ public class CatalogController : ControllerBase
                 };
 
                 boostMetadata = new BoostMetadata(
-                    item.boostInfo.name,
+                    item.BoostInfo.Name,
                     boostTypeString,
                     boostAttributeString,
                     false,
-                    item.boostInfo.canBeRemoved,
-                    TimeFormatter.FormatDuration(item.boostInfo.duration),
+                    item.BoostInfo.CanBeRemoved,
+                    TimeFormatter.FormatDuration(item.BoostInfo.Duration),
                     true,
-                    item.boostInfo.level,
-                    [.. item.boostInfo.effects.Select(effect => BoostUtils.BoostEffectToApiResponse(effect, item.boostInfo.duration))],
-                    item.boostInfo.triggeredOnDeath ? "Death" : null,
+                    item.BoostInfo.Level,
+                    [.. item.BoostInfo.Effects.Select(effect => BoostUtils.BoostEffectToApiResponse(effect, item.BoostInfo.Duration))],
+                    item.BoostInfo.TriggeredOnDeath ? "Death" : null,
                     null
                 );
             }
@@ -212,9 +212,9 @@ public class CatalogController : ControllerBase
             }
 
             ItemsCatalog.ItemR.ItemData.JournalMetadataR? journalMetadata;
-            if (item.journalEntry is not null)
+            if (item.JournalEntry is not null)
             {
-                string behaviorString = item.journalEntry.behavior switch
+                string behaviorString = item.JournalEntry.Behavior switch
                 {
                     CICIJEBehavior.NONE => "None",
                     CICIJEBehavior.PASSIVE => "Passive",
@@ -223,7 +223,7 @@ public class CatalogController : ControllerBase
                     _ => throw new UnreachableException(),
                 };
 
-                string biomeString = item.journalEntry.biome switch
+                string biomeString = item.JournalEntry.Biome switch
                 {
                     CICIJEBiome.NONE => "None",
                     CICIJEBiome.OVERWORLD => "Overworld",
@@ -249,9 +249,9 @@ public class CatalogController : ControllerBase
                 };
 
                 journalMetadata = new ItemsCatalog.ItemR.ItemData.JournalMetadataR(
-                    item.journalEntry.group,
-                    item.experience.journal,
-                    item.journalEntry.order,
+                    item.JournalEntry.Group,
+                    item.Experience.Journal,
+                    item.JournalEntry.Order,
                     behaviorString,
                     biomeString
                 );
@@ -262,14 +262,14 @@ public class CatalogController : ControllerBase
             }
 
             return new ItemsCatalog.ItemR(
-                item.id,
+                item.Id,
                 new ItemsCatalog.ItemR.ItemData(
-                    item.name,
-                    item.aux,
+                    item.Name,
+                    item.Aux,
                     typeString,
                     useTypeString,
                     0,
-                    item.consumeInfo?.heal,
+                    item.ConsumeInfo?.Heal,
                     0,
                     mobDamage,
                     blockDamage,
@@ -282,47 +282,47 @@ public class CatalogController : ControllerBase
                         blockDamage,
                         null,
                         0,
-                        item.consumeInfo is not null ? item.consumeInfo.heal : 0,
-                        item.toolInfo?.efficiencyCategory,
+                        item.ConsumeInfo is not null ? item.ConsumeInfo.Heal : 0,
+                        item.ToolInfo?.EfficiencyCategory,
                         health
                     ),
                     boostMetadata,
                     journalMetadata,
-                    item.journalEntry is not null && item.journalEntry.sound is not null ? new ItemsCatalog.ItemR.ItemData.AudioMetadataR(
-                        new Dictionary<string, string>() { ["journal"] = item.journalEntry.sound },
-                        item.journalEntry.sound
+                    item.JournalEntry is not null && item.JournalEntry.Sound is not null ? new ItemsCatalog.ItemR.ItemData.AudioMetadataR(
+                        new Dictionary<string, string>() { ["journal"] = item.JournalEntry.Sound },
+                        item.JournalEntry.Sound
                     ) : null,
                     new Dictionary<string, object>()
                 ),
                 categoryString,
-                Enum.Parse<Types.Common.Rarity>(item.rarity.ToString()),
+                Enum.Parse<Types.Common.Rarity>(item.Rarity.ToString()),
                 1,
-                item.stackable,
-                item.fuelInfo is not null ? new Types.Common.BurnRate(item.fuelInfo.burnTime, item.fuelInfo.heatPerSecond) : null,
-                item.fuelInfo is not null && item.fuelInfo.returnItemId is not null ? [new ItemsCatalog.ItemR.ReturnItem(item.fuelInfo.returnItemId, 1)] : [],
-                item.consumeInfo is not null && item.consumeInfo.returnItemId is not null ? [new ItemsCatalog.ItemR.ReturnItem(item.consumeInfo.returnItemId, 1)] : [],
-                item.experience.tappable,
-                new Dictionary<string, int?>() { ["tappable"] = item.experience.tappable, ["encounter"] = item.experience.encounter, ["crafting"] = item.experience.crafting },
+                item.Stackable,
+                item.FuelInfo is not null ? new Types.Common.BurnRate(item.FuelInfo.BurnTime, item.FuelInfo.HeatPerSecond) : null,
+                item.FuelInfo is not null && item.FuelInfo.ReturnItemId is not null ? [new ItemsCatalog.ItemR.ReturnItem(item.FuelInfo.ReturnItemId, 1)] : [],
+                item.ConsumeInfo is not null && item.ConsumeInfo.ReturnItemId is not null ? [new ItemsCatalog.ItemR.ReturnItem(item.ConsumeInfo.ReturnItemId, 1)] : [],
+                item.Experience.Tappable,
+                new Dictionary<string, int?>() { ["tappable"] = item.Experience.Tappable, ["encounter"] = item.Experience.Encounter, ["crafting"] = item.Experience.Crafting },
                 false
             );
         })];
 
         Dictionary<string, ItemsCatalog.EfficiencyCategory> efficiencyCategories = [];
-        foreach (Catalog.ItemEfficiencyCategoriesCatalog.EfficiencyCategory efficiencyCategory in catalog.itemEfficiencyCategoriesCatalog.efficiencyCategories)
+        foreach (Catalog.ItemEfficiencyCategoriesCatalogR.EfficiencyCategory efficiencyCategory in catalog.ItemEfficiencyCategoriesCatalog.EfficiencyCategories)
         {
-            efficiencyCategories[efficiencyCategory.name] = new ItemsCatalog.EfficiencyCategory(
+            efficiencyCategories[efficiencyCategory.Name] = new ItemsCatalog.EfficiencyCategory(
                 new ItemsCatalog.EfficiencyCategory.EfficiencyMapR(
-                    efficiencyCategory.hand,
-                    efficiencyCategory.hoe,
-                    efficiencyCategory.axe,
-                    efficiencyCategory.shovel,
-                    efficiencyCategory.pickaxe_1,
-                    efficiencyCategory.pickaxe_2,
-                    efficiencyCategory.pickaxe_3,
-                    efficiencyCategory.pickaxe_4,
-                    efficiencyCategory.pickaxe_5,
-                    efficiencyCategory.sword,
-                    efficiencyCategory.sheers
+                    efficiencyCategory.Hand,
+                    efficiencyCategory.Hoe,
+                    efficiencyCategory.Axe,
+                    efficiencyCategory.Shovel,
+                    efficiencyCategory.Pickaxe_1,
+                    efficiencyCategory.Pickaxe_2,
+                    efficiencyCategory.Pickaxe_3,
+                    efficiencyCategory.Pickaxe_4,
+                    efficiencyCategory.Pickaxe_5,
+                    efficiencyCategory.Sword,
+                    efficiencyCategory.Sheers
                 )
             );
         }
@@ -332,9 +332,9 @@ public class CatalogController : ControllerBase
 
     private static RecipesCatalog MakeRecipesCatalogApiResponse(Catalog catalog)
     {
-        RecipesCatalog.CraftingRecipe[] crafting = [.. catalog.recipesCatalog.crafting.Select(recipe =>
+        RecipesCatalog.CraftingRecipe[] crafting = [.. catalog.RecipesCatalog.Crafting.Select(recipe =>
         {
-            string categoryString = recipe.category switch
+            string categoryString = recipe.Category switch
             {
                 CRCCRCategory.CONSTRUCTION => "Construction",
                 CRCCRCategory.EQUIPMENT => "Equipment",
@@ -344,24 +344,24 @@ public class CatalogController : ControllerBase
             };
 
             return new RecipesCatalog.CraftingRecipe(
-                    recipe.id,
+                    recipe.Id,
                     categoryString,
-                    TimeFormatter.FormatDuration(recipe.duration * 1000),
-                    [.. recipe.ingredients.Select(ingredient => new RecipesCatalog.CraftingRecipe.Ingredient(ingredient.possibleItemIds, ingredient.count))],
-                    new RecipesCatalog.CraftingRecipe.OutputR(recipe.output.itemId, recipe.output.count),
-                    [.. recipe.returnItems.Select(returnItem => new RecipesCatalog.CraftingRecipe.ReturnItem(returnItem.itemId, returnItem.count))],
+                    TimeFormatter.FormatDuration(recipe.Duration * 1000),
+                    [.. recipe.Ingredients.Select(ingredient => new RecipesCatalog.CraftingRecipe.Ingredient(ingredient.PossibleItemIds, ingredient.Count))],
+                    new RecipesCatalog.CraftingRecipe.OutputR(recipe.Output.ItemId, recipe.Output.Count),
+                    [.. recipe.ReturnItems.Select(returnItem => new RecipesCatalog.CraftingRecipe.ReturnItem(returnItem.ItemId, returnItem.Count))],
                     false
             );
         })];
 
-        RecipesCatalog.SmeltingRecipe[] smelting = [.. catalog.recipesCatalog.smelting.Select(recipe =>
+        RecipesCatalog.SmeltingRecipe[] smelting = [.. catalog.RecipesCatalog.Smelting.Select(recipe =>
         {
             return new RecipesCatalog.SmeltingRecipe(
-                recipe.id,
-                recipe.heatRequired,
-                recipe.input,
-                new RecipesCatalog.SmeltingRecipe.OutputR(recipe.output, 1),
-                recipe.returnItemId is not null ? [new RecipesCatalog.SmeltingRecipe.ReturnItem(recipe.returnItemId, 1)] : [],
+                recipe.Id,
+                recipe.HeatRequired,
+                recipe.Input,
+                new RecipesCatalog.SmeltingRecipe.OutputR(recipe.Output, 1),
+                recipe.ReturnItemId is not null ? [new RecipesCatalog.SmeltingRecipe.ReturnItem(recipe.ReturnItemId, 1)] : [],
                 false
             );
         })];
@@ -372,9 +372,9 @@ public class CatalogController : ControllerBase
     private static JournalCatalog MakeJournalCatalogApiResponse(Catalog catalog)
     {
         Dictionary<string, JournalCatalog.Item> items = [];
-        foreach (Catalog.ItemJournalGroupsCatalog.JournalGroup group in catalog.itemJournalGroupsCatalog.groups)
+        foreach (Catalog.ItemJournalGroupsCatalogR.JournalGroup group in catalog.ItemJournalGroupsCatalog.Groups)
         {
-            string parentCollectionString = group.parentCollection switch
+            string parentCollectionString = group.ParentCollection switch
             {
                 CIJGCJGParentCollection.BLOCKS => "Blocks",
                 CIJGCJGParentCollection.ITEMS_CRAFTED => "ItemsCrafted",
@@ -383,12 +383,12 @@ public class CatalogController : ControllerBase
                 _ => throw new UnreachableException(),
             };
 
-            items[group.name] = new JournalCatalog.Item(
-                    group.id,
+            items[group.Name] = new JournalCatalog.Item(
+                    group.Id,
                     parentCollectionString,
-                    group.order,
-                    group.order,
-                    group.defaultSound,
+                    group.Order,
+                    group.Order,
+                    group.DefaultSound,
                     false,
                     "200526.173531"
             );

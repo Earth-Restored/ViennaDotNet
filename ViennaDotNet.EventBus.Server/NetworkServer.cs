@@ -6,26 +6,26 @@ using ViennaDotNet.Common.Utils;
 
 namespace ViennaDotNet.EventBus.Server;
 
-public class NetworkServer
+public sealed class NetworkServer
 {
-    private readonly Server server;
-    private readonly TcpListener serverSocket;
+    private readonly Server _server;
+    private readonly TcpListener _serverSocket;
 
     public NetworkServer(Server server, int port)
     {
-        this.server = server;
-        serverSocket = new TcpListener(IPAddress.Loopback, port);
-        serverSocket.Start();
+        _server = server;
+        _serverSocket = new TcpListener(IPAddress.Loopback, port);
+        _serverSocket.Start();
         Log.Information($"Created server on port {port}");
     }
 
-    public void run()
+    public void Run()
     {
-        for (; ; )
+        while (true)
         {
             try
             {
-                Socket socket = serverSocket.AcceptSocket();
+                Socket socket = _serverSocket.AcceptSocket();
                 Log.Information($"Connection from {socket.RemoteEndPoint}");
                 Connection connection = new Connection(this, socket);
                 new Thread(connection.run).Start();
@@ -39,23 +39,23 @@ public class NetworkServer
 
     private sealed class Connection
     {
-        private readonly NetworkServer networkServer;
+        private readonly NetworkServer _networkServer;
 
-        private readonly Socket socket;
+        private readonly Socket _socket;
 
         //private readonly NetworkStream outputStream;
 #if NET9_0_OR_GREATER
-        private readonly Lock sendLock = new();
+        private readonly Lock _sendLock = new();
 #else
-        private readonly object sendLock = new();
+        private readonly object _sendLock = new();
 #endif
 
-        private readonly Dictionary<int, Channel> channels = [];
+        private readonly Dictionary<int, Channel> _channels = [];
 
         public Connection(NetworkServer networkServer, Socket socket)
         {
-            this.networkServer = networkServer;
-            this.socket = socket;
+            _networkServer = networkServer;
+            _socket = socket;
             //outputStream = new NetworkStream(this.socket);
         }
 
@@ -68,7 +68,7 @@ public class NetworkServer
                 bool close = false;
                 while (!close)
                 {
-                    int readLength = socket.Receive(readBuffer);
+                    int readLength = _socket.Receive(readBuffer);
                     if (readLength > 0)
                     {
                         int startOffset = 0;
@@ -79,7 +79,7 @@ public class NetworkServer
                                 byteArrayOutputStream.Write(readBuffer, startOffset, offset - startOffset);
                                 string command = Encoding.ASCII.GetString(byteArrayOutputStream.ToArray());
 
-                                if (!handleCommand(command))
+                                if (!HandleCommand(command))
                                 {
                                     close = true;
                                     break;
@@ -103,23 +103,23 @@ public class NetworkServer
                 Log.Warning($"Exception while reading socket: {ex}");
             }
 
-            handleClose();
+            HandleClose();
         }
 
-        internal void sendMessage(string message)
+        internal void SendMessage(string message)
         {
-            lock (sendLock)
+            lock (_sendLock)
             {
                 try
                 {
-                    socket.Send(Encoding.ASCII.GetBytes(message + "\n"));
+                    _socket.Send(Encoding.ASCII.GetBytes(message + "\n"));
                 }
                 catch (SocketException ex)
                 {
                     Log.Warning($"Exception while sending: {ex}");
                     try
                     {
-                        socket.Shutdown(SocketShutdown.Both);
+                        _socket.Shutdown(SocketShutdown.Both);
                     }
                     catch (SocketException shutdownEx)
                     {
@@ -127,13 +127,13 @@ public class NetworkServer
                     }
                     finally
                     {
-                        socket.Close();
+                        _socket.Close();
                     }
                 }
             }
         }
 
-        private bool handleCommand(string command)
+        private bool HandleCommand(string command)
         {
             string[] parts = command.Split(' ', 2);
             if (parts.Length != 2)
@@ -142,16 +142,16 @@ public class NetworkServer
             if (!int.TryParse(parts[0], out int channelId) || channelId <= 0)
                 return false;
 
-            Channel? channel = channels.GetOrDefault(channelId, null);
+            Channel? channel = _channels.GetOrDefault(channelId, null);
             if (channel is not null)
             {
                 if (parts[1] == "CLOSE")
                 {
-                    channel.handleClose();
-                    channels.Remove(channelId);
+                    channel.HandleClose();
+                    _channels.Remove(channelId);
                 }
                 else
-                    channel.handleCommand(parts[1]);
+                    channel.HandleCommand(parts[1]);
 
                 return true;
             }
@@ -161,10 +161,10 @@ public class NetworkServer
                     return true;
                 else
                 {
-                    channel = handleChannelOpenCommand(channelId, parts[1]);
+                    channel = HandleChannelOpenCommand(channelId, parts[1]);
                     if (channel is not null)
                     {
-                        channels[channelId] = channel;
+                        _channels[channelId] = channel;
                         return true;
                     }
                     else
@@ -173,17 +173,17 @@ public class NetworkServer
             }
         }
 
-        private void handleClose()
+        private void HandleClose()
         {
             Log.Information("Connection closed");
 
-            foreach (var channel in channels)
+            foreach (var channel in _channels)
             {
-                channel.Value.handleClose();
+                channel.Value.HandleClose();
             }
         }
 
-        private Channel? handleChannelOpenCommand(int channelId, string command)
+        private Channel? HandleChannelOpenCommand(int channelId, string command)
         {
             string[] parts = command.Split(' ');
             if (parts.Length < 1)
@@ -192,8 +192,8 @@ public class NetworkServer
             switch (parts[0])
             {
                 case "PUB":
-                    PublisherChannel publisherChannel = new PublisherChannel(this, channelId, networkServer);
-                    if (!publisherChannel.isValid())
+                    PublisherChannel publisherChannel = new PublisherChannel(this, channelId, _networkServer);
+                    if (!publisherChannel.IsValid)
                         return null;
 
                     return publisherChannel;
@@ -202,15 +202,15 @@ public class NetworkServer
                         if (parts.Length < 2)
                             return null;
 
-                        SubscriberChannel subscriberChannel = new SubscriberChannel(networkServer, this, channelId, parts[1]);
-                        return !subscriberChannel.isValid()
+                        SubscriberChannel subscriberChannel = new SubscriberChannel(_networkServer, this, channelId, parts[1]);
+                        return !subscriberChannel.IsValid
                             ? null
                             : subscriberChannel;
                     }
                 case "REQ":
                     {
-                        RequestSenderChannel requestSenderChannel = new RequestSenderChannel(this, channelId, networkServer);
-                        return !requestSenderChannel.isValid()
+                        RequestSenderChannel requestSenderChannel = new RequestSenderChannel(this, channelId, _networkServer);
+                        return !requestSenderChannel.IsValid
                             ? null
                             : requestSenderChannel;
                     }
@@ -219,8 +219,8 @@ public class NetworkServer
                         if (parts.Length < 2)
                             return null;
 
-                        RequestHandlerChannel requestHandlerChannel = new RequestHandlerChannel(this, channelId, parts[1], networkServer);
-                        return !requestHandlerChannel.isValid()
+                        RequestHandlerChannel requestHandlerChannel = new RequestHandlerChannel(this, channelId, parts[1], _networkServer);
+                        return !requestHandlerChannel.IsValid
                             ? null
                             : requestHandlerChannel;
                     }
@@ -232,43 +232,41 @@ public class NetworkServer
 
     private abstract class Channel
     {
-        private readonly Connection connection;
-        private readonly int channelId;
+        private readonly Connection _connection;
+        private readonly int _channelId;
 
         protected Channel(Connection connection, int channelId)
         {
-            this.connection = connection;
-            this.channelId = channelId;
+            this._connection = connection;
+            this._channelId = channelId;
         }
 
-        public abstract bool isValid();
+        public abstract bool IsValid { get; }
 
-        public abstract void handleCommand(string command);
-        public abstract void handleClose();
+        public abstract void HandleCommand(string command);
+        public abstract void HandleClose();
 
-        protected void sendMessage(string message)
-            => connection.sendMessage($"{channelId} {message}");
+        protected void SendMessage(string message)
+            => _connection.SendMessage($"{_channelId} {message}");
     }
 
     private sealed class PublisherChannel : Channel
     {
-        private readonly Server.Publisher publisher;
+        private readonly Server.Publisher _publisher;
         private bool _error = false;
 
         public PublisherChannel(Connection connection, int channelId, NetworkServer networkServer)
             : base(connection, channelId)
         {
-            publisher = networkServer.server.addPublisher();
+            _publisher = networkServer._server.AddPublisher();
         }
+        public override bool IsValid => true;
 
-        public override bool isValid()
-            => true;
-
-        public override void handleCommand(string command)
+        public override void HandleCommand(string command)
         {
             if (_error)
             {
-                sendMessage("ERR");
+                SendMessage("ERR");
                 return;
             }
 
@@ -279,7 +277,7 @@ public class NetworkServer
                 string[] fields = entryString.Split(':', 3);
                 if (fields.Length != 3)
                 {
-                    error();
+                    Error();
                     return;
                 }
 
@@ -287,92 +285,90 @@ public class NetworkServer
                 string queueName = fields[0];
                 string type = fields[1];
                 string data = fields[2];
-                if (publisher.publish(queueName, timestamp, type, data))
-                    sendMessage("ACK");
+                if (_publisher.Publish(queueName, timestamp, type, data))
+                    SendMessage("ACK");
                 else
-                    error();
+                    Error();
             }
             else
-                error();
+                Error();
         }
 
-        public override void handleClose()
-            => publisher.remove();
+        public override void HandleClose()
+            => _publisher.Remove();
 
-        private void error()
+        private void Error()
         {
             _error = true;
-            sendMessage("ERR");
+            SendMessage("ERR");
         }
     }
 
     private sealed class SubscriberChannel : Channel
     {
-        private readonly NetworkServer netServer;
-        private readonly Server.Subscriber? subscriber;
+        private readonly NetworkServer _netServer;
+        private readonly Server.Subscriber? _subscriber;
 
         public SubscriberChannel(NetworkServer _netServer, Connection connection, int channelId, string queueName)
                 : base(connection, channelId)
         {
-            netServer = _netServer;
-            subscriber = netServer.server.addSubscriber(queueName, handleMessage);
+            this._netServer = _netServer;
+            _subscriber = this._netServer._server.AddSubscriber(queueName, HandleMessage);
         }
 
-        public override bool isValid()
-            => subscriber is not null;
+        public override bool IsValid => _subscriber is not null;
 
-        public override void handleCommand(string command)
+        public override void HandleCommand(string command)
         {
             // empty
         }
 
-        public override void handleClose()
-            => subscriber?.remove();
+        public override void HandleClose()
+            => _subscriber?.Remove();
 
-        private void handleMessage(Server.Subscriber.Message message)
+        private void HandleMessage(Server.Subscriber.Message message)
         {
             if (message is Server.Subscriber.EntryMessage entryMessage)
             {
                 StringBuilder stringBuilder = new StringBuilder();
-                stringBuilder.Append(entryMessage.timestamp);
+                stringBuilder.Append(entryMessage.Timestamp);
                 stringBuilder.Append(':');
-                stringBuilder.Append(entryMessage.type);
+                stringBuilder.Append(entryMessage.Type);
                 stringBuilder.Append(':');
-                stringBuilder.Append(entryMessage.data);
-                sendMessage(stringBuilder.ToString());
+                stringBuilder.Append(entryMessage.Data);
+                SendMessage(stringBuilder.ToString());
             }
             else if (message is Server.Subscriber.ErrorMessage)
-                sendMessage("ERR");
+                SendMessage("ERR");
         }
     }
 
     private sealed class RequestSenderChannel : Channel
     {
-        private readonly Server.RequestSender requestSender;
+        private readonly Server.RequestSender _requestSender;
         // TODO: should they be volatile?
-        private volatile TaskCompletionSource<string?>? currentPendingResponse = null;
+        private volatile TaskCompletionSource<string?>? _currentPendingResponse = null;
         private volatile bool _error = false;
 
         public RequestSenderChannel(Connection connection, int channelId, NetworkServer networkServer)
             : base(connection, channelId)
         {
-            requestSender = networkServer.server.addRequestSender();
+            _requestSender = networkServer._server.AddRequestSender();
         }
 
-        public override bool isValid()
-            => true;
+        public override bool IsValid => true;
 
-        public override void handleCommand(string command)
+        public override void HandleCommand(string command)
         {
             if (_error)
             {
-                sendMessage("ERR");
+                SendMessage("ERR");
                 return;
             }
 
-            if (currentPendingResponse is not null)
+            if (_currentPendingResponse is not null)
             {
-                error();
+                Error();
                 return;
             }
 
@@ -383,7 +379,7 @@ public class NetworkServer
                 string[] fields = entryString.Split(':', 3);
                 if (fields.Length != 3)
                 {
-                    error();
+                    Error();
                     return;
                 }
 
@@ -392,68 +388,67 @@ public class NetworkServer
                 string type = fields[1];
                 string data = fields[2];
 
-                TaskCompletionSource<string?>? completableFuture = requestSender.request(queueName, timestamp, type, data);
+                TaskCompletionSource<string?>? completableFuture = _requestSender.Request(queueName, timestamp, type, data);
                 if (completableFuture is not null)
                 {
-                    currentPendingResponse = completableFuture;
-                    sendMessage("ACK");
+                    _currentPendingResponse = completableFuture;
+                    SendMessage("ACK");
                     completableFuture.Task.ContinueWith(task =>
                     {
-                        if (currentPendingResponse is not null)
+                        if (_currentPendingResponse is not null)
                         {
-                            if (currentPendingResponse != completableFuture)
+                            if (_currentPendingResponse != completableFuture)
                                 throw new InvalidOperationException();
 
-                            currentPendingResponse = null;
+                            _currentPendingResponse = null;
                             if (task.Result is not null)
-                                sendMessage("REP " + task.Result);
+                                SendMessage("REP " + task.Result);
                             else
-                                sendMessage("NREP");
+                                SendMessage("NREP");
                         }
                     });
                 }
                 else
-                    error();
+                    Error();
             }
             else
-                error();
+                Error();
         }
 
-        public override void handleClose()
+        public override void HandleClose()
         {
-            requestSender.remove();
-            currentPendingResponse = null;
+            _requestSender.Remove();
+            _currentPendingResponse = null;
         }
 
-        private void error()
+        private void Error()
         {
             _error = true;
-            currentPendingResponse = null;
-            sendMessage("ERR");
+            _currentPendingResponse = null;
+            SendMessage("ERR");
         }
     }
 
     private sealed class RequestHandlerChannel : Channel
     {
-        private readonly Server.RequestHandler requestHandler;
-        private readonly Dictionary<int, TaskCompletionSource<string?>> pendingResponses = [];
-        private int nextRequestId = 1;
+        private readonly Server.RequestHandler _requestHandler;
+        private readonly Dictionary<int, TaskCompletionSource<string?>> _pendingResponses = [];
+        private int _nextRequestId = 1;
         private bool _error = false;
 
         public RequestHandlerChannel(Connection connection, int channelId, string queueName, NetworkServer networkServer)
             : base(connection, channelId)
         {
-            requestHandler = networkServer.server.addRequestHandler(queueName, handleRequest, handleError) ?? throw new ArgumentException($"{nameof(queueName)} is invalid.", nameof(queueName));
+            _requestHandler = networkServer._server.AddRequestHandler(queueName, HandleRequest, HandleError) ?? throw new ArgumentException($"{nameof(queueName)} is invalid.", nameof(queueName));
         }
 
-        public override bool isValid()
-            => requestHandler is not null;
+        public override bool IsValid => _requestHandler is not null;
 
-        public override void handleCommand(string command)
+        public override void HandleCommand(string command)
         {
             if (_error)
             {
-                sendMessage("ERR");
+                SendMessage("ERR");
                 return;
             }
 
@@ -464,7 +459,7 @@ public class NetworkServer
                 string[] fields = entryString.Split(':', 2);
                 if (fields.Length != 2)
                 {
-                    error();
+                    Error();
                     return;
                 }
 
@@ -475,18 +470,18 @@ public class NetworkServer
                 }
                 catch (FormatException)
                 {
-                    error();
+                    Error();
                     return;
                 }
 
                 string data = fields[1];
 
-                if (pendingResponses.TryGetValue(requestId, out TaskCompletionSource<string?>? responseCompletableFuture))
+                if (_pendingResponses.TryGetValue(requestId, out TaskCompletionSource<string?>? responseCompletableFuture))
                     responseCompletableFuture.SetResult(data);
                 else
-                    error();
+                    Error();
 
-                pendingResponses.Remove(requestId);
+                _pendingResponses.Remove(requestId);
             }
             else if (parts[0] == "NREP")
             {
@@ -497,63 +492,63 @@ public class NetworkServer
                 }
                 catch (FormatException)
                 {
-                    error();
+                    Error();
                     return;
                 }
 
-                TaskCompletionSource<string?>? responseCompletableFuture = pendingResponses.JavaRemove(requestId);
+                TaskCompletionSource<string?>? responseCompletableFuture = _pendingResponses.JavaRemove(requestId);
                 if (responseCompletableFuture is not null)
                     responseCompletableFuture.SetResult(null);
                 else
-                    error();
+                    Error();
             }
             else
-                error();
+                Error();
         }
 
-        public override void handleClose()
+        public override void HandleClose()
         {
-            requestHandler.remove();
-            foreach (var source in pendingResponses.Values)
+            _requestHandler.Remove();
+            foreach (var source in _pendingResponses.Values)
             {
                 source.SetResult(null);
             }
 
-            pendingResponses.Clear();
+            _pendingResponses.Clear();
         }
 
-        private TaskCompletionSource<string?> handleRequest(Server.RequestHandler.Request request)
+        private TaskCompletionSource<string?> HandleRequest(Server.RequestHandler.RequestR request)
         {
-            int requestId = nextRequestId++;
+            int requestId = _nextRequestId++;
             TaskCompletionSource<string?> responseCompletableFuture = new();
-            pendingResponses[requestId] = responseCompletableFuture;
+            _pendingResponses[requestId] = responseCompletableFuture;
 
             StringBuilder stringBuilder = new StringBuilder();
             stringBuilder.Append(requestId);
             stringBuilder.Append(':');
-            stringBuilder.Append(request.timestamp);
+            stringBuilder.Append(request.Timestamp);
             stringBuilder.Append(':');
-            stringBuilder.Append(request.type);
+            stringBuilder.Append(request.Type);
             stringBuilder.Append(':');
-            stringBuilder.Append(request.data);
-            sendMessage(stringBuilder.ToString());
+            stringBuilder.Append(request.Data);
+            SendMessage(stringBuilder.ToString());
 
             return responseCompletableFuture;
         }
 
-        private void handleError(Server.RequestHandler.ErrorMessage errorMessage)
-            => error();
+        private void HandleError(Server.RequestHandler.ErrorMessage errorMessage)
+            => Error();
 
-        private void error()
+        private void Error()
         {
             _error = true;
-            foreach (var item in pendingResponses)
+            foreach (var item in _pendingResponses)
             {
                 item.Value.SetResult(null);
             }
 
-            pendingResponses.Clear();
-            sendMessage("ERR");
+            _pendingResponses.Clear();
+            SendMessage("ERR");
         }
     }
 }

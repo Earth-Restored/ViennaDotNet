@@ -61,7 +61,7 @@ internal static class Program
             return 1;
         }
 
-        server.run();
+        server.Run();
 
         return 0;
     }

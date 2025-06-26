@@ -4,18 +4,18 @@ namespace ViennaDotNet.ObjectStore.Server;
 
 public class Server
 {
-    private readonly DataStore dataStore;
+    private readonly DataStore _dataStore;
 
     public Server(DataStore dataStore)
     {
-        this.dataStore = dataStore;
+        _dataStore = dataStore;
     }
 
-    public string? store(byte[] data)
+    public string? Store(byte[] data)
     {
         try
         {
-            string id = dataStore.store(data);
+            string id = _dataStore.Store(data);
             Log.Information($"Stored new object {id}");
             return id;
         }
@@ -26,12 +26,12 @@ public class Server
         }
     }
 
-    public byte[]? load(string id)
+    public byte[]? Load(string id)
     {
         Log.Information($"Request for object {id}");
         try
         {
-            byte[]? data = dataStore.load(id);
+            byte[]? data = _dataStore.Load(id);
             if (data is null)
                 Log.Information($"Requested object {id} does not exist");
 
@@ -44,10 +44,10 @@ public class Server
         }
     }
 
-    public bool delete(string id)
+    public bool Delete(string id)
     {
         Log.Information($"Request to delete object {id}");
-        dataStore.delete(id);
+        _dataStore.Delete(id);
         return true;
     }
 }

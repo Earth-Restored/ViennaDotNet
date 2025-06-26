@@ -116,7 +116,7 @@ public static class Program
         Log.Information("Connecting to event bus");
         try
         {
-            eventBus = EventBusClient.create(options.EventBusConnectionString);
+            eventBus = EventBusClient.Create(options.EventBusConnectionString);
         }
         catch (EventBusClientException ex)
         {
@@ -129,7 +129,7 @@ public static class Program
         Log.Information("Connecting to object storage");
         try
         {
-            objectStore = ObjectStoreClient.create(options.ObjectStoreConnectionString);
+            objectStore = ObjectStoreClient.Create(options.ObjectStoreConnectionString);
         }
         catch (ObjectStoreClientException ex)
         {
@@ -157,7 +157,7 @@ public static class Program
         tappablesManager = new TappablesManager(eventBus);
         buildplateInstancesManager = new BuildplateInstancesManager(eventBus);
 
-        BuildplateInstanceRequestHandler.Start(DB, eventBus, objectStore, staticData.catalog);
+        BuildplateInstanceRequestHandler.Start(DB, eventBus, objectStore, staticData.Catalog);
 
         CreateHostBuilder(args, options.HttpPort).Build().Run();
 

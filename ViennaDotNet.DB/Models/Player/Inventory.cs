@@ -17,7 +17,13 @@ public sealed class Inventory
         _nonStackableItems = [];
     }
 
-    public Inventory copy()
+    [JsonIgnore]
+    public IEnumerable<StackableItem> StackableItems => _stackableItems.Select(item => new StackableItem(item.Key, item.Value));
+
+    [JsonIgnore]
+    public IEnumerable<NonStackableItem> NonStackableItems => _nonStackableItems.Select(item => new NonStackableItem(item.Key, [.. item.Value.Values]));
+
+    public Inventory Copy()
     {
         Inventory inventory = new Inventory();
         inventory._stackableItems.AddRange(_stackableItems);
@@ -28,22 +34,16 @@ public sealed class Inventory
     }
 
     public sealed record StackableItem(
-        string id,
-        int? count
+        string Id,
+        int? Count
     );
-
-    public StackableItem[] getStackableItems()
-        => [.. _stackableItems.Select(item => new StackableItem(item.Key, item.Value))];
 
     public sealed record NonStackableItem(
-        string id,
-        NonStackableItemInstance[] instances
+        string Id,
+        NonStackableItemInstance[] Instances
     );
 
-    public NonStackableItem[] getNonStackableItems()
-        => [.. _nonStackableItems.Select(item => new NonStackableItem(item.Key, [.. item.Value.Values]))];
-
-    public int getItemCount(string id)
+    public int GetItemCount(string id)
     {
         int? count = _stackableItems.GetOrDefault(id, null);
         if (count is not null)
@@ -58,7 +58,7 @@ public sealed class Inventory
             : 0;
     }
 
-    public NonStackableItemInstance[] getItemInstances(string id)
+    public NonStackableItemInstance[] GetItemInstances(string id)
     {
         Dictionary<string, NonStackableItemInstance>? instances = _nonStackableItems!.GetOrDefault(id, null);
         return instances is not null
@@ -66,13 +66,13 @@ public sealed class Inventory
             : [];
     }
 
-    public NonStackableItemInstance? getItemInstance(string id, string instanceId)
+    public NonStackableItemInstance? GetItemInstance(string id, string instanceId)
     {
         Dictionary<string, NonStackableItemInstance>? instances = _nonStackableItems!.GetOrDefault(id, null);
         return instances?.GetOrDefault(instanceId, null);
     }
 
-    public void addItems(string id, int count)
+    public void AddItems(string id, int count)
     {
         if (count < 0)
         {
@@ -82,17 +82,17 @@ public sealed class Inventory
         _stackableItems[id] = _stackableItems.GetOrDefault(id, 0) + count;
     }
 
-    public void addItems(string id, NonStackableItemInstance[] instances)
+    public void AddItems(string id, NonStackableItemInstance[] instances)
     {
         Dictionary<string, NonStackableItemInstance> instancesMap = _nonStackableItems.ComputeIfAbsent(id, id1 => [])!;
 
         foreach (NonStackableItemInstance instance in instances)
         {
-            instancesMap.Add(instance.instanceId, instance);
+            instancesMap.Add(instance.InstanceId, instance);
         }
     }
 
-    public bool takeItems(string id, int count)
+    public bool TakeItems(string id, int count)
     {
         if (count < 0)
         {
@@ -109,7 +109,7 @@ public sealed class Inventory
         return true;
     }
 
-    public NonStackableItemInstance[]? takeItems(string id, string[] instanceIds)
+    public NonStackableItemInstance[]? TakeItems(string id, string[] instanceIds)
     {
         Dictionary<string, NonStackableItemInstance>? instanceMap = _nonStackableItems.GetValueOrDefault(id);
         if (instanceMap is null)

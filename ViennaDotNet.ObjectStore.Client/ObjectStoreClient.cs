@@ -6,7 +6,7 @@ namespace ViennaDotNet.ObjectStore.Client;
 
 public class ObjectStoreClient
 {
-    public static ObjectStoreClient create(string connectionString)
+    public static ObjectStoreClient Create(string connectionString)
     {
         string[] parts = connectionString.Split(':', 2);
         string host = parts[0];
@@ -50,32 +50,32 @@ public class ObjectStoreClient
         }
     }
 
-    private readonly Socket socket;
-    private readonly BlockingCollection<object> outgoingMessageQueue = [];
-    private readonly Thread outgoingThread;
-    private readonly Thread incomingThread;
+    private readonly Socket _socket;
+    private readonly BlockingCollection<object> _outgoingMessageQueue = [];
+    private readonly Thread _outgoingThread;
+    private readonly Thread _incomingThread;
 #if NET9_0_OR_GREATER
     private readonly Lock _lock = new();
 #else
     private readonly object _lock = new();
 #endif
 
-    private bool closed = false;
+    private bool _closed = false;
 
-    private Command? currentCommand = null;
-    private LinkedList<Command> queuedCommands = new();
+    private Command? _currentCommand = null;
+    private LinkedList<Command> _queuedCommands = new();
 
     private ObjectStoreClient(Socket socket)
     {
-        this.socket = socket;
+        _socket = socket;
 
-        outgoingThread = new Thread(() =>
+        _outgoingThread = new Thread(() =>
         {
             try
             {
                 for (; ; )
                 {
-                    object message = outgoingMessageQueue.Take();
+                    object message = _outgoingMessageQueue.Take();
                     if (message is string command)
                         socket.Send(Encoding.ASCII.GetBytes(command));
                     else if (message is byte[] data)
@@ -93,13 +93,13 @@ public class ObjectStoreClient
             catch (SocketException)
             {
                 lock (_lock)
-                    closed = true;
+                    _closed = true;
             }
 
-            initiateClose();
+            InitiateClose();
         });
 
-        incomingThread = new Thread(() =>
+        _incomingThread = new Thread(() =>
         {
             try
             {
@@ -110,7 +110,7 @@ public class ObjectStoreClient
                 for (; ; )
                 {
                     lock (_lock)
-                        if (closed)
+                        if (_closed)
                             break;
 
                     int readLength = socket.Receive(readBuffer);
@@ -120,7 +120,7 @@ public class ObjectStoreClient
                         while (startOffset < readLength)
                         {
                             lock (_lock)
-                                if (closed)
+                                if (_closed)
                                     break;
 
                             if (binaryReadLength > 0)
@@ -134,9 +134,9 @@ public class ObjectStoreClient
                                 else
                                 {
                                     byteArrayOutputStream.Write(readBuffer, startOffset, binaryReadLength);
-                                    if (!handleBinaryData(lastMessage, byteArrayOutputStream.ToArray()))
+                                    if (!HandleBinaryData(lastMessage, byteArrayOutputStream.ToArray()))
                                     {
-                                        initiateClose();
+                                        InitiateClose();
                                         break;
                                     }
 
@@ -154,10 +154,10 @@ public class ObjectStoreClient
                                     {
                                         byteArrayOutputStream.Write(readBuffer, startOffset, offset - startOffset);
                                         lastMessage = Encoding.ASCII.GetString(byteArrayOutputStream.ToArray());
-                                        binaryReadLength = handleMessage(lastMessage);
+                                        binaryReadLength = HandleMessage(lastMessage);
                                         if (binaryReadLength == -1)
                                         {
-                                            initiateClose();
+                                            InitiateClose();
                                             break;
                                         }
 
@@ -175,7 +175,7 @@ public class ObjectStoreClient
                         }
                     }
                     else if (readLength == 0)
-                        initiateClose();
+                        InitiateClose();
                     else
                         throw new InvalidOperationException();
 
@@ -186,41 +186,41 @@ public class ObjectStoreClient
             catch (SocketException)
             {
                 lock (_lock)
-                    closed = true;
+                    _closed = true;
             }
 
-            initiateClose();
+            InitiateClose();
 
             lock (_lock)
             {
-                if (currentCommand is not null)
+                if (_currentCommand is not null)
                 {
-                    currentCommand.completableFuture.TrySetResult(currentCommand.type == Command.Type.DELETE ? false : null);
-                    currentCommand = null;
+                    _currentCommand.CompletableFuture.TrySetResult(_currentCommand.Type == Command.TypeE.DELETE ? false : null);
+                    _currentCommand = null;
                 }
 
-                foreach (var command in queuedCommands)
+                foreach (var command in _queuedCommands)
                 {
-                    command.completableFuture.TrySetResult(command.type == Command.Type.DELETE ? false : null);
+                    command.CompletableFuture.TrySetResult(command.Type == Command.TypeE.DELETE ? false : null);
                 }
 
-                queuedCommands.Clear();
+                _queuedCommands.Clear();
             }
         });
 
-        outgoingThread.Start();
-        incomingThread.Start();
+        _outgoingThread.Start();
+        _incomingThread.Start();
     }
 
-    public void close()
+    public void Close()
     {
-        initiateClose();
+        InitiateClose();
 
-        for (; ; )
+        while (true)
         {
             try
             {
-                incomingThread.Join();
+                _incomingThread.Join();
                 break;
             }
             catch (ThreadInterruptedException)
@@ -229,11 +229,11 @@ public class ObjectStoreClient
             }
         }
 
-        for (; ; )
+        while (true)
         {
             try
             {
-                outgoingThread.Join();
+                _outgoingThread.Join();
                 break;
             }
             catch (ThreadInterruptedException)
@@ -243,14 +243,14 @@ public class ObjectStoreClient
         }
     }
 
-    private void initiateClose()
+    private void InitiateClose()
     {
         lock (_lock)
-            closed = true;
+            _closed = true;
 
         try
         {
-            socket.Shutdown(SocketShutdown.Both);
+            _socket.Shutdown(SocketShutdown.Both);
         }
         catch (SocketException)
         {
@@ -262,77 +262,77 @@ public class ObjectStoreClient
         }
         finally
         {
-            socket.Close();
+            _socket.Close();
         }
 
-        outgoingThread.Interrupt();
+        _outgoingThread.Interrupt();
     }
 
-    public TaskCompletionSource<object?> store(byte[] data)
+    public TaskCompletionSource<object?> Store(byte[] data)
     {
         TaskCompletionSource<object?> completableFuture = new TaskCompletionSource<object?>();
-        queueCommand(new Command(Command.Type.STORE, data, completableFuture));
+        QueueCommand(new Command(Command.TypeE.STORE, data, completableFuture));
         return completableFuture;
     }
 
-    public TaskCompletionSource<object?> get(string id)
+    public TaskCompletionSource<object?> Get(string id)
     {
         TaskCompletionSource<object?> completableFuture = new TaskCompletionSource<object?>();
-        queueCommand(new Command(Command.Type.GET, id, completableFuture));
+        QueueCommand(new Command(Command.TypeE.GET, id, completableFuture));
         return completableFuture;
     }
 
-    public TaskCompletionSource<object?> delete(string id)
+    public TaskCompletionSource<object?> Delete(string id)
     {
         TaskCompletionSource<object?> completableFuture = new TaskCompletionSource<object?>();
-        queueCommand(new Command(Command.Type.DELETE, id, completableFuture));
+        QueueCommand(new Command(Command.TypeE.DELETE, id, completableFuture));
         return completableFuture;
     }
 
-    private void queueCommand(Command command)
+    private void QueueCommand(Command command)
     {
         lock (_lock)
         {
-            if (closed)
-                command.completableFuture.TrySetResult(command.type == Command.Type.DELETE ? false : null);
+            if (_closed)
+                command.CompletableFuture.TrySetResult(command.Type == Command.TypeE.DELETE ? false : null);
             else
             {
-                queuedCommands.AddLast(command);
-                if (currentCommand is null)
-                    sendNextCommand();
+                _queuedCommands.AddLast(command);
+                if (_currentCommand is null)
+                    SendNextCommand();
             }
         }
     }
 
-    private void sendNextCommand()
+    private void SendNextCommand()
     {
         lock (_lock)
         {
-            currentCommand = null;
+            _currentCommand = null;
 
-            if (closed)
+            if (_closed)
                 return;
 
-            if (queuedCommands.Count != 0)
+            if (_queuedCommands.Count != 0)
             {
-                currentCommand = queuedCommands.First!.Value;
-                queuedCommands.RemoveFirst();
-                switch (currentCommand.type)
+                _currentCommand = _queuedCommands.First!.Value;
+                _queuedCommands.RemoveFirst();
+                switch (_currentCommand.Type)
                 {
-                    case Command.Type.STORE:
+                    case Command.TypeE.STORE:
                         {
-                            sendMessage("STORE " + ((byte[])currentCommand.data).Length + "\n");
-                            sendMessage(currentCommand.data);
+                            SendMessage("STORE " + ((byte[])_currentCommand.Data).Length + "\n");
+                            SendMessage(_currentCommand.Data);
                             break;
                         }
-                    case Command.Type.GET:
+                    case Command.TypeE.GET:
                         {
-                            sendMessage("GET " + ((string)currentCommand.data) + "\n");
+                            SendMessage("GET " + ((string)_currentCommand.Data) + "\n");
                             break;
                         }
-                    case Command.Type.DELETE:
+                    case Command.TypeE.DELETE:
                         {
-                            sendMessage("DEL " + ((string)currentCommand.data) + "\n");
+                            SendMessage("DEL " + ((string)_currentCommand.Data) + "\n");
                             break;
                         }
                 }
@@ -340,40 +340,40 @@ public class ObjectStoreClient
         }
     }
 
-    private int handleMessage(string message)
+    private int HandleMessage(string message)
     {
         lock (_lock)
         {
-            if (closed)
+            if (_closed)
                 return -1;
 
-            if (currentCommand is null)
+            if (_currentCommand is null)
                 return -1;
 
             string[] parts = message.Split(' ', 2);
-            switch (currentCommand.type)
+            switch (_currentCommand.Type)
             {
-                case Command.Type.STORE:
+                case Command.TypeE.STORE:
                     {
                         if (parts[0] == "OK")
                         {
                             if (parts.Length != 2)
                                 return -1;
 
-                            currentCommand.completableFuture.TrySetResult(parts[1]);
-                            sendNextCommand();
+                            _currentCommand.CompletableFuture.TrySetResult(parts[1]);
+                            SendNextCommand();
                             return 0;
                         }
                         else if (parts[0] == "ERR")
                         {
-                            currentCommand.completableFuture.TrySetResult(null);
-                            sendNextCommand();
+                            _currentCommand.CompletableFuture.TrySetResult(null);
+                            SendNextCommand();
                             return 0;
                         }
                         else
                             return -1;
                     }
-                case Command.Type.GET:
+                case Command.TypeE.GET:
                     {
                         if (parts[0] == "OK")
                         {
@@ -388,8 +388,8 @@ public class ObjectStoreClient
 
                                 if (length == 0)
                                 {
-                                    currentCommand.completableFuture.TrySetResult(Array.Empty<byte>());
-                                    sendNextCommand();
+                                    _currentCommand.CompletableFuture.TrySetResult(Array.Empty<byte>());
+                                    SendNextCommand();
                                 }
 
                                 return length;
@@ -401,25 +401,25 @@ public class ObjectStoreClient
                         }
                         else if (parts[0] == "ERR")
                         {
-                            currentCommand.completableFuture.TrySetResult(null);
-                            sendNextCommand();
+                            _currentCommand.CompletableFuture.TrySetResult(null);
+                            SendNextCommand();
                             return 0;
                         }
                         else
                             return -1;
                     }
-                case Command.Type.DELETE:
+                case Command.TypeE.DELETE:
                     {
                         if (parts[0] == "OK")
                         {
-                            currentCommand.completableFuture.TrySetResult(true);
-                            sendNextCommand();
+                            _currentCommand.CompletableFuture.TrySetResult(true);
+                            SendNextCommand();
                             return 0;
                         }
                         else if (parts[0] == "ERR")
                         {
-                            currentCommand.completableFuture.TrySetResult(false);
-                            sendNextCommand();
+                            _currentCommand.CompletableFuture.TrySetResult(false);
+                            SendNextCommand();
                             return 0;
                         }
                         else
@@ -431,28 +431,28 @@ public class ObjectStoreClient
         }
     }
 
-    private bool handleBinaryData(string message, byte[] data)
+    private bool HandleBinaryData(string message, byte[] data)
     {
         lock (_lock)
         {
-            if (closed)
+            if (_closed)
                 return false;
 
-            if (currentCommand is null)
+            if (_currentCommand is null)
                 throw new InvalidOperationException();
 
             string[] parts = message.Split(' ', 2);
             if (parts.Length != 2)
                 throw new InvalidOperationException();
 
-            switch (currentCommand.type)
+            switch (_currentCommand.Type)
             {
-                case Command.Type.GET:
+                case Command.TypeE.GET:
                     {
                         if (parts[0] == "OK")
                         {
-                            currentCommand.completableFuture.TrySetResult(data);
-                            sendNextCommand();
+                            _currentCommand.CompletableFuture.TrySetResult(data);
+                            SendNextCommand();
                             return true;
                         }
                         else
@@ -464,17 +464,17 @@ public class ObjectStoreClient
         }
     }
 
-    private void sendMessage(object message)
+    private void SendMessage(object message)
     {
         lock (_lock)
-            if (closed)
+            if (_closed)
                 throw new InvalidOperationException();
 
-        for (; ; )
+        while (true)
         {
             try
             {
-                outgoingMessageQueue.Add(message);
+                _outgoingMessageQueue.Add(message);
                 break;
             }
             catch (ThreadInterruptedException)
@@ -486,22 +486,22 @@ public class ObjectStoreClient
 
     private sealed class Command
     {
-        public readonly Type type;
-        public readonly object data;
-        public readonly TaskCompletionSource<object?> completableFuture;
+        public readonly TypeE Type;
+        public readonly object Data;
+        public readonly TaskCompletionSource<object?> CompletableFuture;
 
-        public enum Type
+        public enum TypeE
         {
             STORE,
             GET,
             DELETE
         }
 
-        public Command(Type type, object data, TaskCompletionSource<object?> completableFuture)
+        public Command(TypeE type, object data, TaskCompletionSource<object?> completableFuture)
         {
-            this.type = type;
-            this.data = data;
-            this.completableFuture = completableFuture;
+            Type = type;
+            Data = data;
+            CompletableFuture = completableFuture;
         }
     }
 }

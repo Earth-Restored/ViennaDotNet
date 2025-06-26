@@ -2,13 +2,13 @@
 
 public sealed class Rubies
 {
-    public int purchased;
-    public int earned;
+    public int Purchased { get; set; }
+    public int Earned { get; set; }
 
     public Rubies()
     {
-        purchased = 0;
-        earned = 0;
+        Purchased = 0;
+        Earned = 0;
     }
 
     /// <summary>
@@ -17,29 +17,31 @@ public sealed class Rubies
     /// <param name="amount">The amount of rubies to spend</param>
     /// <returns>If there were enought rubies to spend <paramref name="amount"/></returns>
     /// <exception cref="InvalidOperationException"></exception>
-    public bool spend(int amount)
+    public bool Spend(int amount)
     {
-        if (amount > purchased + earned)
+        if (amount > Purchased + Earned)
         {
             return false;
         }
 
         // TODO: in what order should purchased/earned rubies be spent?
-        if (amount > purchased)
+        if (amount > Purchased)
         {
-            amount -= purchased;
-            purchased = 0;
+            amount -= Purchased;
+            Purchased = 0;
         }
         else
         {
-            purchased -= amount;
+            Purchased -= amount;
             amount = 0;
         }
 
         if (amount > 0)
-            earned -= amount;
+        {
+            Earned -= amount;
+        }
 
-        if (purchased < 0 || earned < 0)
+        if (Purchased < 0 || Earned < 0)
         {
             throw new InvalidOperationException();
         }

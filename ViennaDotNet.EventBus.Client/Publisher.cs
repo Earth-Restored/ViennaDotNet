@@ -5,40 +5,40 @@ namespace ViennaDotNet.EventBus.Client;
 
 public sealed partial class Publisher
 {
-    private readonly EventBusClient client;
-    private readonly int channelId;
+    private readonly EventBusClient _client;
+    private readonly int _channelId;
 
     private readonly object _lock = new();
 
     private bool _closed = false;
 
     // TODO: probably should be a queue
-    private readonly LinkedList<string> queuedEvents = new();
-    private readonly LinkedList<TaskCompletionSource<bool>> queuedEventResults = new();
-    private TaskCompletionSource<bool>? currentPendingEventResult = null;
+    private readonly LinkedList<string> _queuedEvents = new();
+    private readonly LinkedList<TaskCompletionSource<bool>> _queuedEventResults = new();
+    private TaskCompletionSource<bool>? _currentPendingEventResult = null;
 
     internal Publisher(EventBusClient client, int channelId)
     {
-        this.client = client;
-        this.channelId = channelId;
+        _client = client;
+        _channelId = channelId;
     }
 
-    public void close()
+    public void Close()
     {
-        client.removePublisher(channelId);
-        client.sendMessage(channelId, "CLOSE");
-        closed();
+        _client.RemovePublisher(_channelId);
+        _client.SendMessage(_channelId, "CLOSE");
+        Closed();
     }
 
-    public Task<bool> publish(string queueName, string type, string data)
+    public Task<bool> Publish(string queueName, string type, string data)
     {
-        if (!validateQueueName(queueName))
+        if (!ValidateQueueName(queueName))
             throw new ArgumentException("Queue name contains invalid characters", nameof(queueName));
 
-        if (!validateType(type))
+        if (!ValidateType(type))
             throw new ArgumentException("Type contains invalid characters", nameof(type));
 
-        if (!validateData(data))
+        if (!ValidateData(data))
             throw new ArgumentException("Data contains invalid characters", nameof(data));
 
         string eventMessage = "SEND " + queueName + ":" + type + ":" + data;
@@ -51,11 +51,11 @@ public sealed partial class Publisher
                 completableFuture.SetResult(false);
             else
             {
-                queuedEvents.AddLast(eventMessage);
-                queuedEventResults.AddLast(completableFuture);
-                if (currentPendingEventResult is null)
+                _queuedEvents.AddLast(eventMessage);
+                _queuedEventResults.AddLast(completableFuture);
+                if (_currentPendingEventResult is null)
                 {
-                    sendNextEvent();
+                    SendNextEvent();
                 }
             }
         }
@@ -63,27 +63,27 @@ public sealed partial class Publisher
         return completableFuture.Task;
     }
 
-    public void flush()
+    public void Flush()
     {
         Monitor.Enter(_lock);
-        var task = queuedEventResults.Count == 0 ? currentPendingEventResult : queuedEventResults.Last!.Value;
+        var task = _queuedEventResults.Count == 0 ? _currentPendingEventResult : _queuedEventResults.Last!.Value;
         Monitor.Exit(_lock);
 
         task?.Task.Wait();
     }
 
-    internal Task<bool> handleMessage(string message)
+    internal Task<bool> HandleMessage(string message)
     {
         if (message == "ACK")
         {
             lock (_lock)
             {
-                if (currentPendingEventResult is not null)
+                if (_currentPendingEventResult is not null)
                 {
-                    currentPendingEventResult.SetResult(true);
-                    currentPendingEventResult = null;
-                    if (!queuedEvents.IsEmpty())
-                        sendNextEvent();
+                    _currentPendingEventResult.SetResult(true);
+                    _currentPendingEventResult = null;
+                    if (!_queuedEvents.IsEmpty())
+                        SendNextEvent();
 
                     return Task.FromResult(true);
                 }
@@ -93,51 +93,51 @@ public sealed partial class Publisher
         }
         else if (message == "ERR")
         {
-            close();
+            Close();
             return Task.FromResult(true);
         }
         else
             return Task.FromResult(false);
     }
 
-    private void sendNextEvent()
+    private void SendNextEvent()
     {
-        string message = queuedEvents.First!.Value;
-        queuedEvents.RemoveFirst();
-        client.sendMessage(channelId, message);
-        currentPendingEventResult = queuedEventResults.First!.Value;
-        queuedEventResults.RemoveFirst();
+        string message = _queuedEvents.First!.Value;
+        _queuedEvents.RemoveFirst();
+        _client.SendMessage(_channelId, message);
+        _currentPendingEventResult = _queuedEventResults.First!.Value;
+        _queuedEventResults.RemoveFirst();
     }
 
-    internal void closed()
+    internal void Closed()
     {
         lock (_lock)
         {
             _closed = true;
 
-            if (currentPendingEventResult is not null)
+            if (_currentPendingEventResult is not null)
             {
-                currentPendingEventResult.SetResult(false);
-                currentPendingEventResult = null;
+                _currentPendingEventResult.SetResult(false);
+                _currentPendingEventResult = null;
             }
 
-            foreach (var task in queuedEventResults)
+            foreach (var task in _queuedEventResults)
             {
                 task.SetResult(false);
             }
 
-            queuedEventResults.Clear();
-            queuedEvents.Clear();
+            _queuedEventResults.Clear();
+            _queuedEvents.Clear();
         }
     }
 
-    private static bool validateQueueName(string queueName)
+    private static bool ValidateQueueName(string queueName)
         => !string.IsNullOrWhiteSpace(queueName) && queueName.Length != 0 && !GetRegex1().IsMatch(queueName) && !GetRegex2().IsMatch(queueName);
 
-    private static bool validateType(string type)
+    private static bool ValidateType(string type)
         => !string.IsNullOrWhiteSpace(type) && type.Length != 0 && !GetRegex1().IsMatch(type) && !GetRegex2().IsMatch(type);
 
-    private static bool validateData(string str)
+    private static bool ValidateData(string str)
     {
         for (int i = 0; i < str.Length; i++)
             if (str[i] < 32 || str[i] >= 127)

@@ -15,24 +15,20 @@ public sealed class ActivityLog
         _entries = new();
     }
 
-    public ActivityLog copy()
+    [JsonIgnore]
+    public IEnumerable<Entry> Entries => _entries;
+
+    public ActivityLog Copy()
     {
         ActivityLog activityLog = new ActivityLog();
         activityLog._entries.AddRange(_entries);
         return activityLog;
     }
 
-    public Entry[] getEntries()
-    {
-        return [.. _entries];
-    }
+    public void AddEntry(Entry entry)
+        => _entries.AddLast(entry);
 
-    public void addEntry(Entry entry)
-    {
-        _entries.AddLast(entry);
-    }
-
-    public void prune()
+    public void Prune()
     {
         // it is widely known that the activity log is length limited but there is only ONE person who has stated how long it was limited to and apparently it is 40 entires
         while (_entries.Count > 40)
@@ -43,19 +39,18 @@ public sealed class ActivityLog
 
     public abstract class Entry
     {
-        [JsonInclude]
-        public readonly long timestamp;
-        [JsonInclude]
-        public readonly Type type;
+        public long Timestamp { get; init; }
 
-        protected Entry(long timestamp, Type type)
+        public TypeE Type { get; init; }
+
+        protected Entry(long timestamp, TypeE type)
         {
-            this.timestamp = timestamp;
-            this.type = type;
+            Timestamp = timestamp;
+            Type = type;
         }
 
         [JsonConverter(typeof(JsonStringEnumConverter))]
-        public enum Type
+        public enum TypeE
         {
             LEVEL_UP,
             TAPPABLE,
@@ -74,7 +69,7 @@ public sealed class ActivityLog
                     JsonElement root = document.RootElement;
 
                     if (!root.TryGetProperty("type", out JsonElement typeElement) ||
-                        !Enum.TryParse<Type>(typeElement.GetString(), out var type))
+                        !Enum.TryParse<TypeE>(typeElement.GetString(), out var type))
                     {
                         throw new JsonException("Invalid or missing type property.");
                     }
@@ -83,12 +78,12 @@ public sealed class ActivityLog
 
                     return type switch
                     {
-                        Entry.Type.LEVEL_UP => JsonSerializer.Deserialize<LevelUpEntry>(json, options),
-                        Entry.Type.TAPPABLE => JsonSerializer.Deserialize<TappableEntry>(json, options),
-                        Entry.Type.JOURNAL_ITEM_UNLOCKED => JsonSerializer.Deserialize<JournalItemUnlockedEntry>(json, options),
-                        Entry.Type.CRAFTING_COMPLETED => JsonSerializer.Deserialize<CraftingCompletedEntry>(json, options),
-                        Entry.Type.SMELTING_COMPLETED => JsonSerializer.Deserialize<SmeltingCompletedEntry>(json, options),
-                        Entry.Type.BOOST_ACTIVATED => JsonSerializer.Deserialize<BoostActivatedEntry>(json, options),
+                        Entry.TypeE.LEVEL_UP => JsonSerializer.Deserialize<LevelUpEntry>(json, options),
+                        Entry.TypeE.TAPPABLE => JsonSerializer.Deserialize<TappableEntry>(json, options),
+                        Entry.TypeE.JOURNAL_ITEM_UNLOCKED => JsonSerializer.Deserialize<JournalItemUnlockedEntry>(json, options),
+                        Entry.TypeE.CRAFTING_COMPLETED => JsonSerializer.Deserialize<CraftingCompletedEntry>(json, options),
+                        Entry.TypeE.SMELTING_COMPLETED => JsonSerializer.Deserialize<SmeltingCompletedEntry>(json, options),
+                        Entry.TypeE.BOOST_ACTIVATED => JsonSerializer.Deserialize<BoostActivatedEntry>(json, options),
                         _ => throw new JsonException("Invalid entry type."),
                     };
                 }
@@ -101,73 +96,67 @@ public sealed class ActivityLog
 
     public sealed class LevelUpEntry : Entry
     {
-        [JsonInclude]
-        public readonly int level;
+        public int Level { get; init; }
 
         public LevelUpEntry(long timestamp, int level)
-            : base(timestamp, Type.LEVEL_UP)
+            : base(timestamp, TypeE.LEVEL_UP)
         {
-            this.level = level;
+            Level = level;
         }
     }
 
     public sealed class TappableEntry : Entry
     {
-        [JsonInclude]
-        public readonly Rewards rewards;
+        public Rewards Rewards { get; init; }
 
         public TappableEntry(long timestamp, Rewards rewards)
-            : base(timestamp, Type.TAPPABLE)
+            : base(timestamp, TypeE.TAPPABLE)
         {
-            this.rewards = rewards;
+            Rewards = rewards;
         }
     }
 
     public sealed class JournalItemUnlockedEntry : Entry
     {
-        [JsonInclude]
-        public readonly string itemId;
+        public string ItemId { get; init; }
 
         public JournalItemUnlockedEntry(long timestamp, string itemId)
-            : base(timestamp, Type.JOURNAL_ITEM_UNLOCKED)
+            : base(timestamp, TypeE.JOURNAL_ITEM_UNLOCKED)
         {
-            this.itemId = itemId;
+            ItemId = itemId;
         }
     }
 
     public sealed class CraftingCompletedEntry : Entry
     {
-        [JsonInclude]
-        public readonly Rewards rewards;
+        public Rewards Rewards { get; init; }
 
         public CraftingCompletedEntry(long timestamp, Rewards rewards)
-            : base(timestamp, Type.CRAFTING_COMPLETED)
+            : base(timestamp, TypeE.CRAFTING_COMPLETED)
         {
-            this.rewards = rewards;
+            Rewards = rewards;
         }
     }
 
     public sealed class SmeltingCompletedEntry : Entry
     {
-        [JsonInclude]
-        public readonly Rewards rewards;
+        public Rewards Rewards { get; init; }
 
         public SmeltingCompletedEntry(long timestamp, Rewards rewards)
-            : base(timestamp, Type.SMELTING_COMPLETED)
+            : base(timestamp, TypeE.SMELTING_COMPLETED)
         {
-            this.rewards = rewards;
+            Rewards = rewards;
         }
     }
 
     public sealed class BoostActivatedEntry : Entry
     {
-        [JsonInclude]
-        public readonly string itemId;
+        public string ItemId { get; init; }
 
         public BoostActivatedEntry(long timestamp, string itemId)
-            : base(timestamp, Type.BOOST_ACTIVATED)
+            : base(timestamp, TypeE.BOOST_ACTIVATED)
         {
-            this.itemId = itemId;
+            ItemId = itemId;
         }
     }
 }

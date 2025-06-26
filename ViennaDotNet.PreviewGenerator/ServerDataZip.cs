@@ -7,11 +7,9 @@ namespace ViennaDotNet.PreviewGenerator;
 internal sealed class ServerDataZip
 {
     public static ServerDataZip Read(Stream inputStream)
-    {
-        return new ServerDataZip(inputStream);
-    }
+        => new ServerDataZip(inputStream);
 
-    private readonly Dictionary<string, byte[]> files = [];
+    private readonly Dictionary<string, byte[]> _files = [];
 
     private ServerDataZip(Stream inputStream)
     {
@@ -25,12 +23,12 @@ internal sealed class ServerDataZip
             using (MemoryStream ms = new MemoryStream())
             {
                 entryStream.CopyTo(ms);
-                files.Add(entry.FullName, ms.ToArray());
+                _files.Add(entry.FullName, ms.ToArray());
             }
         }
     }
 
-    public CompoundTag getChunkNBT(int x, int z)
+    public CompoundTag GetChunkNBT(int x, int z)
     {
         int regionX = x >> 5;
         int regionZ = z >> 5;
@@ -38,7 +36,7 @@ internal sealed class ServerDataZip
         int chunkZ = z & 31;
         int chunkIndex = (chunkZ << 5) | chunkX;
 
-        using MemoryStream ms = new MemoryStream(files[$"region/r.{regionX}.{regionZ}.mca"]);
+        using MemoryStream ms = new MemoryStream(_files[$"region/r.{regionX}.{regionZ}.mca"]);
         using BinaryReader reader = new BinaryReader(ms);
 
         ms.Seek(chunkIndex * 4, SeekOrigin.Begin);

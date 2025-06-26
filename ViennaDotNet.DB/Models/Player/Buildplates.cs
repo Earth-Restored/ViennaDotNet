@@ -13,50 +13,47 @@ public sealed class Buildplates
         // empty
     }
 
-    public void addBuildplate(string id, Buildplate buildplate)
+    public void AddBuildplate(string id, Buildplate buildplate)
         => _buildplates[id] = buildplate;
 
-    public Buildplate? getBuildplate(string id)
+    public Buildplate? GetBuildplate(string id)
         => _buildplates.GetOrDefault(id, null);
 
     public sealed record BuildplateEntry(
-        string id,
-        Buildplate buildplate
+        string Id,
+        Buildplate Buildplate
     );
 
-    public BuildplateEntry[] getBuildplates()
+    public BuildplateEntry[] GetBuildplates()
         => [.. _buildplates.Select(entry => new BuildplateEntry(entry.Key, entry.Value))];
 
     public sealed class Buildplate
     {
-        [JsonInclude]
-        public readonly int size;
-        [JsonInclude]
-        public readonly int offset;
-        [JsonInclude]
-        public readonly int scale;
+        public int Size { get; init; }
 
-        [JsonInclude]
-        public readonly bool night;
+        public int Offset { get; init; }
 
-        [JsonInclude]
-        public long lastModified;
-        [JsonInclude]
-        public string serverDataObjectId;
-        [JsonInclude]
-        public string previewObjectId;
+        public int Scale { get; init; }
+
+        public bool Night { get; init; }
+
+        public long LastModified { get; set; }
+
+        public string ServerDataObjectId { get; set; }
+
+        public string PreviewObjectId { get; set; }
 
         public Buildplate(int size, int offset, int scale, bool night, long lastModified, string serverDataObjectId, string previewObjectId)
         {
-            this.size = size;
-            this.offset = offset;
-            this.scale = scale;
+            Size = size;
+            Offset = offset;
+            Scale = scale;
 
-            this.night = night;
+            Night = night;
 
-            this.lastModified = lastModified;
-            this.serverDataObjectId = serverDataObjectId;
-            this.previewObjectId = previewObjectId;
+            LastModified = lastModified;
+            ServerDataObjectId = serverDataObjectId;
+            PreviewObjectId = previewObjectId;
         }
     }
 }

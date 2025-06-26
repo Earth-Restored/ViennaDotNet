@@ -6,30 +6,30 @@ namespace ViennaDotNet.PreviewGenerator;
 
 internal sealed class JsonNbtConverter
 {
-    public static JsonNbtTag convert(NbtMap tag)
+    public static JsonNbtTag Convert(NbtMap tag)
     {
         Dictionary<string, JsonNbtTag> value = [];
-        foreach (var entry in tag.entrySet())
-            value[entry.Key] = convert(entry.Value);
+        foreach (var entry in tag.EntrySet())
+            value[entry.Key] = Convert(entry.Value);
 
         return new CompoundJsonNbtTag(value);
     }
 
-    public static JsonNbtTag convert(NbtList tag)
+    public static JsonNbtTag Convert(NbtList tag)
     {
         LinkedList<JsonNbtTag> value = new();
         foreach (object item in tag)
-            value.AddLast(convert(item));
+            value.AddLast(Convert(item));
 
         return new ListJsonNbtTag([.. value]);
     }
 
-    private static JsonNbtTag convert(object tag)
+    private static JsonNbtTag Convert(object tag)
     {
         if (tag is NbtMap map)
-            return convert(map);
+            return Convert(map);
         else if (tag is NbtList list)
-            return convert(list);
+            return Convert(list);
         else if (tag is int i)
             return new IntJsonNbtTag(i);
         else if (tag is byte b)
@@ -45,7 +45,7 @@ internal sealed class JsonNbtConverter
     public abstract class JsonNbtTag
     {
         [JsonConverter(typeof(JsonStringEnumConverter))]
-        public enum Type
+        public enum TypeE
         {
             Compound,
             List,
@@ -55,20 +55,20 @@ internal sealed class JsonNbtConverter
             String
         }
 
-        public readonly Type type;
-        public readonly object value;
+        public readonly TypeE Type;
+        public readonly object Value;
 
-        public JsonNbtTag(Type type, object value)
+        public JsonNbtTag(TypeE type, object value)
         {
-            this.type = type;
-            this.value = value;
+            Type = type;
+            Value = value;
         }
     }
 
     public sealed class CompoundJsonNbtTag : JsonNbtTag
     {
         public CompoundJsonNbtTag(Dictionary<string, JsonNbtTag> value)
-            : base(Type.Compound, value)
+            : base(TypeE.Compound, value)
         {
         }
     }
@@ -76,7 +76,7 @@ internal sealed class JsonNbtConverter
     public sealed class ListJsonNbtTag : JsonNbtTag
     {
         public ListJsonNbtTag(JsonNbtTag[] value)
-            : base(Type.List, value)
+            : base(TypeE.List, value)
         {
         }
     }
@@ -84,7 +84,7 @@ internal sealed class JsonNbtConverter
     public sealed class IntJsonNbtTag : JsonNbtTag
     {
         public IntJsonNbtTag(int value)
-            : base(Type.Int, value)
+            : base(TypeE.Int, value)
         {
         }
     }
@@ -92,7 +92,7 @@ internal sealed class JsonNbtConverter
     public sealed class ByteJsonNbtTag : JsonNbtTag
     {
         public ByteJsonNbtTag(byte value)
-            : base(Type.Byte, value)
+            : base(TypeE.Byte, value)
         {
         }
     }
@@ -100,7 +100,7 @@ internal sealed class JsonNbtConverter
     public sealed class FloatJsonNbtTag : JsonNbtTag
     {
         public FloatJsonNbtTag(float value)
-            : base(Type.Float, value)
+            : base(TypeE.Float, value)
         {
         }
     }
@@ -108,7 +108,7 @@ internal sealed class JsonNbtConverter
     public sealed class StringJsonNbtTag : JsonNbtTag
     {
         public StringJsonNbtTag(string value)
-            : base(Type.String, value)
+            : base(TypeE.String, value)
         {
         }
     }

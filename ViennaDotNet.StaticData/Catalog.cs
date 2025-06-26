@@ -1,26 +1,29 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Immutable;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using ViennaDotNet.Common;
 
 namespace ViennaDotNet.StaticData;
 
 public sealed class Catalog
 {
-    public readonly ItemsCatalog itemsCatalog;
-    public readonly ItemEfficiencyCategoriesCatalog itemEfficiencyCategoriesCatalog;
-    public readonly ItemJournalGroupsCatalog itemJournalGroupsCatalog;
-    public readonly RecipesCatalog recipesCatalog;
-    public readonly NFCBoostsCatalog nfcBoostsCatalog;
+    public readonly ItemsCatalogR ItemsCatalog;
+    public readonly ItemEfficiencyCategoriesCatalogR ItemEfficiencyCategoriesCatalog;
+    public readonly ItemJournalGroupsCatalogR ItemJournalGroupsCatalog;
+    public readonly RecipesCatalogR RecipesCatalog;
+    public readonly NFCBoostsCatalogR NfcBoostsCatalog;
 
     internal Catalog(string dir)
     {
         try
         {
-            itemsCatalog = new ItemsCatalog(Path.Combine(dir, "items.json"));
-            itemEfficiencyCategoriesCatalog = new ItemEfficiencyCategoriesCatalog(Path.Combine(dir, "itemEfficiencyCategories.json"));
-            itemJournalGroupsCatalog = new ItemJournalGroupsCatalog(Path.Combine(dir, "itemJournalGroups.json"));
-            recipesCatalog = new RecipesCatalog(Path.Combine(dir, "recipes.json"));
-            nfcBoostsCatalog = new NFCBoostsCatalog(Path.Combine(dir, "nfc.json"));
+            ItemsCatalog = new ItemsCatalogR(Path.Combine(dir, "items.json"));
+            ItemEfficiencyCategoriesCatalog = new ItemEfficiencyCategoriesCatalogR(Path.Combine(dir, "itemEfficiencyCategories.json"));
+            ItemJournalGroupsCatalog = new ItemJournalGroupsCatalogR(Path.Combine(dir, "itemJournalGroups.json"));
+            RecipesCatalog = new RecipesCatalogR(Path.Combine(dir, "recipes.json"));
+            NfcBoostsCatalog = new NFCBoostsCatalogR(Path.Combine(dir, "nfc.json"));
         }
         catch (StaticDataException)
         {
@@ -32,70 +35,70 @@ public sealed class Catalog
         }
     }
 
-    public sealed class ItemsCatalog
+    public sealed class ItemsCatalogR
     {
-        public readonly Item[] items;
+        public readonly ImmutableArray<Item> Items;
 
         private readonly Dictionary<string, Item> itemsById = [];
 
-        internal ItemsCatalog(string file)
+        internal ItemsCatalogR(string file)
         {
             using (var stream = File.OpenRead(file))
             {
-                Item[]? items = JsonSerializer.Deserialize<Item[]>(stream);
+                Item[]? items = Json.Deserialize<Item[]>(stream);
 
                 Debug.Assert(items is not null);
 
-                this.items = items;
+                Items = ImmutableCollectionsMarshal.AsImmutableArray(items);
             }
 
             HashSet<string> ids = [];
             HashSet<string> names = [];
-            foreach (Item item in items)
+            foreach (Item item in Items)
             {
-                if (!ids.Add(item.id))
+                if (!ids.Add(item.Id))
                 {
-                    throw new StaticDataException($"Duplicate item ID {item.id}");
+                    throw new StaticDataException($"Duplicate item ID {item.Id}");
                 }
 
-                if (!names.Add(item.name + "." + item.aux))
+                if (!names.Add(item.Name + "." + item.Aux))
                 {
-                    throw new StaticDataException($"Duplicate item name/aux {item.name} {item.aux}");
+                    throw new StaticDataException($"Duplicate item name/aux {item.Name} {item.Aux}");
                 }
             }
 
-            foreach (Item item in items)
+            foreach (Item item in Items)
             {
-                itemsById[item.id] = item;
+                itemsById[item.Id] = item;
             }
         }
 
-        public Item? getItem(string id)
+        public Item? GetItem(string id)
             => itemsById.GetValueOrDefault(id);
 
         public record Item(
-            string id,
-            string name,
-            int aux,
-            bool stackable,
-            Item.Type type,
-            Item.Category category,
-            Item.Rarity rarity,
-            Item.UseType useType,
-            Item.UseType alternativeUseType,
-            Item.BlockInfo? blockInfo,
-            Item.ToolInfo? toolInfo,
-            Item.ConsumeInfo? consumeInfo,
-            Item.FuelInfo? fuelInfo,
-            Item.ProjectileInfo? projectileInfo,
-            Item.MobInfo? mobInfo,
-            Item.BoostInfo? boostInfo,
-            Item.JournalEntry? journalEntry,
-            Item.Experience experience
+            string Id,
+            string Name,
+            int Aux,
+            bool Stackable,
+            Item.TypeE Type,
+            Item.CategoryE Category,
+            Item.RarityE Rarity,
+            Item.UseTypeE UseType,
+            Item.UseTypeE AlternativeUseType,
+            Item.BlockInfoR? BlockInfo,
+            Item.ToolInfoR? ToolInfo,
+            Item.ConsumeInfoR? ConsumeInfo,
+            Item.FuelInfoR? FuelInfo,
+            Item.ProjectileInfoR? ProjectileInfo,
+            Item.MobInfoR? MobInfo,
+            Item.BoostInfoR? BoostInfo,
+            Item.JournalEntryR? JournalEntry,
+            Item.ExperienceR Experience
         )
         {
             [JsonConverter(typeof(JsonStringEnumConverter))]
-            public enum Type
+            public enum TypeE
             {
                 BLOCK,
                 ITEM,
@@ -107,7 +110,7 @@ public sealed class Catalog
             }
 
             [JsonConverter(typeof(JsonStringEnumConverter))]
-            public enum Category
+            public enum CategoryE
             {
                 CONSTRUCTION,
                 EQUIPMENT,
@@ -129,7 +132,7 @@ public sealed class Catalog
             }
 
             [JsonConverter(typeof(JsonStringEnumConverter))]
-            public enum Rarity
+            public enum RarityE
             {
                 COMMON,
                 UNCOMMON,
@@ -140,7 +143,7 @@ public sealed class Catalog
             }
 
             [JsonConverter(typeof(JsonStringEnumConverter))]
-            public enum UseType
+            public enum UseTypeE
             {
                 NONE,
                 BUILD,
@@ -152,63 +155,63 @@ public sealed class Catalog
                 CONSUME
             }
 
-            public sealed record BlockInfo(
-                int breakingHealth,
-                string? efficiencyCategory
+            public sealed record BlockInfoR(
+                int BreakingHealth,
+                string? EfficiencyCategory
             );
 
-            public sealed record ToolInfo(
-                int blockDamage,
-                int mobDamage,
-                int maxWear,
-                string? efficiencyCategory
+            public sealed record ToolInfoR(
+                int BlockDamage,
+                int MobDamage,
+                int MaxWear,
+                string? EfficiencyCategory
             );
 
-            public sealed record ConsumeInfo(
-                int heal,
-                string? returnItemId
+            public sealed record ConsumeInfoR(
+                int Heal,
+                string? ReturnItemId
             );
 
-            public sealed record FuelInfo(
-                int burnTime,
-                int heatPerSecond,
-                string? returnItemId
+            public sealed record FuelInfoR(
+                int BurnTime,
+                int HeatPerSecond,
+                string? ReturnItemId
             );
 
-            public sealed record ProjectileInfo(
-                int mobDamage
+            public sealed record ProjectileInfoR(
+                int MobDamage
             );
 
-            public sealed record MobInfo(
-                int health
+            public sealed record MobInfoR(
+                int Health
             );
 
-            public sealed record BoostInfo(
-                string name,
-                int? level,
-                BoostInfo.Type type,
-                bool canBeRemoved,
-                long duration,
-                bool triggeredOnDeath,
-                BoostInfo.Effect[] effects
+            public sealed record BoostInfoR(
+                string Name,
+                int? Level,
+                BoostInfoR.TypeE Type,
+                bool CanBeRemoved,
+                long Duration,
+                bool TriggeredOnDeath,
+                BoostInfoR.Effect[] Effects
             )
             {
                 [JsonConverter(typeof(JsonStringEnumConverter))]
-                public enum Type
+                public enum TypeE
                 {
                     POTION,
                     INVENTORY_ITEM
                 }
 
                 public record Effect(
-                    Effect.Type type,
-                    int value,
-                    string[] applicableItemIds,
-                    Effect.Activation activation
+                    Effect.TypeE Type,
+                    int Value,
+                    string[] ApplicableItemIds,
+                    Effect.ActivationE Activation
                 )
                 {
                     [JsonConverter(typeof(JsonStringEnumConverter))]
-                    public enum Type
+                    public enum TypeE
                     {
                         ADVENTURE_XP,
                         CRAFTING,
@@ -227,7 +230,7 @@ public sealed class Catalog
                     }
 
                     [JsonConverter(typeof(JsonStringEnumConverter))]
-                    public enum Activation
+                    public enum ActivationE
                     {
                         INSTANT,
                         TIMED,
@@ -236,16 +239,16 @@ public sealed class Catalog
                 }
             }
 
-            public sealed record JournalEntry(
-                string group,
-                int order,
-                JournalEntry.Biome biome,
-                JournalEntry.Behavior behavior,
-                string? sound
+            public sealed record JournalEntryR(
+                string Group,
+                int Order,
+                JournalEntryR.BiomeE Biome,
+                JournalEntryR.BehaviorE Behavior,
+                string? Sound
             )
             {
                 [JsonConverter(typeof(JsonStringEnumConverter))]
-                public enum Biome
+                public enum BiomeE
                 {
                     NONE,
                     OVERWORLD,
@@ -270,7 +273,7 @@ public sealed class Catalog
                 }
 
                 [JsonConverter(typeof(JsonStringEnumConverter))]
-                public enum Behavior
+                public enum BehaviorE
                 {
                     NONE,
                     PASSIVE,
@@ -279,98 +282,96 @@ public sealed class Catalog
                 }
             }
 
-            public sealed record Experience(
-                int tappable,
-                int encounter,
-                int crafting,
-                int journal    // TODO: what is this used for?
-            )
-            {
-            }
+            public sealed record ExperienceR(
+                int Tappable,
+                int Encounter,
+                int Crafting,
+                int Journal    // TODO: what is this used for?
+            );
         }
     }
 
-    public sealed class ItemEfficiencyCategoriesCatalog
+    public sealed class ItemEfficiencyCategoriesCatalogR
     {
-        public readonly EfficiencyCategory[] efficiencyCategories;
+        public readonly ImmutableArray<EfficiencyCategory> EfficiencyCategories;
 
-        internal ItemEfficiencyCategoriesCatalog(string file)
+        internal ItemEfficiencyCategoriesCatalogR(string file)
         {
             using (var stream = File.OpenRead(file))
             {
-                EfficiencyCategory[]? efficiencyCategories = JsonSerializer.Deserialize<EfficiencyCategory[]>(stream);
+                EfficiencyCategory[]? efficiencyCategories = Json.Deserialize<EfficiencyCategory[]>(stream);
 
                 Debug.Assert(efficiencyCategories is not null);
 
-                this.efficiencyCategories = efficiencyCategories;
+                EfficiencyCategories = ImmutableCollectionsMarshal.AsImmutableArray(efficiencyCategories);
             }
 
             HashSet<string> names = [];
-            foreach (EfficiencyCategory efficiencyCategory in efficiencyCategories)
+            foreach (EfficiencyCategory efficiencyCategory in EfficiencyCategories)
             {
-                if (!names.Add(efficiencyCategory.name))
+                if (!names.Add(efficiencyCategory.Name))
                 {
-                    throw new StaticDataException($"Duplicate efficiency category name {efficiencyCategory.name}");
+                    throw new StaticDataException($"Duplicate efficiency category name {efficiencyCategory.Name}");
                 }
             }
         }
 
         public sealed record EfficiencyCategory(
-            string name,
-            float hand,
-            float hoe,
-            float axe,
-            float shovel,
-            float pickaxe_1,
-            float pickaxe_2,
-            float pickaxe_3,
-            float pickaxe_4,
-            float pickaxe_5,
-            float sword,
-            float sheers
+            string Name,
+            float Hand,
+            float Hoe,
+            float Axe,
+            float Shovel,
+            [property: JsonPropertyName("pickaxe_1")] float Pickaxe_1,
+            [property: JsonPropertyName("pickaxe_2")] float Pickaxe_2,
+            [property: JsonPropertyName("pickaxe_3")] float Pickaxe_3,
+            [property: JsonPropertyName("pickaxe_4")] float Pickaxe_4,
+            [property: JsonPropertyName("pickaxe_5")] float Pickaxe_5,
+            float Sword,
+            float Sheers
         );
     }
 
-    public sealed class ItemJournalGroupsCatalog
+    public sealed class ItemJournalGroupsCatalogR
     {
-        public readonly JournalGroup[] groups;
+        public readonly ImmutableArray<JournalGroup> Groups;
 
-        internal ItemJournalGroupsCatalog(string file)
+        internal ItemJournalGroupsCatalogR(string file)
         {
             using (var stream = File.OpenRead(file))
             {
-                JournalGroup[]? groups = JsonSerializer.Deserialize<JournalGroup[]>(File.ReadAllText(file));
+                JournalGroup[]? groups = Json.Deserialize<JournalGroup[]>(File.ReadAllText(file));
 
                 Debug.Assert(groups is not null);
-                this.groups = groups;
+                Groups = ImmutableCollectionsMarshal.AsImmutableArray(groups);
             }
 
             HashSet<string> ids = [];
             HashSet<string> names = [];
-            foreach (JournalGroup journalGroup in groups)
+            foreach (JournalGroup journalGroup in Groups)
             {
-                if (!ids.Add(journalGroup.id))
+                if (!ids.Add(journalGroup.Id))
                 {
-                    throw new StaticDataException($"Duplicate journal group ID {journalGroup.id}");
+                    throw new StaticDataException($"Duplicate journal group ID {journalGroup.Id}");
                 }
 
-                if (!names.Add(journalGroup.name))
+                if (!names.Add(journalGroup.Name))
                 {
-                    throw new StaticDataException($"Duplicate journal group name {journalGroup.name}");
+                    throw new StaticDataException($"Duplicate journal group name {journalGroup.Name}");
                 }
             }
         }
 
         public record JournalGroup(
-            string id,
-            string name,
-            JournalGroup.ParentCollection parentCollection,
-            int order,
-            string? defaultSound
+            string Id,
+            string Name,
+            JournalGroup.ParentCollectionE ParentCollection,
+            int Order,
+            string? DefaultSound
         )
         {
             [JsonConverter(typeof(JsonStringEnumConverter))]
-            public enum ParentCollection
+            public enum ParentCollectionE
             {
                 BLOCKS,
                 ITEMS_CRAFTED,
@@ -380,78 +381,78 @@ public sealed class Catalog
         }
     }
 
-    public sealed class RecipesCatalog
+    public sealed class RecipesCatalogR
     {
-        public readonly CraftingRecipe[] crafting;
-        public readonly SmeltingRecipe[] smelting;
+        public readonly ImmutableArray< CraftingRecipe> Crafting;
+        public readonly ImmutableArray<SmeltingRecipe> Smelting;
 
         private readonly Dictionary<string, CraftingRecipe> craftingRecipesById = [];
         private readonly Dictionary<string, SmeltingRecipe> smeltingRecipesById = [];
 
         private sealed record RecipesCatalogFile(
-            CraftingRecipe[] crafting,
-            SmeltingRecipe[] smelting
+            CraftingRecipe[] Crafting,
+            SmeltingRecipe[] Smelting
         );
 
-        internal RecipesCatalog(string file)
+        internal RecipesCatalogR(string file)
         {
             RecipesCatalogFile? recipesCatalogFile;
             using (var stream = File.OpenRead(file))
             {
-                recipesCatalogFile = JsonSerializer.Deserialize<RecipesCatalogFile>(stream);
+                recipesCatalogFile = Json.Deserialize<RecipesCatalogFile>(stream);
             }
 
             Debug.Assert(recipesCatalogFile is not null);
 
-            crafting = recipesCatalogFile.crafting;
-            smelting = recipesCatalogFile.smelting;
+            Crafting = ImmutableCollectionsMarshal.AsImmutableArray( recipesCatalogFile.Crafting);
+            Smelting = ImmutableCollectionsMarshal.AsImmutableArray(recipesCatalogFile.Smelting);
 
             HashSet<string> craftingIds = [];
             HashSet<string> smeltingIds = [];
-            foreach (CraftingRecipe craftingRecipe in crafting)
+            foreach (CraftingRecipe craftingRecipe in Crafting)
             {
-                if (!craftingIds.Add(craftingRecipe.id))
+                if (!craftingIds.Add(craftingRecipe.Id))
                 {
-                    throw new StaticDataException($"Duplicate crafting recipe ID {craftingRecipe.id}");
+                    throw new StaticDataException($"Duplicate crafting recipe ID {craftingRecipe.Id}");
                 }
             }
 
-            foreach (SmeltingRecipe smeltingRecipe in smelting)
+            foreach (SmeltingRecipe smeltingRecipe in Smelting)
             {
-                if (!smeltingIds.Add(smeltingRecipe.id))
+                if (!smeltingIds.Add(smeltingRecipe.Id))
                 {
-                    throw new StaticDataException($"Duplicate smelting recipe ID {smeltingRecipe.id}");
+                    throw new StaticDataException($"Duplicate smelting recipe ID {smeltingRecipe.Id}");
                 }
             }
 
-            foreach (CraftingRecipe craftingRecipe in crafting)
+            foreach (CraftingRecipe craftingRecipe in Crafting)
             {
-                craftingRecipesById[craftingRecipe.id] = craftingRecipe;
+                craftingRecipesById[craftingRecipe.Id] = craftingRecipe;
             }
 
-            foreach (SmeltingRecipe smeltingRecipe in smelting)
+            foreach (SmeltingRecipe smeltingRecipe in Smelting)
             {
-                smeltingRecipesById[smeltingRecipe.id] = smeltingRecipe;
+                smeltingRecipesById[smeltingRecipe.Id] = smeltingRecipe;
             }
         }
 
-        public CraftingRecipe? getCraftingRecipe(string id)
+        public CraftingRecipe? GetCraftingRecipe(string id)
             => craftingRecipesById.GetValueOrDefault(id);
 
-        public SmeltingRecipe? getSmeltingRecipe(string id)
+        public SmeltingRecipe? GetSmeltingRecipe(string id)
             => smeltingRecipesById.GetValueOrDefault(id);
 
         public sealed record CraftingRecipe(
-            string id,
-            int duration,
-            CraftingRecipe.Category category,
-            CraftingRecipe.Ingredient[] ingredients,
-            CraftingRecipe.Output output,
-            CraftingRecipe.ReturnItem[] returnItems
+            string Id,
+            int Duration,
+            CraftingRecipe.CategoryE Category,
+            CraftingRecipe.Ingredient[] Ingredients,
+            CraftingRecipe.OutputR Output,
+            CraftingRecipe.ReturnItem[] ReturnItems
         )
         {
             [JsonConverter(typeof(JsonStringEnumConverter))]
-            public enum Category
+            public enum CategoryE
             {
                 CONSTRUCTION,
                 EQUIPMENT,
@@ -460,42 +461,42 @@ public sealed class Catalog
             }
 
             public sealed record Ingredient(
-                int count,
-                string[] possibleItemIds
+                int Count,
+                string[] PossibleItemIds
             );
 
-            public record Output(
-                string itemId,
-                int count
+            public record OutputR(
+                string ItemId,
+                int Count
             );
 
             public record ReturnItem(
-                string itemId,
-                int count
+                string ItemId,
+                int Count
             );
         }
 
         public sealed record SmeltingRecipe(
-            string id,
-            int heatRequired,
-            string input,
-            string output,
-            string returnItemId
+            string Id,
+            int HeatRequired,
+            string Input,
+            string Output,
+            string ReturnItemId
         );
     }
 
-    public sealed class NFCBoostsCatalog
+    public sealed class NFCBoostsCatalogR
     {
         private sealed record NFCBoostsCatalogFile(
         // TODO
         );
 
-        internal NFCBoostsCatalog(string file)
+        internal NFCBoostsCatalogR(string file)
         {
             NFCBoostsCatalogFile? nfcBoostsCatalogFile;
             using (var stream = File.OpenRead(file))
             {
-                nfcBoostsCatalogFile = JsonSerializer.Deserialize<NFCBoostsCatalogFile>(stream);
+                nfcBoostsCatalogFile = Json.Deserialize<NFCBoostsCatalogFile>(stream);
             }
 
             // TODO

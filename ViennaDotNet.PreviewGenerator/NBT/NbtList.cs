@@ -26,83 +26,61 @@ public class NbtList : IList
 
     public object SyncRoot => null!;
 
-    public object? this[int index] { get => get(index); set => throw new InvalidOperationException(); }
+    public object? this[int index] { get => Get(index); set => throw new InvalidOperationException(); }
 
     public NbtList(NbtType type, ICollection collection)
     {
-        ArgumentNullException.ThrowIfNull(type, "tagClass");
-        this._type = type;
-        _array = Array.CreateInstance(type.getTagClass(), collection.Count);
+        ArgumentNullException.ThrowIfNull(type, nameof(type));
+        _type = type;
+        _array = Array.CreateInstance(type.TagType, collection.Count);
         collection.CopyTo(_array, 0);
     }
 
     public NbtList(NbtType tagClass, params object[] array)
     {
-        ArgumentNullException.ThrowIfNull(_type, "tagClass");
+        ArgumentNullException.ThrowIfNull(_type, nameof(tagClass));
         _type = tagClass;
-        this._array = (Array)array.Clone();
+        _array = (Array)array.Clone();
     }
 
-    public NbtType getType()
-    {
-        return _type;
-    }
+    public NbtType GetType()
+        => _type;
 
-    public object get(int index)
+    public object Get(int index)
     {
         if (index < 0 || index >= _array.Length)
             throw new IndexOutOfRangeException("Expected 0-" + (_array.Length - 1) + ". Got " + index);
 
-        return NbtUtils.copy(_array.GetValue(index)!);
+        return NbtUtils.Copy(_array.GetValue(index)!);
     }
 
-    public int size()
-    {
-        return _array.Length;
-    }
+    public int Size()
+        => _array.Length;
 
     public int Add(object? value)
-    {
-        throw new InvalidOperationException();
-    }
+        => throw new InvalidOperationException();
 
     public void Clear()
-    {
-        throw new InvalidOperationException();
-    }
+        => throw new InvalidOperationException();
 
     public bool Contains(object? value)
-    {
-        return Array.IndexOf(_array, value) >= 0;
-    }
+        => Array.IndexOf(_array, value) >= 0;
 
     public int IndexOf(object? value)
-    {
-        return Array.IndexOf(_array, value);
-    }
+        => Array.IndexOf(_array, value);
 
     public void Insert(int index, object? value)
-    {
-        throw new InvalidOperationException();
-    }
+        => throw new InvalidOperationException();
 
     public void Remove(object? value)
-    {
-        throw new InvalidOperationException();
-    }
+        => throw new InvalidOperationException();
 
     public void RemoveAt(int index)
-    {
-        throw new InvalidOperationException();
-    }
+        => throw new InvalidOperationException();
 
     public void CopyTo(Array array, int index)
-    {
-        this._array.CopyTo(array, index);
-    }
+        => _array.CopyTo(array, index);
 
     public IEnumerator GetEnumerator()
-    {
-        return _array.GetEnumerator();
-    }
+        => _array.GetEnumerator();
 }

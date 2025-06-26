@@ -23,7 +23,7 @@ public class TappableGenerator
     {
         _staticData = staticData;
 
-        if (_staticData.tappablesConfig.tappables.Length == 0)
+        if (_staticData.TappablesConfig.Tappables.Length == 0)
         {
             Log.Warning("No tappable configs provided");
         }
@@ -31,37 +31,36 @@ public class TappableGenerator
         _random = new Random();
     }
 
-    public long getMaxTappableLifetime()
-    {
-        return MAX_DELAY + MAX_DURATION + 30 * 1000;
-    }
+    public long GetMaxTappableLifetime()
+        => MAX_DELAY + MAX_DURATION + 30 * 1000;
 
-    public Tappable[] generateTappables(int tileX, int tileY, long currentTime)
+    public Tappable[] GenerateTappables(int tileX, int tileY, long currentTime)
     {
-        if (_staticData.tappablesConfig.tappables.Length == 0)
+        if (_staticData.TappablesConfig.Tappables.Length == 0)
         {
             return [];
         }
 
         LinkedList<Tappable> tappables = new();
+        Span<float> tileBounds = stackalloc float[4];
         for (int count = _random.Next(MIN_COUNT, MAX_COUNT + 1); count > 0; count--)
         {
             long spawnDelay = _random.NextInt64(MIN_DELAY, MAX_DELAY + 1);
             long duration = _random.NextInt64(MIN_DURATION, MAX_DURATION + 1);
 
-            TappablesConfig.TappableConfig tappableConfig = _staticData.tappablesConfig.tappables[_random.Next(0, _staticData.tappablesConfig.tappables.Length)];
+            TappablesConfig.TappableConfig tappableConfig = _staticData.TappablesConfig.Tappables[_random.Next(0, _staticData.TappablesConfig.Tappables.Length)];
 
-            float[] tileBounds = getTileBounds(tileX, tileY);
+            GetTileBounds(tileX, tileY, tileBounds);
             float lat = _random.NextSingle(tileBounds[1], tileBounds[0]);
             float lon = _random.NextSingle(tileBounds[2], tileBounds[3]);
 
-            int dropSetIndex = _random.Next(0, tappableConfig.dropSets.Select(dropSet => dropSet.chance).Sum());
-            TappablesConfig.TappableConfig.DropSet? dropSet = null;
+            int dropSetIndex = _random.Next(0, tappableConfig.DropSets.Select(dropSet => dropSet.Chance).Sum());
+            TappablesConfig.TappableConfig.DropSetR? dropSet = null;
 
-            foreach (TappablesConfig.TappableConfig.DropSet dropSet1 in tappableConfig.dropSets)
+            foreach (TappablesConfig.TappableConfig.DropSetR dropSet1 in tappableConfig.DropSets)
             {
                 dropSet = dropSet1;
-                dropSetIndex -= dropSet1.chance;
+                dropSetIndex -= dropSet1.Chance;
                 if (dropSetIndex <= 0)
                 {
                     break;
@@ -75,13 +74,13 @@ public class TappableGenerator
 
             LinkedList<Tappable.Item> items = new();
 
-            foreach (string itemId in dropSet.items)
+            foreach (string itemId in dropSet.Items)
             {
-                TappablesConfig.TappableConfig.ItemCount itemCount = tappableConfig.itemCounts[itemId];
-                items.AddLast(new Tappable.Item(itemId, _random.Next(itemCount.min, itemCount.max + 1)));
+                TappablesConfig.TappableConfig.ItemCount itemCount = tappableConfig.ItemCounts[itemId];
+                items.AddLast(new Tappable.Item(itemId, _random.Next(itemCount.Min, itemCount.Max + 1)));
             }
 
-            Tappable.Rarity rarity = Enum.Parse<Tappable.Rarity>(items.Select(item => _staticData.catalog.itemsCatalog.getItem(item.id)!.rarity).Max().ToString());
+            Tappable.RarityE rarity = Enum.Parse<Tappable.RarityE>(items.Select(item => _staticData.Catalog.ItemsCatalog.GetItem(item.Id)!.Rarity).Max().ToString());
 
             Tappable tappable = new Tappable(
                 U.RandomUuid().ToString(),
@@ -89,7 +88,7 @@ public class TappableGenerator
                 lon,
                 currentTime + spawnDelay,
                 duration,
-                tappableConfig.icon,
+                tappableConfig.Icon,
                 rarity,
                 [.. items]
             );
@@ -99,23 +98,17 @@ public class TappableGenerator
         return [.. tappables];
     }
 
-    private static float[] getTileBounds(int tileX, int tileY)
+    private static void GetTileBounds(int tileX, int tileY, Span<float> dest)
     {
-        return [
-            yToLat((float) tileY / (1 << 16)),
-            yToLat((float) (tileY + 1) / (1 << 16)),
-            xToLon((float) tileX / (1 << 16)),
-            xToLon((float) (tileX + 1) / (1 << 16))
-    ];
+        dest[0] = YToLat((float)tileY / (1 << 16));
+        dest[1] = YToLat((float)(tileY + 1) / (1 << 16));
+        dest[2] = XToLon((float)tileX / (1 << 16));
+        dest[3] = XToLon((float)(tileX + 1) / (1 << 16));
     }
 
-    private static float xToLon(float x)
-    {
-        return (float)MathE.ToDegrees((x * 2.0 - 1.0) * Math.PI);
-    }
+    private static float XToLon(float x)
+        => (float)MathE.ToDegrees((x * 2.0d - 1.0d) * double.Pi);
 
-    private static float yToLat(float y)
-    {
-        return (float)MathE.ToDegrees(Math.Atan(Math.Sinh((1.0 - y * 2.0) * Math.PI)));
-    }
+    private static float YToLat(float y)
+        => (float)MathE.ToDegrees(double.Atan(double.Sinh((1.0d - y * 2.0d) * double.Pi)));
 }

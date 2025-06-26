@@ -4,26 +4,25 @@ namespace ViennaDotNet.DB.Models.Player;
 
 public sealed class Boosts
 {
-    [JsonInclude]
-    public readonly ActiveBoost?[] activeBoosts;
+    public ActiveBoost?[] ActiveBoosts { get; init; }
 
     public Boosts()
     {
-        activeBoosts = new ActiveBoost[5];
+        ActiveBoosts = new ActiveBoost[5];
     }
 
-    public ActiveBoost? get(string instanceId)
-        => activeBoosts.FirstOrDefault(activeBoost => activeBoost is not null && activeBoost.instanceId == instanceId);
+    public ActiveBoost? Get(string instanceId)
+        => ActiveBoosts.FirstOrDefault(activeBoost => activeBoost is not null && activeBoost.InstanceId == instanceId);
 
-    public ActiveBoost[] prune(long currentTime)
+    public ActiveBoost[] Prune(long currentTime)
     {
         LinkedList<ActiveBoost> prunedBoosts = [];
-        for (int index = 0; index < activeBoosts.Length; index++)
+        for (int index = 0; index < ActiveBoosts.Length; index++)
         {
-            ActiveBoost? activeBoost = activeBoosts[index];
-            if (activeBoost is not null && activeBoost.startTime + activeBoost.duration < currentTime)
+            ActiveBoost? activeBoost = ActiveBoosts[index];
+            if (activeBoost is not null && activeBoost.StartTime + activeBoost.Duration < currentTime)
             {
-                activeBoosts[index] = null;
+                ActiveBoosts[index] = null;
                 prunedBoosts.AddLast(activeBoost);
             }
         }
@@ -32,9 +31,9 @@ public sealed class Boosts
     }
 
     public sealed record ActiveBoost(
-        [property: JsonInclude] string instanceId,
-        [property: JsonInclude] string itemId,
-        [property: JsonInclude] long startTime,
-        [property: JsonInclude] long duration
+        string InstanceId,
+        string ItemId,
+        long StartTime,
+        long Duration
     );
 }

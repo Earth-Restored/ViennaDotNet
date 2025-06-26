@@ -15,7 +15,7 @@ public sealed class Tokens
         _tokens = [];
     }
 
-    public Tokens copy()
+    public Tokens Copy()
     {
         Tokens tokens = new Tokens();
         tokens._tokens.AddRange(_tokens);
@@ -23,17 +23,17 @@ public sealed class Tokens
     }
 
     public sealed record TokenWithId(
-        string id,
-        Token token
+        string Id,
+        Token Token
     );
 
-    public TokenWithId[] getTokens()
+    public TokenWithId[] GetTokens()
         => [.. _tokens.Select(item => new TokenWithId(item.Key, item.Value))];
 
-    public void addToken(string id, Token token)
+    public void AddToken(string id, Token token)
         => _tokens[id] = token;
 
-    public Token? removeToken(string id)
+    public Token? RemoveToken(string id)
     {
         Token? res = null;
         if (_tokens.TryGetValue(id, out Token? t))
@@ -48,14 +48,15 @@ public sealed class Tokens
 
     public abstract class Token
     {
-        public readonly Type type;
+        public TypeE Type { get; init; }
 
-        public Token(Type type)
+        public Token(TypeE type)
         {
-            this.type = type;
+            Type = type;
         }
 
-        public enum Type
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public enum TypeE
         {
             LEVEL_UP,
             JOURNAL_ITEM_UNLOCKED
@@ -71,7 +72,7 @@ public sealed class Tokens
                 JsonElement root = document.RootElement;
 
                 if (!root.TryGetProperty("type", out JsonElement typeElement) ||
-                    !Enum.TryParse<Token.Type>(typeElement.GetString(), out var type))
+                    !Enum.TryParse<Token.TypeE>(typeElement.GetString(), out var type))
                 {
                     throw new JsonException("Invalid or missing type property.");
                 }
@@ -80,8 +81,8 @@ public sealed class Tokens
 
                 return type switch
                 {
-                    Token.Type.LEVEL_UP => JsonSerializer.Deserialize<LevelUpToken>(json, options),
-                    Token.Type.JOURNAL_ITEM_UNLOCKED => JsonSerializer.Deserialize<JournalItemUnlockedToken>(json, options),
+                    Token.TypeE.LEVEL_UP => JsonSerializer.Deserialize<LevelUpToken>(json, options),
+                    Token.TypeE.JOURNAL_ITEM_UNLOCKED => JsonSerializer.Deserialize<JournalItemUnlockedToken>(json, options),
                     _ => throw new JsonException($"Unexpected token type: {type}")
                 };
             }
@@ -93,28 +94,25 @@ public sealed class Tokens
 
     public class LevelUpToken : Token
     {
-        [JsonInclude]
-        public readonly int level;
-        [JsonInclude]
-        public readonly Rewards rewards;
+        public int Level { get; init; }
+        public Rewards Rewards { get; init; }
 
         public LevelUpToken(int level, Rewards rewards)
-            : base(Type.LEVEL_UP)
+            : base(TypeE.LEVEL_UP)
         {
-            this.level = level;
-            this.rewards = rewards;
+            Level = level;
+            Rewards = rewards;
         }
     }
 
     public class JournalItemUnlockedToken : Token
     {
-        [JsonInclude]
-        public readonly string itemId;
+        public string ItemId { get; init; }
 
         public JournalItemUnlockedToken(string itemId)
-            : base(Type.JOURNAL_ITEM_UNLOCKED)
+            : base(TypeE.JOURNAL_ITEM_UNLOCKED)
         {
-            this.itemId = itemId;
+            ItemId = itemId;
         }
     }
 }

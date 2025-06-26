@@ -8,15 +8,15 @@ namespace ViennaDotNet.PreviewGenerator.Utils;
 
 public static class BlockEntityTranslator
 {
-    public static NbtMap? translateBlockEntity(JavaBlocks.BedrockMapping.BlockEntity blockEntityMapping, BlockEntityInfo? javaBlockEntityInfo)
+    public static NbtMap? TranslateBlockEntity(JavaBlocks.BedrockMapping.BlockEntityR blockEntityMapping, BlockEntityInfo? javaBlockEntityInfo)
     {
-        switch (blockEntityMapping.type)
+        switch (blockEntityMapping.Type)
         {
             case "bed":
                 {
                     NbtMapBuilder builder = NbtMap.builder();
-                    builder.putString("id", "Bed");
-                    builder.putByte("color", ((JavaBlocks.BedrockMapping.BedBlockEntity)blockEntityMapping).color switch
+                    builder.PutString("id", "Bed");
+                    builder.PutByte("color", ((JavaBlocks.BedrockMapping.BedBlockEntity)blockEntityMapping).Color switch
                     {
                         "white" => 0,
                         "orange" => 1,
@@ -36,23 +36,23 @@ public static class BlockEntityTranslator
                         "black" => 15,
                         _ => 0
                     });
-                    return builder.build();
+                    return builder.Build();
                 }
             case "flower_pot":
                 {
                     NbtMapBuilder builder = NbtMap.builder();
-                    builder.putString("id", "FlowerPot");
-                    NbtMap? contents = ((JavaBlocks.BedrockMapping.FlowerPotBlockEntity)blockEntityMapping).contents;
+                    builder.PutString("id", "FlowerPot");
+                    NbtMap? contents = ((JavaBlocks.BedrockMapping.FlowerPotBlockEntity)blockEntityMapping).Contents;
                     if (contents is not null)
-                        builder.putCompound("PlantBlock", contents);
+                        builder.PutCompound("PlantBlock", contents);
 
-                    return builder.build();
+                    return builder.Build();
                 }
             case "moving_block":
                 {
                     NbtMapBuilder builder = NbtMap.builder();
 
-                    builder.putString("id", "MovingBlock");
+                    builder.PutString("id", "MovingBlock");
 
                     if (javaBlockEntityInfo is null)
                     {
@@ -69,31 +69,31 @@ public static class BlockEntityTranslator
                     }
 
                     int javaBlockId = javaNbt.Get<IntTag>("blockStateId").Value;
-                    JavaBlocks.BedrockMapping? bedrockMapping = JavaBlocks.getBedrockMapping(javaBlockId);
+                    JavaBlocks.BedrockMapping? bedrockMapping = JavaBlocks.GetBedrockMapping(javaBlockId);
                     if (bedrockMapping is null)
                     {
-                        Log.Warning($"Moving block entity contained block with no mapping {JavaBlocks.getName(javaBlockId)}");
+                        Log.Warning($"Moving block entity contained block with no mapping {JavaBlocks.GetName(javaBlockId)}");
                         return null;
                     }
 
                     NbtMapBuilder movingBlockBuilder = NbtMap.builder();
-                    movingBlockBuilder.putString("name", BedrockBlocks.getName(bedrockMapping.id));
-                    movingBlockBuilder.putCompound("states", BedrockBlocks.getStateNbt(bedrockMapping.id));
-                    builder.putCompound("movingBlock", movingBlockBuilder.build());
+                    movingBlockBuilder.PutString("name", BedrockBlocks.GetName(bedrockMapping.Id));
+                    movingBlockBuilder.PutCompound("states", BedrockBlocks.GetStateNbt(bedrockMapping.Id));
+                    builder.PutCompound("movingBlock", movingBlockBuilder.Build());
 
-                    if (bedrockMapping.waterlogged)
+                    if (bedrockMapping.Waterlogged)
                     {
                         NbtMapBuilder movingBlockExtraBuilder = NbtMap.builder();
-                        movingBlockExtraBuilder.putString("name", BedrockBlocks.getName(BedrockBlocks.WATER));
-                        movingBlockExtraBuilder.putCompound("states", BedrockBlocks.getStateNbt(BedrockBlocks.WATER));
-                        builder.putCompound("movingBlockExtra", movingBlockExtraBuilder.build());
+                        movingBlockExtraBuilder.PutString("name", BedrockBlocks.GetName(BedrockBlocks.WaterId));
+                        movingBlockExtraBuilder.PutCompound("states", BedrockBlocks.GetStateNbt(BedrockBlocks.WaterId));
+                        builder.PutCompound("movingBlockExtra", movingBlockExtraBuilder.Build());
                     }
 
-                    if (bedrockMapping.blockEntity is not null)
+                    if (bedrockMapping.BlockEntity is not null)
                     {
-                        NbtMap? blockEntityNbt = BlockEntityTranslator.translateBlockEntity(bedrockMapping.blockEntity, null);
+                        NbtMap? blockEntityNbt = BlockEntityTranslator.TranslateBlockEntity(bedrockMapping.BlockEntity, null);
                         if (blockEntityNbt is not null)
-                            builder.putCompound("movingEntity", blockEntityNbt.toBuilder().putInt("x", javaBlockEntityInfo.X).putInt("y", javaBlockEntityInfo.Y).putInt("z", javaBlockEntityInfo.Z).putBoolean("isMovable", false).build());
+                            builder.PutCompound("movingEntity", blockEntityNbt.toBuilder().PutInt("x", javaBlockEntityInfo.X).PutInt("y", javaBlockEntityInfo.Y).PutInt("z", javaBlockEntityInfo.Z).PutBoolean("isMovable", false).Build());
                     }
 
                     if (!javaNbt.ContainsKey("basePos"))
@@ -103,23 +103,23 @@ public static class BlockEntityTranslator
                     }
 
                     CompoundTag basePosTag = javaNbt.Get<CompoundTag>("basePos");
-                    builder.putInt("pistonPosX", basePosTag.Get<IntTag>("x").Value);
-                    builder.putInt("pistonPosY", basePosTag.Get<IntTag>("y").Value);
-                    builder.putInt("pistonPosZ", basePosTag.Get<IntTag>("z").Value);
+                    builder.PutInt("pistonPosX", basePosTag.Get<IntTag>("x").Value);
+                    builder.PutInt("pistonPosY", basePosTag.Get<IntTag>("y").Value);
+                    builder.PutInt("pistonPosZ", basePosTag.Get<IntTag>("z").Value);
 
-                    return builder.build();
+                    return builder.Build();
                 }
             case "piston":
                 {
                     JavaBlocks.BedrockMapping.PistonBlockEntity pistonBlockEntity = (JavaBlocks.BedrockMapping.PistonBlockEntity)blockEntityMapping;
                     NbtMapBuilder builder = NbtMap.builder();
-                    builder.putString("id", "PistonArm");
-                    builder.putByte("State", (byte)(pistonBlockEntity.extended ? 2 : 0));
-                    builder.putByte("NewState", (byte)(pistonBlockEntity.extended ? 2 : 0));
-                    builder.putFloat("Progress", pistonBlockEntity.extended ? 1.0f : 0.0f);
-                    builder.putFloat("LastProgress", pistonBlockEntity.extended ? 1.0f : 0.0f);
-                    builder.putBoolean("Sticky", pistonBlockEntity.sticky);
-                    return builder.build();
+                    builder.PutString("id", "PistonArm");
+                    builder.PutByte("State", (byte)(pistonBlockEntity.Extended ? 2 : 0));
+                    builder.PutByte("NewState", (byte)(pistonBlockEntity.Extended ? 2 : 0));
+                    builder.PutFloat("Progress", pistonBlockEntity.Extended ? 1.0f : 0.0f);
+                    builder.PutFloat("LastProgress", pistonBlockEntity.Extended ? 1.0f : 0.0f);
+                    builder.PutBoolean("Sticky", pistonBlockEntity.Sticky);
+                    return builder.Build();
                 }
             default:
                 throw new InvalidOperationException();
