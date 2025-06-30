@@ -11,7 +11,7 @@ using ViennaDotNet.DB;
 using ViennaDotNet.DB.Models.Player;
 using ViennaDotNet.StaticData;
 
-namespace ViennaDotNet.ApiServer.Controllers;
+namespace ViennaDotNet.ApiServer.Controllers.EarthApi;
 
 [Authorize]
 [ApiVersion("1.1")]
@@ -122,7 +122,7 @@ public class TappablesController : ViennaControllerBase
                 .Get("boosts", playerId, typeof(Boosts))
                 .Then(results1 =>
                 {
-                    EarthDB.Query query = new EarthDB.Query(true);
+                    var query = new EarthDB.Query(true);
                     Boosts boosts = results1.Get<Boosts>("boosts");
 
                     RedeemedTappables redeemedTappables = results1.Get<RedeemedTappables>("redeemedTappables");
@@ -163,7 +163,7 @@ public class TappablesController : ViennaControllerBase
                         int experiencePointsMultiplier = experiencePointsGlobalMultiplier + experiencePointsPerItemMultiplier.GetValueOrDefault(item.Id);
                         if (experiencePointsMultiplier > 0)
                         {
-                            experiencePoints = (experiencePoints * (experiencePointsMultiplier + 100)) / 100;
+                            experiencePoints = experiencePoints * (experiencePointsMultiplier + 100) / 100;
                         }
 
                         rewards.AddExperiencePoints(experiencePoints * item.Count);

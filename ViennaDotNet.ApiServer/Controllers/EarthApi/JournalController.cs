@@ -9,7 +9,7 @@ using ViennaDotNet.Common.Utils;
 using ViennaDotNet.DB;
 using ViennaDotNet.DB.Models.Player;
 
-namespace ViennaDotNet.ApiServer.Controllers;
+namespace ViennaDotNet.ApiServer.Controllers.EarthApi;
 
 [Authorize]
 [ApiVersion("1.1")]

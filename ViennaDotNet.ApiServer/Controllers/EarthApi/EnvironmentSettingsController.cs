@@ -6,7 +6,7 @@ using System.Text.Json.Serialization;
 using ViennaDotNet.ApiServer.Utils;
 using ViennaDotNet.Common;
 
-namespace ViennaDotNet.ApiServer.Controllers;
+namespace ViennaDotNet.ApiServer.Controllers.EarthApi;
 
 [Authorize]
 [ApiVersion("1.1")]
@@ -16,7 +16,7 @@ public class EnvironmentSettingsController : ControllerBase
     [HttpGet("features")]
     public IActionResult Features()
     {
-        EarthApiResponse resp = new EarthApiResponse(new Dictionary<string, object>
+        var resp = new EarthApiResponse(new Dictionary<string, object>
         {
             ["workshop_enabled"] = true,
             ["buildplates_enabled"] = true,
@@ -69,7 +69,7 @@ public class EnvironmentSettingsController : ControllerBase
     [HttpGet("settings")]
     public IActionResult Settings()
     {
-        EarthApiResponse resp = new EarthApiResponse(new Dictionary<string, object>
+        var resp = new EarthApiResponse(new Dictionary<string, object>
         {
             ["encounterinteractionradius"] = 40,
             ["tappableinteractionradius"] = 70,

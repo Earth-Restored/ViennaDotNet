@@ -16,7 +16,7 @@ using ViennaDotNet.ObjectStore.Client;
 using ViennaDotNet.StaticData;
 using Buildplates = ViennaDotNet.DB.Models.Player.Buildplates;
 
-namespace ViennaDotNet.ApiServer.Controllers;
+namespace ViennaDotNet.ApiServer.Controllers.EarthApi;
 
 [Authorize]
 [ApiVersion("1.1")]
@@ -62,7 +62,7 @@ public class ShopController : ViennaControllerBase
                     {
                         var buildplate = buildplateResults.GetBuildplate(item.Id);
 
-                        Guid itemId = Guid.Parse(item.Id);
+                        var itemId = Guid.Parse(item.Id);
                         StoreItemInfo.StoreItemTypeE storeItemType = Enum.Parse<StoreItemInfo.StoreItemTypeE>(item.StoreItemType);
 
                         if (buildplate is null)
@@ -72,7 +72,7 @@ public class ShopController : ViennaControllerBase
                             break;
                         }
 
-                        byte[]? previewData = (await objectStoreClient.Get(buildplate.PreviewObjectId).Task) as byte[];
+                        byte[]? previewData = await objectStoreClient.Get(buildplate.PreviewObjectId).Task as byte[];
 
                         if (previewData is null)
                         {

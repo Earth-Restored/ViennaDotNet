@@ -34,7 +34,7 @@ using State = ViennaDotNet.ApiServer.Types.Workshop.State;
 using TimeFormatter = ViennaDotNet.ApiServer.Utils.TimeFormatter;
 using UnlockPrice = ViennaDotNet.ApiServer.Types.Workshop.UnlockPrice;
 
-namespace ViennaDotNet.ApiServer.Controllers;
+namespace ViennaDotNet.ApiServer.Controllers.EarthApi;
 
 [Authorize]
 [ApiVersion("1.1")]
@@ -157,7 +157,7 @@ public class WorkshopRouter : ViennaControllerBase
             return BadRequest();
         }
 
-        if (startRequest.Ingredients.Any(item => item is null || item.Quantity < 1 || (item.ItemInstanceIds is not null && item.ItemInstanceIds.Length > 0 && item.ItemInstanceIds.Length != item.Quantity)))
+        if (startRequest.Ingredients.Any(item => item is null || item.Quantity < 1 || item.ItemInstanceIds is not null && item.ItemInstanceIds.Length > 0 && item.ItemInstanceIds.Length != item.Quantity))
         {
             return BadRequest();
         }
@@ -182,7 +182,7 @@ public class WorkshopRouter : ViennaControllerBase
                 .Get("hotbar", playerId, typeof(Hotbar))
                 .Then(results1 =>
                 {
-                    EarthDB.Query query = new EarthDB.Query(true);
+                    var query = new EarthDB.Query(true);
 
                     var craftingSlots = results1.Get<CraftingSlots>("crafting");
                     CraftingSlot craftingSlot = craftingSlots.Slots[slotIndex - 1];
@@ -194,7 +194,7 @@ public class WorkshopRouter : ViennaControllerBase
                         return query;
                     }
 
-                    InputItem[] providedItems = new InputItem[startRequest.Ingredients.Length];
+                    var providedItems = new InputItem[startRequest.Ingredients.Length];
                     for (int index = 0; index < startRequest.Ingredients.Length; index++)
                     {
                         StartRequestCrafting.Item item = startRequest.Ingredients[index];
@@ -328,7 +328,7 @@ public class WorkshopRouter : ViennaControllerBase
             return BadRequest();
         }
 
-        if (startRequest.Input.Quantity < 1 || (startRequest.Input.ItemInstanceIds is not null && startRequest.Input.ItemInstanceIds.Length > 0 && startRequest.Input.ItemInstanceIds.Length != startRequest.Input.Quantity))
+        if (startRequest.Input.Quantity < 1 || startRequest.Input.ItemInstanceIds is not null && startRequest.Input.ItemInstanceIds.Length > 0 && startRequest.Input.ItemInstanceIds.Length != startRequest.Input.Quantity)
         {
             return BadRequest();
         }
@@ -376,7 +376,7 @@ public class WorkshopRouter : ViennaControllerBase
                 .Get("hotbar", playerId, typeof(Hotbar))
                 .Then(results1 =>
                 {
-                    EarthDB.Query query = new EarthDB.Query(true);
+                    var query = new EarthDB.Query(true);
 
                     var smeltingSlots = results1.Get<SmeltingSlots>("smelting");
                     SmeltingSlot smeltingSlot = smeltingSlots.Slots[slotIndex - 1];
@@ -616,7 +616,7 @@ public class WorkshopRouter : ViennaControllerBase
                 .Get("journal", playerId, typeof(Journal))
                 .Then(results1 =>
                 {
-                    EarthDB.Query query = new EarthDB.Query(true);
+                    var query = new EarthDB.Query(true);
                     query.Get("crafting", playerId, typeof(CraftingSlots));
 
                     var craftingSlots = results1.Get<CraftingSlots>("crafting");
@@ -684,7 +684,7 @@ public class WorkshopRouter : ViennaControllerBase
                 .Get("journal", playerId, typeof(Journal))
                 .Then(results1 =>
                 {
-                    EarthDB.Query query = new EarthDB.Query(true);
+                    var query = new EarthDB.Query(true);
                     query.Get("smelting", playerId, typeof(SmeltingSlots));
 
                     var smeltingSlots = results1.Get<SmeltingSlots>("smelting");
@@ -766,7 +766,7 @@ public class WorkshopRouter : ViennaControllerBase
                 .Get("profile", playerId, typeof(Profile))
                 .Then(results1 =>
                 {
-                    EarthDB.Query query = new EarthDB.Query(true);
+                    var query = new EarthDB.Query(true);
                     query.Get("profile", playerId, typeof(Profile));
 
                     var craftingSlots = results1.Get<CraftingSlots>("crafting");
@@ -831,7 +831,7 @@ public class WorkshopRouter : ViennaControllerBase
                 .Get("profile", playerId, typeof(Profile))
                 .Then(results1 =>
                 {
-                    EarthDB.Query query = new EarthDB.Query(true);
+                    var query = new EarthDB.Query(true);
                     query.Get("profile", playerId, typeof(Profile));
 
                     var smeltingSlots = results1.Get<SmeltingSlots>("smelting");
@@ -944,7 +944,7 @@ public class WorkshopRouter : ViennaControllerBase
                 .Get("profile", playerId, typeof(Profile))
                 .Then(results1 =>
                 {
-                    EarthDB.Query query = new EarthDB.Query(true);
+                    var query = new EarthDB.Query(true);
 
                     CraftingSlots craftingSlots = results1.Get<CraftingSlots>("crafting");
                     CraftingSlot craftingSlot = craftingSlots.Slots[slotIndex - 1];
@@ -995,7 +995,7 @@ public class WorkshopRouter : ViennaControllerBase
                 .Get("profile", playerId, typeof(Profile))
                 .Then(results1 =>
                 {
-                    EarthDB.Query query = new EarthDB.Query(true);
+                    var query = new EarthDB.Query(true);
 
                     SmeltingSlots smeltingSlots = results1.Get<SmeltingSlots>("smelting");
                     SmeltingSlot smeltingSlot = smeltingSlots.Slots[slotIndex - 1];
@@ -1100,7 +1100,7 @@ public class WorkshopRouter : ViennaControllerBase
             else
                 fuel = null;
 
-            Types.Workshop.SmeltingSlot.BurningR burning = new Types.Workshop.SmeltingSlot.BurningR(
+            var burning = new Types.Workshop.SmeltingSlot.BurningR(
                 !state.Completed ? TimeFormatter.FormatTime(state.BurnStartTime) : null,
                 !state.Completed ? TimeFormatter.FormatTime(state.BurnEndTime) : null,
                 TimeFormatter.FormatDuration(state.RemainingHeat * 1000 / state.CurrentBurningFuel.HeatPerSecond),

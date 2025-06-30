@@ -16,7 +16,7 @@ using CIJGCJGParentCollection = ViennaDotNet.StaticData.Catalog.ItemJournalGroup
 using CRCCRCategory = ViennaDotNet.StaticData.Catalog.RecipesCatalogR.CraftingRecipe.CategoryE;
 using ItemsCatalog = ViennaDotNet.ApiServer.Types.Catalog.ItemsCatalog;
 
-namespace ViennaDotNet.ApiServer.Controllers;
+namespace ViennaDotNet.ApiServer.Controllers.EarthApi;
 
 [Authorize]
 [ApiVersion("1.1")]

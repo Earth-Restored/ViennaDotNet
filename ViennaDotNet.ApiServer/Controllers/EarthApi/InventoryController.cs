@@ -13,7 +13,7 @@ using ViennaDotNet.DB.Models.Common;
 using ViennaDotNet.DB.Models.Player;
 using ViennaDotNet.StaticData;
 
-namespace ViennaDotNet.ApiServer.Controllers;
+namespace ViennaDotNet.ApiServer.Controllers.EarthApi;
 
 [Authorize]
 [ApiVersion("1.1")]
@@ -66,7 +66,7 @@ public class InventoryController : ControllerBase
                 hotbarItemInstances.Add(item.InstanceId);
         }
 
-        Types.Inventory.Inventory inventory = new Types.Inventory.Inventory(
+        var inventory = new Types.Inventory.Inventory(
             [.. hotbarModel.Items.Select(item => item is not null ? new HotbarItem(
                 item.Uuid,
                 item.Count,
@@ -132,7 +132,7 @@ public class InventoryController : ControllerBase
                 .Get("inventory", playerId, typeof(DB.Models.Player.Inventory))
                 .Then(results1 =>
                 {
-                    Hotbar hotbar = new Hotbar();
+                    var hotbar = new Hotbar();
                     for (int index = 0; index < hotbar.Items.Length; index++)
                     {
                         SetHotbarRequestItem item = setHotbarRequestItems[index];
@@ -199,7 +199,7 @@ public class InventoryController : ControllerBase
                     Profile profile = results1.Get<Profile>("profile");
                     Boosts boosts = results1.Get<Boosts>("boosts");
 
-                    EarthDB.Query query = new EarthDB.Query(true);
+                    var query = new EarthDB.Query(true);
 
                     if (!inventory.TakeItems(itemId, 1))
                     {
@@ -235,7 +235,7 @@ public class InventoryController : ControllerBase
                     int healingMultiplier = BoostUtils.GetActiveStatModifiers(boosts, requestStartedOn, catalog.ItemsCatalog).FoodMultiplier;
                     if (healingMultiplier > 0)
                     {
-                        healing = (healing * (healingMultiplier + 100)) / 100;
+                        healing = healing * (healingMultiplier + 100) / 100;
                     }
 
                     int maxPlayerHealth = BoostUtils.GetMaxPlayerHealth(boosts, requestStartedOn, catalog.ItemsCatalog);

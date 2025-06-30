@@ -7,7 +7,7 @@ using ViennaDotNet.Common;
 using ViennaDotNet.Common.Utils;
 using Rewards = ViennaDotNet.ApiServer.Types.Common.Rewards;
 
-namespace ViennaDotNet.ApiServer.Controllers;
+namespace ViennaDotNet.ApiServer.Controllers.EarthApi;
 
 [Authorize]
 [ApiVersion("1.1")]

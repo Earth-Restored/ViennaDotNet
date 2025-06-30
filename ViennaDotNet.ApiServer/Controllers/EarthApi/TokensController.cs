@@ -10,7 +10,7 @@ using ViennaDotNet.DB;
 using ViennaDotNet.DB.Models.Player;
 using Rewards = ViennaDotNet.ApiServer.Utils.Rewards;
 
-namespace ViennaDotNet.ApiServer.Controllers;
+namespace ViennaDotNet.ApiServer.Controllers.EarthApi;
 
 [Authorize]
 [ApiVersion("1.1")]

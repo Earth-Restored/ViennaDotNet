@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using ViennaDotNet.ApiServer.Utils;
 
-namespace ViennaDotNet.ApiServer.Controllers;
+namespace ViennaDotNet.ApiServer.Controllers.EarthApi;
 
 [ApiVersion("1.1")]
 [Route("cdn/tile/16/{_}/{tilePos1}_{tilePos2}_16.png")]

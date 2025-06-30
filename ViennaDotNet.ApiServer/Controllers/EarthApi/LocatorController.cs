@@ -5,7 +5,7 @@ using ViennaDotNet.ApiServer.Types;
 using ViennaDotNet.ApiServer.Utils;
 using ViennaDotNet.Common;
 
-namespace ViennaDotNet.ApiServer.Controllers;
+namespace ViennaDotNet.ApiServer.Controllers.EarthApi;
 
 [ApiController]
 [ApiVersion("1.0")]

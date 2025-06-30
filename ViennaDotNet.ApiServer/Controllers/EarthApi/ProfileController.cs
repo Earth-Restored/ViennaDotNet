@@ -10,7 +10,7 @@ using ViennaDotNet.DB;
 using ViennaDotNet.DB.Models.Player;
 using ViennaDotNet.StaticData;
 
-namespace ViennaDotNet.ApiServer.Controllers;
+namespace ViennaDotNet.ApiServer.Controllers.EarthApi;
 
 [Authorize]
 [ApiVersion("1.1")]
@@ -38,7 +38,7 @@ public class ProfileController : ControllerBase
         Boosts boosts = results.Get<Boosts>("boosts");
 
         var levels = staticData.Levels.Levels;
-        int currentLevelExperience = profile.Experience - (profile.Level > 1 ? (profile.Level - 2 < levels.Length ? levels[profile.Level - 2].ExperienceRequired : levels[^1].ExperienceRequired) : 0);
+        int currentLevelExperience = profile.Experience - (profile.Level > 1 ? profile.Level - 2 < levels.Length ? levels[profile.Level - 2].ExperienceRequired : levels[^1].ExperienceRequired : 0);
         int experienceRemaining = profile.Level - 1 < levels.Length ? levels[profile.Level - 1].ExperienceRequired - profile.Experience : 0;
 
         int maxPlayerHealth = BoostUtils.GetMaxPlayerHealth(boosts, requestStartedOn, staticData.Catalog.ItemsCatalog);
@@ -58,7 +58,7 @@ public class ProfileController : ControllerBase
             currentLevelExperience,
             experienceRemaining,
             profile.Health,
-            (profile.Health / (float)maxPlayerHealth) * 100.0f)));
+            profile.Health / (float)maxPlayerHealth * 100.0f)));
 
         return Content(resp, "application/json");
     }

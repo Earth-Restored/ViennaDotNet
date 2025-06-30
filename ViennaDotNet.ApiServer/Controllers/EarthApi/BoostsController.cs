@@ -12,7 +12,7 @@ using ViennaDotNet.DB.Models.Player;
 using ViennaDotNet.StaticData;
 using Effect = ViennaDotNet.ApiServer.Types.Common.Effect;
 
-namespace ViennaDotNet.ApiServer.Controllers;
+namespace ViennaDotNet.ApiServer.Controllers.EarthApi;
 
 [Authorize]
 [ApiVersion("1.1")]
@@ -66,7 +66,7 @@ public class BoostsController : ViennaControllerBase
             throw new ServerErrorException(exception);
         }
 
-        Boosts boosts = (Boosts)results.GetExtra("boosts");
+        var boosts = (Boosts)results.GetExtra("boosts");
 
         Types.Boost.Boosts.Potion?[] potions = [.. boosts.ActiveBoosts.Select(activeBoost =>
         {
@@ -141,7 +141,7 @@ public class BoostsController : ViennaControllerBase
 
         BoostUtils.StatModiferValues statModiferValues = BoostUtils.GetActiveStatModifiers(boosts, requestStartedOn, catalog.ItemsCatalog);
 
-        Types.Boost.Boosts boostsResponse = new Types.Boost.Boosts(
+        var boostsResponse = new Types.Boost.Boosts(
             potions,
             new Types.Boost.Boosts.MiniFig[5],
             [.. activeEffects],
@@ -153,7 +153,7 @@ public class BoostsController : ViennaControllerBase
                 statModiferValues.AttackMultiplier > 0 ? statModiferValues.AttackMultiplier + 100 : null,
                 statModiferValues.DefenseMultiplier > 0 ? statModiferValues.DefenseMultiplier + 100 : null,
                 statModiferValues.MiningSpeedMultiplier > 0 ? statModiferValues.MiningSpeedMultiplier + 100 : null,
-                statModiferValues.MaxPlayerHealthMultiplier > 0 ? (20 * statModiferValues.MaxPlayerHealthMultiplier) / 100 + 20 : 20,
+                statModiferValues.MaxPlayerHealthMultiplier > 0 ? 20 * statModiferValues.MaxPlayerHealthMultiplier / 100 + 20 : 20,
                 statModiferValues.CraftingSpeedMultiplier > 0 ? statModiferValues.CraftingSpeedMultiplier / 100 + 1 : null,
                 statModiferValues.SmeltingSpeedMultiplier > 0 ? statModiferValues.SmeltingSpeedMultiplier / 100 + 1 : null,
                 statModiferValues.FoodMultiplier > 0 ? (statModiferValues.FoodMultiplier + 100) / 100f : null
@@ -253,7 +253,7 @@ public class BoostsController : ViennaControllerBase
                         }
                     }
 
-                    EarthDB.Query updateQuery = new EarthDB.Query(true);
+                    var updateQuery = new EarthDB.Query(true);
                     updateQuery.Update("inventory", playerId, inventory);
                     updateQuery.Update("boosts", playerId, boosts);
 
@@ -334,7 +334,7 @@ public class BoostsController : ViennaControllerBase
                         }
                     }
 
-                    EarthDB.Query updateQuery = new EarthDB.Query(true);
+                    var updateQuery = new EarthDB.Query(true);
                     updateQuery.Update("boosts", playerId, boosts);
                     if (profileChanged)
                     {

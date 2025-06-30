@@ -5,7 +5,7 @@ using ViennaDotNet.ApiServer.Types;
 using ViennaDotNet.ApiServer.Utils;
 using ViennaDotNet.Common;
 
-namespace ViennaDotNet.ApiServer.Controllers;
+namespace ViennaDotNet.ApiServer.Controllers.EarthApi;
 
 //Wheres the resource pack?
 [ApiVersion("1.1")]
