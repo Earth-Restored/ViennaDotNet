@@ -1,0 +1,348 @@
+@page "/Admin/Roles"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using System.Security.Claims
+@using Microsoft.EntityFrameworkCore
+@using ViennaDotNet.LauncherUI.Data
+@attribute [Authorize(Policy = Permissions.ManageRoles)]
+@rendermode InteractiveServer
+@inject RoleManager<ApplicationRole> RoleManager
+@inject AuthenticationStateProvider AuthStateProvider
+@inject ApplicationDbContext DbContext
+
+<PageTitle>Role Management</PageTitle>
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Role Hierarchy</h2>
+        <button class="btn btn-primary" @onclick="PrepareCreate">Create New Role</button>
+    </div>
+
+    @if (_roles == null)
+    {
+        <p><em>Loading roles...</em></p>
+    }
+    else
+    {
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Position</th>
+                    <th>Color</th>
+                    <th>Name</th>
+                    <th>Permissions</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var role in _roles.OrderBy(r => r.Position))
+                {
+                    var canManage = role.Position > _userMinPosition && !role.IsBuiltIn;
+                    <tr style="border-left: 5px solid @role.Color">
+                        <td>@role.Position</td>
+                        <td>
+                            <div style="width: 20px; height: 20px; background:@role.Color; border-radius: 4px;"></div>
+                        </td>
+                        <td>
+                            <strong>@role.Name</strong>
+                            @if (role.IsBuiltIn)
+                            {
+                                <span class="badge bg-secondary ms-2">System</span>
+                            }
+                        </td>
+                        <td>
+                            @if (_rolePermissions.TryGetValue(role.Id, out var perms) && perms.Any())
+                            {
+                                <div class="d-flex flex-wrap gap-1 align-items-center">
+                                    @foreach (var p in perms.Take(3))
+                                    {
+                                        <span class="badge border text-dark fw-normal"
+                                              style="background-color: #f8f9fa; border-color: #dee2e6 !important;">
+                                            @p
+                                        </span>
+                                    }
+                                    @if (perms.Count > 3)
+                                    {
+                                        <span class="badge bg-secondary-subtle text-secondary border">
+                                            +@(perms.Count - 3) more
+                                        </span>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <span class="text-muted small"><em>No permissions</em></span>
+                            }
+                        </td>
+                        <td>
+                            @if (canManage)
+                            {
+                                <button class="btn btn-sm btn-outline-primary" @onclick="() => EditRole(role)">Edit</button>
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteRole(role)">Delete</button>
+                                if (role.Position > 0 && role.Position > _userMinPosition + 1)
+                                {
+                                    <button class="btn btn-sm btn-light" @onclick="() => MoveUp(role)">▲</button>
+                                }
+
+                                if (role.Position < _roles.Count - 1)
+                                {
+                                    <button class="btn btn-sm btn-light" @onclick="() => MoveDown(role)">▼</button>
+                                }
+                            }
+                            else
+                            {
+                                <span class="text-muted small">Insufficient Rank</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+@if (_isEditing)
+{
+    <div class="modal show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5)">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(_model.Id == null ? "Create" : "Edit") Role</h5>
+                    <button type="button" class="btn-close" @onclick="() => _isEditing = false"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Role Name</label>
+                        <input class="form-control" @bind="_model.Name" disabled="@(_model.Id != null)" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Role Color</label>
+                        <input type="color" class="form-control form-control-color" @bind="_model.Color" />
+                    </div>
+
+                    <h6>Permissions</h6>
+                    <div class="row">
+                        @foreach (var perm in Permissions.All)
+                        {
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-type" type="checkbox" checked="@_modelPermissions.Contains(perm)"
+                                           @onchange="@(e => TogglePermission(perm, e.Value))" />
+                                    <label class="form-check-label">@perm</label>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="() => _isEditing = false">Cancel</button>
+                    <button class="btn btn-primary" @onclick="SaveRole">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<ApplicationRole> _roles = new();
+    private int _userMinPosition = -1;
+    private bool _isEditing = false;
+    private RoleEditModel _model = new();
+    private HashSet<string> _modelPermissions = new();
+    private Dictionary<string, List<string>> _rolePermissions = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        // Get the roles of the current user to find their highest position
+        var userRoleNames = user.FindAll(ClaimTypes.Role).Select(c => c.Value);
+        var allRoles = await RoleManager.Roles.ToListAsync();
+
+        _userMinPosition = allRoles
+            .Where(r => userRoleNames.Contains(r.Name))
+            .Select(r => r.Position)
+            .DefaultIfEmpty(9999) // nobody gonna have 9999 roles fr
+            .Min();
+
+        _roles = allRoles;
+
+        _rolePermissions.Clear();
+        foreach (var role in _roles)
+        {
+            var claims = await RoleManager.GetClaimsAsync(role);
+            _rolePermissions[role.Id] = claims
+                .Where(c => c.Type == "Permission")
+                .Select(c => c.Value)
+                .OrderBy(v => v) // Keep it alphabetical for a consistent UI
+                .ToList();
+        }
+    }
+
+    private void PrepareCreate()
+    {
+        _model = new RoleEditModel { Color = "#99AAB5", Position = RoleManager.Roles.Count(), };
+        _modelPermissions.Clear();
+        _isEditing = true;
+    }
+
+    private async Task EditRole(ApplicationRole role)
+    {
+        if (role.Position <= _userMinPosition || role.IsBuiltIn)
+        {
+            return;
+        }
+
+        _model = new RoleEditModel
+        {
+            Id = role.Id,
+            Name = role.Name,
+            Color = role.Color,
+            Position = role.Position
+        };
+
+        var claims = await RoleManager.GetClaimsAsync(role);
+        _modelPermissions = claims
+            .Where(c => c.Type == "Permission")
+            .Select(c => c.Value)
+            .ToHashSet();
+
+        _isEditing = true;
+    }
+
+    private async Task SaveRole()
+    {
+        ApplicationRole role;
+        if (_model.Id == null)
+        {
+            role = new ApplicationRole { Name = _model.Name, Color = _model.Color, Position = _model.Position };
+            await RoleManager.CreateAsync(role);
+        }
+        else
+        {
+            role = await RoleManager.FindByIdAsync(_model.Id);
+            role.Color = _model.Color;
+            await RoleManager.UpdateAsync(role);
+        }
+
+        // Sync Permissions
+        var currentClaims = await RoleManager.GetClaimsAsync(role);
+        foreach (var claim in currentClaims.Where(c => c.Type == "Permission"))
+        {
+            await RoleManager.RemoveClaimAsync(role, claim);
+        }
+        foreach (var perm in _modelPermissions)
+        {
+            await RoleManager.AddClaimAsync(role, new Claim("Permission", perm));
+        }
+
+        _isEditing = false;
+        await LoadData();
+    }
+
+    private async Task MoveUp(ApplicationRole role)
+    {
+        if (role.Position <= 0 || role.Position <= _userMinPosition + 1 || role.IsBuiltIn)
+        {
+            return;
+        }
+
+        var neighbor = _roles.First(item => item.Position == role.Position - 1);
+
+        await SwapPositions(role, neighbor);
+    }
+
+    private async Task MoveDown(ApplicationRole role)
+    {
+        if (role.Position >= _roles.Count - 1 || role.Position <= _userMinPosition || role.IsBuiltIn)
+        {
+            return;
+        }
+
+        var neighbor = _roles.First(item => item.Position == role.Position + 1);
+
+        await SwapPositions(role, neighbor);
+    }
+
+    private async Task SwapPositions(ApplicationRole roleA, ApplicationRole roleB)
+    {
+        int originalA = roleA.Position;
+        int originalB = roleB.Position;
+
+        roleA.Position = -1;
+        await RoleManager.UpdateAsync(roleA);
+
+        roleB.Position = originalA;
+        await RoleManager.UpdateAsync(roleB);
+
+        roleA.Position = originalB;
+        await RoleManager.UpdateAsync(roleA);
+
+        await LoadData();
+    }
+
+    private async Task DeleteRole(ApplicationRole role)
+    {
+        if (role.Position <= _userMinPosition || role.IsBuiltIn)
+        {
+            return;
+        }
+
+        var rolesToShift = _roles
+            .Where(r => r.Position > role.Position)
+            .OrderBy(r => r.Position)
+            .ToList();
+
+        var result = await RoleManager.DeleteAsync(role);
+
+        if (result.Succeeded)
+        {
+            foreach (var r in rolesToShift)
+            {
+                r.Position--;
+                await RoleManager.UpdateAsync(r);
+            }
+        }
+
+        await LoadData();
+    }
+
+    private void TogglePermission(string perm, object checkedValue)
+    {
+        if ((bool)checkedValue) _modelPermissions.Add(perm);
+        else _modelPermissions.Remove(perm);
+    }
+
+    private string GetPermissionPreview(string roleId)
+    {
+        if (!_rolePermissions.TryGetValue(roleId, out var perms) || !perms.Any())
+        {
+            return "None";
+        }
+
+        const int MaxVisible = 3;
+        var visible = perms.Take(MaxVisible);
+        var summary = string.Join(", ", visible);
+
+        if (perms.Count > MaxVisible)
+        {
+            summary += $" +{perms.Count - MaxVisible} more";
+        }
+
+        return summary;
+    }
+
+    public class RoleEditModel
+    {
+        public string? Id { get; set; }
+        public string Name { get; set; } = "";
+        public string Color { get; set; } = "#99AAB5";
+        public int Position { get; set; }
+    }
+}

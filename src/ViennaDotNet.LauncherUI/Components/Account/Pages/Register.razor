@@ -5,11 +5,13 @@
 @using System.Text.Encodings.Web
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.AspNetCore.WebUtilities
+@using Microsoft.EntityFrameworkCore
 @using ViennaDotNet.LauncherUI.Data
 
 @inject UserManager<ApplicationUser> UserManager
 @inject IUserStore<ApplicationUser> UserStore
 @inject SignInManager<ApplicationUser> SignInManager
+@inject RoleManager<ApplicationRole> RoleManager
 @inject IEmailSender<ApplicationUser> EmailSender
 @inject ILogger<Register> Logger
 @inject NavigationManager NavigationManager
@@ -28,17 +30,20 @@
             <hr />
             <ValidationSummary class="text-danger" role="alert" />
             <div class="form-floating mb-3">
-                <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
+                <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="username"
+                           aria-required="true" placeholder="name@example.com" />
                 <label for="Input.Email">Email</label>
                 <ValidationMessage For="() => Input.Email" class="text-danger" />
             </div>
             <div class="form-floating mb-3">
-                <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control" autocomplete="new-password" aria-required="true" placeholder="password" />
+                <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control"
+                           autocomplete="new-password" aria-required="true" placeholder="password" />
                 <label for="Input.Password">Password</label>
                 <ValidationMessage For="() => Input.Password" class="text-danger" />
             </div>
             <div class="form-floating mb-3">
-                <InputText type="password" @bind-Value="Input.ConfirmPassword" id="Input.ConfirmPassword" class="form-control" autocomplete="new-password" aria-required="true" placeholder="password" />
+                <InputText type="password" @bind-Value="Input.ConfirmPassword" id="Input.ConfirmPassword"
+                           class="form-control" autocomplete="new-password" aria-required="true" placeholder="password" />
                 <label for="Input.ConfirmPassword">Confirm Password</label>
                 <ValidationMessage For="() => Input.ConfirmPassword" class="text-danger" />
             </div>
@@ -63,7 +68,8 @@
     [SupplyParameterFromQuery]
     private string? ReturnUrl { get; set; }
 
-    private string? Message => identityErrors is null ? null : $"Error: {string.Join(", ", identityErrors.Select(error => error.Description))}";
+    private string? Message => identityErrors is null ? null : $"Error: {string.Join(", ", identityErrors.Select(error =>
+error.Description))}";
 
     protected override void OnInitialized()
     {
@@ -72,6 +78,8 @@
 
     public async Task RegisterUser(EditContext editContext)
     {
+        var firstUser = !await UserManager.Users.AnyAsync();
+
         var user = CreateUser();
 
         await UserStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
@@ -86,6 +94,12 @@
         }
 
         Logger.LogInformation("User created a new account with password.");
+
+        // Assign owner role if first user
+        if (firstUser)
+        {
+            await UserManager.AddToRoleAsync(user, ApplicationRole.Owner);
+        }
 
         var userId = await UserManager.GetUserIdAsync(user);
         var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
