@@ -75,9 +75,14 @@
                             }
                         </td>
                         <td>
+                            <button class="btn btn-sm @(canManage ? "btn-outline-primary" : "btn-outline-secondary")"
+                                    @onclick="() => EditRole(role)">
+                                <i class="bi @(canManage ? "bi-pencil" : "bi-eye")"></i>
+                                @(canManage ? "Edit" : "View")
+                            </button>
+
                             @if (canManage)
                             {
-                                <button class="btn btn-sm btn-outline-primary" @onclick="() => EditRole(role)">Edit</button>
                                 <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteRole(role)">Delete</button>
                                 if (role.Position > 0 && role.Position > _userMinPosition + 1)
                                 {
@@ -88,10 +93,6 @@
                                 {
                                     <button class="btn btn-sm btn-light" @onclick="() => MoveDown(role)">▼</button>
                                 }
-                            }
-                            else
-                            {
-                                <span class="text-muted small">Insufficient Rank</span>
                             }
                         </td>
                     </tr>
@@ -107,36 +108,54 @@
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">@(_model.Id == null ? "Create" : "Edit") Role</h5>
+                    <h5 class="modal-title">
+                        @(_model.IsReadOnly ? "View Role Details" : (_model.Id == null ? "Create Role" : "Edit Role"))
+                    </h5>
                     <button type="button" class="btn-close" @onclick="() => _isEditing = false"></button>
                 </div>
                 <div class="modal-body">
+                    @if (!string.IsNullOrEmpty(_errorMessage))
+                    {
+                        <div class="alert alert-danger d-flex align-items-center mb-3" role="alert">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            <div>@_errorMessage</div>
+                        </div>
+                    }
+
                     <div class="mb-3">
                         <label class="form-label">Role Name</label>
-                        <input class="form-control" @bind="_model.Name" disabled="@(_model.Id != null)" />
+                        <input class="form-control" @bind="_model.Name" disabled="@(_model.IsReadOnly)" />
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Role Color</label>
-                        <input type="color" class="form-control form-control-color" @bind="_model.Color" />
+                        <input type="color" class="form-control form-control-color" @bind="_model.Color"
+                               disabled="@_model.IsReadOnly" />
                     </div>
 
                     <h6>Permissions</h6>
                     <div class="row">
                         @foreach (var perm in Permissions.All)
                         {
+                            var isAssigned = _modelPermissions.Contains(perm);
                             <div class="col-md-4">
-                                <div class="form-check">
-                                    <input class="form-check-type" type="checkbox" checked="@_modelPermissions.Contains(perm)"
-                                           @onchange="@(e => TogglePermission(perm, e.Value))" />
-                                    <label class="form-check-label">@perm</label>
+                                <div class="form-check p-2 border rounded @(isAssigned ? "bg-light" : "")"
+                                     style="cursor: pointer;">
+                                    <input class="form-check-input ms-1" type="checkbox" checked="@isAssigned"
+                                           disabled="@_model.IsReadOnly" @onchange="@(e => TogglePermission(perm, e.Value))" />
+                                    <label class="form-check-label ms-2 @(isAssigned ? "fw-bold" : "text-muted")">
+                                        @perm
+                                    </label>
                                 </div>
                             </div>
                         }
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" @onclick="() => _isEditing = false">Cancel</button>
-                    <button class="btn btn-primary" @onclick="SaveRole">Save Changes</button>
+                <div class="modal-footer bg-light">
+                    <button class="btn btn-secondary" @onclick="() => _isEditing = false">Close</button>
+                    @if (!_model.IsReadOnly)
+                    {
+                        <button class="btn btn-primary" @onclick="SaveRole">Save Changes</button>
+                    }
                 </div>
             </div>
         </div>
@@ -150,6 +169,8 @@
     private RoleEditModel _model = new();
     private HashSet<string> _modelPermissions = new();
     private Dictionary<string, List<string>> _rolePermissions = new();
+
+    private string? _errorMessage;
 
     protected override async Task OnInitializedAsync()
     {
@@ -194,17 +215,17 @@
 
     private async Task EditRole(ApplicationRole role)
     {
-        if (role.Position <= _userMinPosition || role.IsBuiltIn)
-        {
-            return;
-        }
+        _errorMessage = null;
+
+        var canEdit = role.Position > _userMinPosition && !role.IsBuiltIn;
 
         _model = new RoleEditModel
         {
             Id = role.Id,
             Name = role.Name,
             Color = role.Color,
-            Position = role.Position
+            Position = role.Position,
+            IsReadOnly = !canEdit,
         };
 
         var claims = await RoleManager.GetClaimsAsync(role);
@@ -218,16 +239,45 @@
 
     private async Task SaveRole()
     {
+        _errorMessage = null; // Reset error
+
         ApplicationRole role;
-        if (_model.Id == null)
+        if (_model.Id is null)
         {
-            role = new ApplicationRole { Name = _model.Name, Color = _model.Color, Position = _model.Position };
-            await RoleManager.CreateAsync(role);
+            role = new ApplicationRole
+            {
+                Name = string.IsNullOrWhiteSpace(_model.Name) ? "role" : _model.Name,
+                Color = _model.Color,
+                Position = _model.Position
+            };
         }
         else
         {
             role = await RoleManager.FindByIdAsync(_model.Id);
+            if (!string.IsNullOrWhiteSpace(_model.Name))
+            {
+                role.Name = _model.Name;
+            }
             role.Color = _model.Color;
+        }
+
+        var roleName = string.IsNullOrWhiteSpace(_model.Name)
+            ? (_model.Id is null ? "new-role" : role.Name)
+            : _model.Name.Trim();
+
+        var existingRole = await RoleManager.FindByNameAsync(roleName);
+        if (existingRole != null && existingRole.Id != _model.Id)
+        {
+            _errorMessage = $"A role with the name '{roleName}' already exists.";
+            return;
+        }
+
+        if (_model.Id is null)
+        {
+            await RoleManager.CreateAsync(role);
+        }
+        else
+        {
             await RoleManager.UpdateAsync(role);
         }
 
@@ -275,7 +325,7 @@
         int originalA = roleA.Position;
         int originalB = roleB.Position;
 
-        roleA.Position = -1;
+        roleA.Position = 10000;
         await RoleManager.UpdateAsync(roleA);
 
         roleB.Position = originalA;
@@ -341,8 +391,13 @@
     public class RoleEditModel
     {
         public string? Id { get; set; }
+
         public string Name { get; set; } = "";
+
         public string Color { get; set; } = "#99AAB5";
+
         public int Position { get; set; }
+
+        public bool IsReadOnly { get; set; }
     }
 }

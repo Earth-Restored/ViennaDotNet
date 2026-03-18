@@ -38,6 +38,12 @@
 
         <AuthorizeView>
             <Authorized>
+                 <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="Admin/Roles">
+                        <span class="bi bi-person-lock" aria-hidden="true"></span> Manage Roles
+                    </NavLink>
+                </div>
+
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="Account/Manage">
                         <span class="bi bi-person-fill-nav-menu" aria-hidden="true"></span> @context.User.Identity?.Name
