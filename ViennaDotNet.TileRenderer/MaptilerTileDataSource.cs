@@ -24,7 +24,7 @@ internal sealed class MaptilerTileDataSource : ITileDataSource
     {
         if (zoom > _maxZoom)
         {
-            // TODO: cache surrounding data
+            // TODO: cache surrounding data - return which tiles were fetched?
             tileX = tileX / (1 << (zoom - _maxZoom));
             tileY = tileY / (1 << (zoom - _maxZoom));
 
