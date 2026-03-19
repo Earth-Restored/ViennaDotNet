@@ -1,6 +1,8 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -16,6 +18,10 @@ public partial class Program
 {
     public const string ProgramsDir = "./"; // same as launcher
     public const string StaticDataDir = "staticdata";
+
+    public static string Address { get; private set; } = "";
+
+    public static string LoggerAddress => Address + "/api/logs/create";
 
     private static async Task Main(string[] args)
     {
@@ -106,6 +112,14 @@ public partial class Program
         app.MapAdditionalIdentityEndpoints();
 
         app.MapControllers();
+
+        app.Lifetime.ApplicationStarted.Register(() =>
+        {
+            var server = app.Services.GetRequiredService<IServer>();
+            var addressFeature = server.Features.Get<IServerAddressesFeature>();
+
+            Address = addressFeature?.Addresses.FirstOrDefault() ?? "";
+        });
 
         // Apply database migrations and initialize built-in roles
         using (var scope = app.Services.CreateScope())

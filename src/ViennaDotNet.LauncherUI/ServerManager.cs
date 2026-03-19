@@ -113,11 +113,11 @@ public class ServerManager
         cancellationToken.ThrowIfCancellationRequested();
         ApiServer.Run(settings, logger);
         cancellationToken.ThrowIfCancellationRequested();
-        BuildplateLauncher.Run(settings, logger);
+        /*BuildplateLauncher.Run(settings, logger);
         cancellationToken.ThrowIfCancellationRequested();
         TappablesGenerator.Run(settings, logger);
         cancellationToken.ThrowIfCancellationRequested();
-        TileRenderer.Run(settings, logger);
+        TileRenderer.Run(settings, logger);*/
 
         logger.Information("Waiting for programs to start up");
         await Task.Delay(7500, cancellationToken); // wait a bit for them to start (and possible crash)

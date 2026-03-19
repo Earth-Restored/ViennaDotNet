@@ -28,7 +28,8 @@ internal static class ObjectStoreServer
         return Process.Start(new ProcessStartInfo(Path.GetFullPath(Path.Combine(Program.ProgramsDir, ExeName)),
         [
             $"--dataDir=data{Path.DirectorySeparatorChar}object_store",
-            $"--port={settings.ObjectStorePort}"
+            $"--port={settings.ObjectStorePort}",
+            $"--logger-url={Program.LoggerAddress}",
         ])
         {
             WorkingDirectory = Path.GetFullPath(Program.ProgramsDir),

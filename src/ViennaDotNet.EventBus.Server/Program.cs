@@ -10,18 +10,13 @@ internal static class Program
     {
         [Option("port", Default = 5532, Required = false, HelpText = "Port to listen on")]
         public int Port { get; set; }
+
+        [Option("logger-url", Default = null, Required = false, HelpText = "Url to send logs to")]
+        public string? LoggerUrl { get; set; }
     }
 
     static int Main(string[] args)
     {
-        var log = new LoggerConfiguration()
-            .WriteTo.Console()
-            .WriteTo.File("logs/event_bus_server/log.txt", rollingInterval: RollingInterval.Day, rollOnFileSizeLimit: true, fileSizeLimitBytes: 8338607, outputTemplate: "{Timestamp:HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
-            .MinimumLevel.Debug()
-            .CreateLogger();
-
-        Log.Logger = log;
-
         if (!Debugger.IsAttached)
         {
             AppDomain.CurrentDomain.UnhandledException += (object sender, UnhandledExceptionEventArgs e) =>
@@ -48,6 +43,21 @@ internal static class Program
         }
         else
             return 1;
+
+        var loggerConfig = new LoggerConfiguration()
+            .WriteTo.Console()
+            .WriteTo.File("logs/event_bus_server/log.txt", rollingInterval: RollingInterval.Day, rollOnFileSizeLimit: true, fileSizeLimitBytes: 8338607, outputTemplate: "{Timestamp:HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
+            .Enrich.WithProperty("ComponentName", "EventBus");
+
+        if (!string.IsNullOrWhiteSpace(options.LoggerUrl))
+        {
+            loggerConfig.WriteTo.Http(options.LoggerUrl, 10 * 1024 * 1024);
+        }
+
+        loggerConfig.MinimumLevel.Debug();
+        var log = loggerConfig.CreateLogger();
+
+        Log.Logger = log;
 
         NetworkServer server;
         try

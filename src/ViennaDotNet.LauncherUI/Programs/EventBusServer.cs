@@ -27,7 +27,8 @@ internal static class EventBusServer
         logger.Information($"Running {DispName}");
         return Process.Start(new ProcessStartInfo(Path.GetFullPath(Path.Combine(Program.ProgramsDir, ExeName)),
         [
-            $"--port={settings.EventBusPort}"
+            $"--port={settings.EventBusPort}",
+            $"--logger-url={Program.LoggerAddress}",
         ])
         {
             WorkingDirectory = Path.GetFullPath(Program.ProgramsDir),
