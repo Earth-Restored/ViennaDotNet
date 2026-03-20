@@ -18,7 +18,8 @@ public static class BedrockBlocks
 
     static BedrockBlocks()
     {
-        DataFile.Load("./staticdata/registry/blocks_bedrock.json", _root =>
+        // todo: don't hardcode static data path
+        DataFile.Load("./../staticdata/registry/blocks_bedrock.json", _root =>
         {
             JsonArray root = (JsonArray)_root;
             foreach (var _element in root)

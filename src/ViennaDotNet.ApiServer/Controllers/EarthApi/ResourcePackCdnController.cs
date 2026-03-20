@@ -35,7 +35,7 @@ public class ResourcePackCdnController : ControllerBase
     [HttpGet, HttpHead]
     public async Task<IActionResult> Get()
     {
-        string resourcePackFilePath = @"./staticdata/resourcepacks/vanilla.zip"; //resource packs are distributed as renamed zip files containing an MCpack
+        string resourcePackFilePath = Path.Combine(Program.staticData.Directory, @"resourcepacks/vanilla.zip"); //resource packs are distributed as renamed zip files containing an MCpack
 
         if (!System.IO.File.Exists(resourcePackFilePath))
         {

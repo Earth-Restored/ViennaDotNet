@@ -19,7 +19,8 @@ public static class JavaBlocks
 
     static JavaBlocks()
     {
-        DataFile.Load("./staticdata/registry/blocks_java.json", jToken =>
+        // todo: don't hardcode static data path
+        DataFile.Load("./../staticdata/registry/blocks_java.json", jToken =>
         {
             JsonArray jArray = (JsonArray)jToken;
 

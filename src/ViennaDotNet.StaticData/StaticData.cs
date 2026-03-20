@@ -2,7 +2,7 @@
 
 public sealed class StaticData
 {
-    private readonly string _directory;
+    public readonly string Directory;
 
     private Catalog? _catalog;
     private PlayerLevels? _levels;
@@ -14,20 +14,20 @@ public sealed class StaticData
 
     public StaticData(string dir)
     {
-        _directory = Path.GetFullPath(dir);
+        Directory = Path.GetFullPath(dir);
     }
 
-    public Catalog Catalog => _catalog ??= new Catalog(Path.Combine(_directory, "catalog"));
+    public Catalog Catalog => _catalog ??= new Catalog(Path.Combine(Directory, "catalog"));
 
-    public PlayerLevels Levels => _levels ??= new PlayerLevels(Path.Combine(_directory, "levels"));
+    public PlayerLevels Levels => _levels ??= new PlayerLevels(Path.Combine(Directory, "levels"));
 
-    public TappablesConfig TappablesConfig => _tappablesConfig ??= new TappablesConfig(Path.Combine(_directory, "tappables"));
+    public TappablesConfig TappablesConfig => _tappablesConfig ??= new TappablesConfig(Path.Combine(Directory, "tappables"));
 
-    public EncountersConfig EncountersConfig => _encountersConfig ??= new EncountersConfig(Path.Combine(_directory, "encounters"));
+    public EncountersConfig EncountersConfig => _encountersConfig ??= new EncountersConfig(Path.Combine(Directory, "encounters"));
 
-    public TileRenderer TileRenderer => _tileRenderer ??= new TileRenderer(Path.Combine(_directory, "tile_renderer"));
+    public TileRenderer TileRenderer => _tileRenderer ??= new TileRenderer(Path.Combine(Directory, "tile_renderer"));
 
-    public Buildplates Buildplates => _buildplates ??= new Buildplates(Path.Combine(_directory, "buildplates"));
+    public Buildplates Buildplates => _buildplates ??= new Buildplates(Path.Combine(Directory, "buildplates"));
 
-    public Playfab Playfab => _playfab ??= new Playfab(Path.Combine(_directory, "playfab"));
+    public Playfab Playfab => _playfab ??= new Playfab(Path.Combine(Directory, "playfab"));
 }

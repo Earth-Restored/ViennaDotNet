@@ -1,6 +1,7 @@
 ﻿using Microsoft.Data.Sqlite;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
 using ViennaDotNet.DB;
 using ViennaDotNet.DB.Models.Player;
 
@@ -144,5 +145,38 @@ internal static class DataUtils
 
         return GetAllProfilesAsync(db, cancellationToken)
             .Select(async ((string Id, Profile Profile) item, CancellationToken cancellationToken) => (item.Id, await GetUsername(item.Id, liveConnection, cancellationToken), item.Profile));
+    }
+
+    public static async Task UpdateUsernameAsync(string userId, string? newUsername, SqliteConnection liveConnection, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            using var command = new SqliteCommand("""
+                UPDATE Accounts SET Username = @username WHERE Id = @id;
+                """, liveConnection);
+
+            command.Parameters.AddWithValue("@username", string.IsNullOrWhiteSpace(newUsername) ? DBNull.Value : newUsername);
+            command.Parameters.AddWithValue("@id", userId);
+
+            await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error($"Failed to update username for {userId}: {ex}");
+        }
+    }
+
+    public static async Task UpdateProfileAsync(EarthDB db, string userId, Profile profile, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var updateQuery = new EarthDB.Query(true)
+                .Update("profile", userId, profile)
+                .ExecuteAsync(db, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error($"Failed to update profile for {userId}: {ex}");
+        }
     }
 }

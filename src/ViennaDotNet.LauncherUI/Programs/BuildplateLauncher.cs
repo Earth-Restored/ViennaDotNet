@@ -31,10 +31,10 @@ internal static class BuildplateLauncher
         [
             $"--eventbus=localhost:{settings.EventBusPort}",
             $"--publicAddress={settings.IPv4}",
-            $"--bridgeJar={Path.GetFullPath(Path.Combine("staticdata", "server_jars", "fountain-0.0.1-SNAPSHOT-jar-with-dependencies.jar"))}",
-            $"--serverTemplateDir={Path.GetFullPath(Path.Combine("staticdata", "server_template_dir"))}",
+            $"--bridgeJar={Path.GetFullPath(Path.Combine(Program.StaticDataDir, "server_jars", "fountain-0.0.1-SNAPSHOT-jar-with-dependencies.jar"))}",
+            $"--serverTemplateDir={Path.GetFullPath(Path.Combine(Program.StaticDataDir, "server_template_dir"))}",
             $"--fabricJarName={ServerJarName}",
-            $"--connectorPluginJar={Path.GetFullPath(Path.Combine("staticdata", "server_jars", "buildplate-connector-plugin-0.0.1-SNAPSHOT-jar-with-dependencies.jar"))}",
+            $"--connectorPluginJar={Path.GetFullPath(Path.Combine(Program.StaticDataDir, "server_jars", "buildplate-connector-plugin-0.0.1-SNAPSHOT-jar-with-dependencies.jar"))}",
             $"--logger-url={Program.LoggerAddress}",
         ])
         {

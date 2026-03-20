@@ -20,7 +20,7 @@
         </div>
     </div>
 
-    @if (_errorMessage != null)
+    @if (_errorMessage is not null)
     {
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
             <i class="bi bi-exclamation-octagon-fill me-2"></i>@_errorMessage
@@ -28,14 +28,14 @@
         </div>
     }
 
-    @if (_players == null && _errorMessage == null)
+    @if (_players is null && _errorMessage is null)
     {
         <div class="text-center py-5">
             <div class="spinner-border text-primary" role="status"></div>
             <div class="mt-2 text-muted">Loading player data...</div>
         </div>
     }
-    else if (_players != null)
+    else if (_players is not null)
     {
         <div class="d-none d-md-block card shadow-sm border-0">
             <div class="table-responsive">
@@ -46,17 +46,50 @@
                             <th>Username</th>
                             <th class="text-center">Level</th>
                             <th class="text-center">Rubies</th>
+                            <th class="text-end pe-4">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var player in _players)
                         {
-                            <tr>
-                                <td><code class="text-primary small">@player.Id</code></td>
-                                <td>@RenderUsername(player)</td>
-                                <td class="text-center"><span class="badge bg-info text-dark">Lv. @player.Profile.Level</span></td>
-                                <td class="text-center text-danger fw-bold"><i class="bi bi-gem me-1"></i>@player.Profile.Rubies.Total</td>
-                            </tr>
+                            @if (_editingId == player.Id)
+                            {
+                                <tr class="table-warning">
+                                    <td><code class="text-primary small">@player.Id</code></td>
+                                    <td>
+                                        <input type="text" class="form-control form-control-sm" @bind="_editUsername" placeholder="Username" />
+                                    </td>
+                                    <td>
+                                        <input type="number" class="form-control form-control-sm text-center mx-auto" style="max-width: 80px;" @bind="_editLevel" min="1" />
+                                    </td>
+                                    <td>
+                                        <div class="input-group input-group-sm mx-auto" style="max-width: 120px;">
+                                            <span class="input-group-text"><i class="bi bi-gem text-danger"></i></span>
+                                            <input type="number" class="form-control text-center" @bind="_editTotalRubies" min="0" />
+                                        </div>
+                                    </td>
+                                    <td class="text-end pe-4">
+                                        <button class="btn btn-sm btn-success me-1" @onclick="() => SaveEditAsync(player)"><i class="bi bi-check-lg"></i></button>
+                                        <button class="btn btn-sm btn-outline-secondary" @onclick="CancelEdit"><i class="bi bi-x-lg"></i></button>
+                                    </td>
+                                </tr>
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td><code class="text-primary small">@player.Id</code></td>
+                                    <td>
+                                        @(string.IsNullOrEmpty(player.Username) ? new MarkupString("<span class=\"text-muted fst-italic\">No Username</span>") : player.Username)
+                                    </td>
+                                    <td class="text-center"><span class="badge bg-info text-dark">Lv. @player.Profile.Level</span></td>
+                                    <td class="text-center text-danger fw-bold" title="Purchased: @player.Profile.Rubies.Purchased | Earned: @player.Profile.Rubies.Earned">
+                                        <i class="bi bi-gem me-1"></i>@player.Profile.Rubies.Total
+                                    </td>
+                                    <td class="text-end pe-4">
+                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => StartEdit(player)"><i class="bi bi-pencil"></i></button>
+                                    </td>
+                                </tr>
+                            }
                         }
                     </tbody>
                 </table>
@@ -71,12 +104,15 @@
                         <div class="d-flex justify-content-between align-items-start mb-2">
                             <div class="text-truncate me-2">
                                 <small class="text-muted d-block">ID: @player.Id.Substring(0, Math.Min(12, player.Id.Length))...</small>
-                                @RenderUsername(player)
+                                @(string.IsNullOrEmpty(player.Username) ? "No Username" : player.Username)
                             </div>
                             <div class="text-end">
                                 <span class="badge bg-info text-dark d-block mb-1">Lv. @player.Profile.Level</span>
                                 <span class="text-danger fw-bold small"><i class="bi bi-gem"></i> @player.Profile.Rubies.Total</span>
                             </div>
+                        </div>
+                        <div class="text-end mt-2">
+                            <button class="btn btn-sm btn-outline-primary w-100" @onclick="() => StartEdit(player)">Edit Player</button>
                         </div>
                     </div>
                 </div>
@@ -86,34 +122,15 @@
 </div>
 
 @code {
-    RenderFragment RenderUsername((string Id, string? Username, Profile Profile) player) => __builder =>
-    {
-        @if (_editingId == player.Id)
-        {
-            <div class="input-group input-group-sm">
-                <input type="text" class="form-control" @bind="_tempUsername" placeholder="Enter username..." />
-                <button class="btn btn-success" @onclick="() => SaveUsername(player.Id)"><i class="bi bi-check-lg"></i></button>
-                <button class="btn btn-outline-secondary" @onclick="CancelEdit"><i class="bi bi-x-lg"></i></button>
-            </div>
-        }
-        else
-        {
-            if (string.IsNullOrEmpty(player.Username))
-            {
-                <span class="text-muted fst-italic">No Username</span>
-            }
-            else
-            {
-                <span class="fw-bold">@player.Username</span>
-            }
-        }
-    };
-
     private EarthDB? _earthDB;
     private List<(string Id, string? Username, Profile Profile)>? _players;
     private string? _errorMessage;
+    
+    // Edit State
     private string? _editingId;
-    private string _tempUsername = "";
+    private string _editUsername = "";
+    private int _editLevel = 1;
+    private int _editTotalRubies = 0;
 
     protected override async Task OnInitializedAsync()
     {
@@ -130,9 +147,12 @@
         }
     }
 
-    private void StartEdit(string id, string? currentUsername)
+    private void StartEdit((string Id, string? Username, Profile Profile) player)
     {
-        _editingId = id; _tempUsername = currentUsername ?? "";
+        _editingId = player.Id; 
+        _editUsername = player.Username ?? "";
+        _editLevel = player.Profile.Level;
+        _editTotalRubies = player.Profile.Rubies.Total;
     }
 
     private void CancelEdit()
@@ -140,10 +160,47 @@
         _editingId = null; 
     }
 
-    private async Task SaveUsername(string id) 
+    private async Task SaveEditAsync((string Id, string? Username, Profile Profile) player) 
     {
-        var pIdx = _players!.FindIndex(p => p.Id == id);
-        if (pIdx != -1) _players[pIdx] = (_players[pIdx].Id, _tempUsername, _players[pIdx].Profile);
+        if (_earthDB is null || _players is null)
+        {
+            return;
+        }
+
+        int difference = _editTotalRubies - player.Profile.Rubies.Total;
+        
+        if (difference > 0)
+        {
+            player.Profile.Rubies.Purchased += difference;
+        }
+        else if (difference < 0)
+        {
+            int removeAmount = -difference;
+            
+            int takeFromPurchased = Math.Min(player.Profile.Rubies.Purchased, removeAmount);
+            player.Profile.Rubies.Purchased -= takeFromPurchased;
+            removeAmount -= takeFromPurchased;
+
+            player.Profile.Rubies.Earned = Math.Max(0, player.Profile.Rubies.Earned - removeAmount);
+        }
+
+        // todo: triger proper level
+        player.Profile.Level = _editLevel;
+
+        var pIdx = _players.FindIndex(p => p.Id == player.Id);
+        if (pIdx != -1) 
+        {
+            _players[pIdx] = (player.Id, _editUsername, player.Profile);
+        }
+
+        using var liveDb = DataUtils.OpenLiveDB(Settings.Instance);
+        if (liveDb is not null)
+        {
+            await DataUtils.UpdateUsernameAsync(player.Id, _editUsername, liveDb);
+        }
+        
+        await DataUtils.UpdateProfileAsync(_earthDB, player.Id, player.Profile);
+
         _editingId = null;
     }
 }
