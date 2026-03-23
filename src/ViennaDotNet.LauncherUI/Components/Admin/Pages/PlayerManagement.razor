@@ -99,23 +99,60 @@
         <div class="d-md-none">
             @foreach (var player in _players)
             {
-                <div class="card mb-3 shadow-sm border-start border-primary border-4">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <div class="text-truncate me-2">
-                                <small class="text-muted d-block">ID: @player.Id.Substring(0, Math.Min(12, player.Id.Length))...</small>
-                                @(string.IsNullOrEmpty(player.Username) ? "No Username" : player.Username)
+                @if (_editingId == player.Id)
+                {
+                    <div class="card mb-3 shadow-sm border-start border-warning border-4 bg-warning-subtle">
+                        <div class="card-body">
+                            <div class="mb-1">
+                                <small class="text-muted d-block">ID: @player.Id</small>
                             </div>
-                            <div class="text-end">
-                                <span class="badge bg-info text-dark d-block mb-1">Lv. @player.Profile.Level</span>
-                                <span class="text-danger fw-bold small"><i class="bi bi-gem"></i> @player.Profile.Rubies.Total</span>
+                            
+                            <div class="mb-2">
+                                <label class="form-label small text-muted mb-0">Username</label>
+                                <input type="text" class="form-control form-control-sm" @bind="_editUsername" placeholder="Username" />
                             </div>
-                        </div>
-                        <div class="text-end mt-2">
-                            <button class="btn btn-sm btn-outline-primary w-100" @onclick="() => StartEdit(player)">Edit Player</button>
+                            
+                            <div class="row mb-3">
+                                <div class="col-6">
+                                    <label class="form-label small text-muted mb-0">Level</label>
+                                    <input type="number" class="form-control form-control-sm" @bind="_editLevel" min="1" />
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small text-muted mb-0">Rubies</label>
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text"><i class="bi bi-gem text-danger"></i></span>
+                                        <input type="number" class="form-control" @bind="_editTotalRubies" min="0" />
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex justify-content-end gap-2 mt-3">
+                                <button class="btn btn-sm btn-outline-secondary w-50" @onclick="CancelEdit"><i class="bi bi-x-lg me-1"></i>Cancel</button>
+                                <button class="btn btn-sm btn-success w-50" @onclick="() => SaveEditAsync(player)"><i class="bi bi-check-lg me-1"></i>Save</button>
+                            </div>
                         </div>
                     </div>
-                </div>
+                }
+                else
+                {
+                    <div class="card mb-3 shadow-sm border-start border-primary border-4">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div class="text-truncate me-2">
+                                    <small class="text-muted d-block">ID: @player.Id.Substring(0, Math.Min(12, player.Id.Length))...</small>
+                                    @(string.IsNullOrEmpty(player.Username) ? new MarkupString("<span class=\"text-muted fst-italic\">No Username</span>") : player.Username)
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge bg-info text-dark d-block mb-1">Lv. @player.Profile.Level</span>
+                                    <span class="text-danger fw-bold small"><i class="bi bi-gem"></i> @player.Profile.Rubies.Total</span>
+                                </div>
+                            </div>
+                            <div class="text-end mt-2">
+                                <button class="btn btn-sm btn-outline-primary w-100" @onclick="() => StartEdit(player)"><i class="bi bi-pencil me-1"></i>Edit Player</button>
+                            </div>
+                        </div>
+                    </div>
+                }
             }
         </div>
     }
