@@ -123,6 +123,10 @@
                                             @if (HasPermission(Permissions.ManagePlayers))
                                             {
                                                 <td class="text-end pe-4">
+                                                    <a href="/Admin/Players/@(player.Id)/Buildplates" class="btn btn-sm btn-outline-info"
+                                                           title="Buildplates">
+                                                        <i class="bi bi-boxes"></i>
+                                                    </a>
                                                     <button class="btn btn-sm btn-outline-primary" @onclick="() => StartEdit(player)">
                                                         <i class="bi bi-pencil"></i>
                                                     </button>
@@ -218,6 +222,9 @@
                                                 @if (HasPermission(Permissions.ManagePlayers))
                                                 {
                                                     <div class="text-end mt-2">
+                                                        <a href="/Admin/Players/@(player.Id)/Buildplates" class="btn btn-sm btn-outline-info w-100 mb-1">
+                                                            <i class="bi bi-boxes me-1"></i>Manage Buildplates
+                                                        </a>
                                                         <button class="btn btn-sm btn-outline-primary w-100" @onclick="() => StartEdit(player)">
                                                             <i class="bi bi-pencil me-1"></i>Edit Player
                                                         </button>

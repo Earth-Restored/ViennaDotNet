@@ -11,6 +11,7 @@ using ViennaDotNet.Common.Utils;
 
 [assembly: InternalsVisibleTo("Launcher")]
 [assembly: InternalsVisibleTo("ViennaDotNet.LauncherUI")]
+[assembly: InternalsVisibleTo("ViennaDotNet.BuildplateImporter")]
 
 namespace ViennaDotNet.DB;
 
@@ -175,7 +176,7 @@ public sealed class EarthDB : IDisposable
 
         private sealed record ExtrasEntry(string name, object value);
 
-        private sealed record ThenFunctionEntry(Func<Results, Task<Query>> function, bool replaceResults);
+        private sealed record ThenFunctionEntry(Func<Results, Task<Query?>> function, bool replaceResults);
 
         public Query(bool write)
         {
@@ -217,19 +218,19 @@ public sealed class EarthDB : IDisposable
             return this;
         }
 
-        public Query Then(Func<Results, Task<Query>> function)
+        public Query Then(Func<Results, Task<Query?>> function)
             => Then(function, true);
 
-        public Query Then(Func<Results, Task<Query>> function, bool replaceResults)
+        public Query Then(Func<Results, Task<Query?>> function, bool replaceResults)
         {
             thenFunctions.Add(new ThenFunctionEntry(function, replaceResults));
             return this;
         }
 
-        public Query Then(Func<Results, Query> function)
+        public Query Then(Func<Results, Query?> function)
             => Then(function, true);
 
-        public Query Then(Func<Results, Query> function, bool replaceResults)
+        public Query Then(Func<Results, Query?> function, bool replaceResults)
         {
             thenFunctions.Add(new ThenFunctionEntry(results => Task.FromResult(function(results)), replaceResults));
             return this;
@@ -403,7 +404,12 @@ public sealed class EarthDB : IDisposable
 
             foreach (var entry in thenFunctions)
             {
-                Query query = await entry.function(results);
+                Query? query = await entry.function(results);
+                if (query is null)
+                {
+                    continue;
+                }
+
                 Results innerResults = await query.ExecuteInternalAsync(transaction, write, updates, cancellationToken);
                 if (entry.replaceResults)
                 {
@@ -424,7 +430,7 @@ public sealed class EarthDB : IDisposable
         private readonly List<ExtrasEntry> extras = [];
         private readonly List<ThenFunctionEntry> thenFunctions = [];
 
-        private sealed record WriteObjectsEntry(string Table, object Id, string Value);
+        private sealed record WriteObjectsEntry(string Table, object Id, string? Value);
 
         private sealed record ReadObjectsEntry(string Table, object Id);
 
@@ -450,7 +456,8 @@ public sealed class EarthDB : IDisposable
         }
 
         #region methods
-        public ObjectQuery UpdateTile(ulong pos, string objectId)
+        // null to remove
+        public ObjectQuery UpdateTile(ulong pos, string? objectId)
         {
             if (!_write)
             {
@@ -461,14 +468,15 @@ public sealed class EarthDB : IDisposable
             return this;
         }
 
-        public ObjectQuery UpdateBuildplate(string id, Models.Global.TemplateBuildplate buildplate)
+        // null to remove
+        public ObjectQuery UpdateBuildplate(string id, Models.Global.TemplateBuildplate? buildplate)
         {
             if (!_write)
             {
                 throw new UnsupportedOperationException();
             }
 
-            writeObjects.Add(new WriteObjectsEntry(BuildplatesTable, id, ToJson(buildplate)));
+            writeObjects.Add(new WriteObjectsEntry(BuildplatesTable, id, buildplate is null ? null : ToJson(buildplate)));
             return this;
         }
 
@@ -580,10 +588,20 @@ public sealed class EarthDB : IDisposable
                 using (var command = transaction.Connection!.CreateCommand())
                 {
                     command.CommandTimeout = TRANSACTION_TIMEOUT;
-                    command.CommandText = $"INSERT OR REPLACE INTO {entry.Table}(id, value) VALUES ($id, $value)";
 
-                    command.Parameters.AddWithValue("$id", entry.Id);
-                    command.Parameters.AddWithValue("$value", entry.Value);
+                    if (entry.Value is null)
+                    {
+                        command.CommandText = $"DELETE FROM {entry.Table} WHERE id = $id";
+                        command.Parameters.AddWithValue("$id", entry.Id);
+                    }
+                    else
+                    {
+                        command.CommandText = $"INSERT OR REPLACE INTO {entry.Table}(id, value) VALUES ($id, $value)";
+
+                        command.Parameters.AddWithValue("$id", entry.Id);
+                        command.Parameters.AddWithValue("$value", entry.Value);
+                    }
+
                     await command.ExecuteNonQueryAsync(cancellationToken);
                 }
             }

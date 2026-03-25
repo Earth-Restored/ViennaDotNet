@@ -16,6 +16,8 @@
 - Clear logs - seperate permission
 - Show roles on profile page
 - Export buildplates in both formats
+- Allow hostname in IPv4 setting
+- Launch/connect to remote components - e.g. run buildplate launcher on another PC
 
 ## Refactoring
 

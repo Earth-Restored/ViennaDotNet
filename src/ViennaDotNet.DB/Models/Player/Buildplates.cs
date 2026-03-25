@@ -19,16 +19,20 @@ public sealed class Buildplates
     public Buildplate? GetBuildplate(string id)
         => _buildplates.GetOrDefault(id, null);
 
+    public bool RemoveBuildplate(string id)
+        => _buildplates.Remove(id);
+
     public sealed record BuildplateEntry(
         string Id,
         Buildplate Buildplate
     );
 
-    public BuildplateEntry[] GetBuildplates()
-        => [.. _buildplates.Select(entry => new BuildplateEntry(entry.Key, entry.Value))];
+    public IEnumerable<BuildplateEntry> GetBuildplates()
+        => _buildplates.Select(entry => new BuildplateEntry(entry.Key, entry.Value));
 
     public sealed record Buildplate(
         string TemplateId,
+        string Name,
         int Size,
         int Offset,
         int Scale,

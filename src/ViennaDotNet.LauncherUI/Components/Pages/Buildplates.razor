@@ -3,11 +3,15 @@
 @using System.Security.Claims
 @using System.Diagnostics
 @using Serilog
+@using ViennaDotNet.BuildplateImporter
 @using ViennaDotNet.DB
+@using ViennaDotNet.EventBus.Client
 @using ViennaDotNet.LauncherUI.Utils
+@using ViennaDotNet.ObjectStore.Client
 @attribute [Authorize(Policy = Permissions.ViewBuildplates)]
 @rendermode InteractiveServer
 @inject AuthenticationStateProvider AuthStateProvider
+@inject ServerManager ServerManager
 
 <PageTitle>Buildplates - ViennaDotNet</PageTitle>
 
@@ -166,15 +170,62 @@
                 </div>
                 <div class="modal-body">
                     <p>Are you sure you want to delete <strong>@_bpToDelete?.Name</strong>?</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @onclick="CancelDelete">Cancel</button>
-                    <button type="button" class="btn btn-danger" @onclick="ConfirmDelete">Delete</button>
+                    
+                    <div class="form-check form-switch mt-3">
+                        <input class="form-check-input" type="checkbox" id="removeTemplateCheckbox"
+                               @bind="_removeTemplateFromPlayers">
+                            <label class="form-check-label text-danger" for="removeTemplateToggle">
+                                Also remove this template from all players inventories
+                            </label>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-secondary" @onclick="CancelDelete"
+                                disabled="@_isDeleting">Cancel</button>
+                        <button type="button" class="btn btn-danger" @onclick="ConfirmDelete" disabled="@_isDeleting"
+                                style="min-width: 100px;">
+                            @if (_isDeleting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                <span>Deleting...</span>
+                            }
+                            else
+                            {
+                                <span>Delete</span>
+                            }
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-}
+    }
+
+    @if (!string.IsNullOrEmpty(_deleteErrorMessage))
+    {
+        <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.6); z-index: 1060;">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-danger shadow-lg">
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title"><i class="bi bi-exclamation-octagon-fill me-2"></i>Deletion Failed</h5>
+                        <button type="button" class="btn-close btn-close-white" @onclick="CloseErrorModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>An error occurred while trying to delete <strong>@_bpToDelete?.Name</strong>:</p>
+                        <div class="alert alert-light border small text-break">
+                            @_deleteErrorMessage
+                        </div>
+                        <p class="mb-0">Please try again or report the issue if it persists.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseErrorModal">Close</button>
+                        <button type="button" class="btn btn-danger" @onclick="ConfirmDelete">
+                            <i class="bi bi-arrow-clockwise me-1"></i> Retry
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
 
 @code {
     private ClaimsPrincipal? _user;
@@ -191,7 +242,10 @@
 
     // Modal State
     private bool _showDeleteModal = false;
+    private bool _isDeleting = false;
     private Buildplate? _bpToDelete;
+    private bool _removeTemplateFromPlayers = false;
+    private string? _deleteErrorMessage;
 
     protected override async Task OnInitializedAsync()
     {
@@ -331,26 +385,66 @@ bp.IsNight, bp.ServerDataObjectId, bp.PreviewObjectId))
     private void RequestDelete(Buildplate bp)
     {
         _bpToDelete = bp;
+        _removeTemplateFromPlayers = false;
+        _deleteErrorMessage = null;
         _showDeleteModal = true;
     }
 
     private void CancelDelete()
     {
         _bpToDelete = null;
+        _removeTemplateFromPlayers = false;
+        _deleteErrorMessage = null;
         _showDeleteModal = false;
     }
 
     private async Task ConfirmDelete()
     {
-        if (_bpToDelete is not null && HasPermission(Permissions.ManageBuildplates))
+        _deleteErrorMessage = null;
+
+        if (ServerManager.Status is not ViennaDotNet.LauncherUI.ServerStatus.Online)
         {
-            // todo: delete from db
-            
-            await LoadBuildplates();
+            _deleteErrorMessage = "The server must be running to delete buildplates.";
+            return;
         }
         
-        _showDeleteModal = false;
-        _bpToDelete = null;
+        if (_bpToDelete is not null && HasPermission(Permissions.ManageBuildplates))
+        {
+            try
+            {
+                _isDeleting = true;
+                StateHasChanged();
+
+                using var earthDB = EarthDB.Open(Settings.Instance.EarthDatabaseConnectionString ?? "");
+                using var eventBus = EventBusClient.Create($"localhost:{Settings.Instance.EventBusPort}");
+                using var objectStore = ObjectStoreClient.Create($"localhost:{Settings.Instance.ObjectStorePort}");
+            
+                var importer = new Importer(earthDB, eventBus, objectStore, Log.Logger);
+
+                if (!await importer.RemoveTemplateAsync(_bpToDelete.Id, _removeTemplateFromPlayers, default))
+                {
+                    _deleteErrorMessage = "Failed to delete buildplate, check Launcher logs for details.";
+                    return;
+                }
+                
+                await LoadBuildplates();
+                CancelDelete();
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Failed to delete buildplate");
+                _deleteErrorMessage = $"Failed to delete the buildplate: {ex.Message}";
+            }
+            finally
+            {
+                _isDeleting = false;
+            }
+        }
+    }
+
+    private void CloseErrorModal()
+    {
+        _deleteErrorMessage = null;
     }
 
     private bool HasPermission(string permission)
