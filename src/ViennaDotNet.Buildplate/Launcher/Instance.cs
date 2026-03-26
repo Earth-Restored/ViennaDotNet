@@ -1,4 +1,4 @@
-﻿using Cyotek.Data.Nbt;
+using Cyotek.Data.Nbt;
 using Cyotek.Data.Nbt.Serialization;
 using Serilog;
 using System.Diagnostics;
@@ -15,7 +15,7 @@ namespace ViennaDotNet.Buildplate.Launcher;
 
 public class Instance
 {
-    private const int HOST_PLAYER_CONNECT_TIMEOUT = 20000;
+    private const int HOST_PLAYER_CONNECT_TIMEOUT = 120000;
 
     public static Instance Run(EventBusClient eventBusClient, string? playerId, string buildplateId, BuildplateSource buildplateSource, string instanceId, bool survival, bool night, bool saveEnabled, InventoryType inventoryType, long? shutdownTime, string publicAddress, int port, int serverInternalPort, string javaCmd, FileInfo fountainBridgeJar, DirectoryInfo serverTemplateDir, string fabricJarName, FileInfo connectorPluginJar, DirectoryInfo baseDir, string eventBusConnectionstring)
     {
@@ -850,6 +850,9 @@ public class Instance
     {
         Log.Information("Cleaning up runtime directory");
 
+        Log.Information("Skipped");
+        return;
+
         try
         {
             Files.WalkFileTree(_baseDir.FullName, new FileVisitor(
@@ -1045,7 +1048,7 @@ public class Instance
             }
         }).Start();
     }
-
+	
     private void StartShutdownTimer()
     {
         new Thread(() =>
