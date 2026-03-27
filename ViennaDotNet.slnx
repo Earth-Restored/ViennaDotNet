@@ -3,6 +3,7 @@
     <File Path=".editorconfig" />
   </Folder>
   <Folder Name="/src/">
+    <Project Path="src/ViennaDotNet.BuildplateRenderer/ViennaDotNet.BuildplateRenderer.csproj" />
     <Project Path="src/ViennaDotNet.LauncherUI/ViennaDotNet.LauncherUI.csproj" />
   </Folder>
   <Project Path="src/ViennaDotNet.ApiServer/ViennaDotNet.ApiServer.csproj">

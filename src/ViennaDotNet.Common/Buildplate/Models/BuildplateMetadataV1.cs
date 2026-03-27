@@ -1,8 +1,8 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace ViennaDotNet.BuildplateImporter.Models;
+namespace ViennaDotNet.Buildplate.Model;
 
-internal sealed record BuildplateMetadataV1(
+public sealed record BuildplateMetadataV1(
     [property: JsonPropertyName("size")] int Size,
     [property: JsonPropertyName("offset")] int Offset,
     [property: JsonPropertyName("night")] bool Night

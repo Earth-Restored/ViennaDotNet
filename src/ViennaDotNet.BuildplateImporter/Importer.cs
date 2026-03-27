@@ -2,7 +2,7 @@
 using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
-using ViennaDotNet.BuildplateImporter.Models;
+using ViennaDotNet.Buildplate.Model;
 using ViennaDotNet.Common;
 using ViennaDotNet.Common.Utils;
 using ViennaDotNet.DB;
