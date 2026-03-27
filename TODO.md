@@ -19,6 +19,8 @@
 - Launch/connect to remote components - e.g. run buildplate launcher on another PC
 - Edit player buildplate name and scale
 - View the player buildplate's template (if exists) - open page, search id?
+- Add the level reward buildplates and add them to level ups
+- NFC mini figures
 
 ## Refactoring
 

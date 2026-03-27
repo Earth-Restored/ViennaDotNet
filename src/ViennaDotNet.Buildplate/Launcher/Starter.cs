@@ -48,6 +48,8 @@ public class Starter
             return null;
         }
 
+        Log.Information($"Instance base directory: '{baseDir}'");
+
         int port = FindPort(portsInUse, BASE_PORT);
         int serverInternalPort = FindPort(serverInternalPortsInUse, SERVER_INTERNAL_BASE_PORT);
         Instance instance = Instance.Run(_eventBusClient, playerId, buildplateId, buildplateSource, instanceId, survival, night, saveEnabled, inventoryType, shutdownTime, _publicAddress, port, serverInternalPort, _javaCmd, _fountainBridgeJar, _serverTemplateDir, _fabricJarName, _connectorPluginJar, baseDir, _eventBusConnectionString);
