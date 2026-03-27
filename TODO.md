@@ -7,6 +7,7 @@
 - Player items management
 - Encounter generation and AR
 - Use tiles when spawning tappables - don't spawn on water/forbidden areas, spawn more trees in forest?
+- Fix code scanning and joining friends
 - Allow setting maximum cache size for tiles
 - Allow custom java resourcepacks? (tool to turn them into earth(bedrock) resourcepacks)
 - Some option to only allow custom login - because we cannot verify microsoft accounts
