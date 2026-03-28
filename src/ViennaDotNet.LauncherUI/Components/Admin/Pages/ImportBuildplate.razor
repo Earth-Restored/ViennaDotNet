@@ -1,0 +1,327 @@
+@page "/Admin/ImportBuildplate"
+@using Microsoft.AspNetCore.Authorization
+@using Serilog
+@using System.Buffers
+@using ViennaDotNet.BuildplateImporter
+@using ViennaDotNet.DB
+@using ViennaDotNet.EventBus.Client
+@using ViennaDotNet.ObjectStore.Client
+@attribute [Authorize(Policy = Permissions.ManageBuildplates)]
+@rendermode InteractiveServer
+@inject NavigationManager NavManager
+@inject ServerManager ServerManager
+
+<PageTitle>Import Buildplate(s) - ViennaDotNet</PageTitle>
+
+<div class="import-container">
+    <button class="btn-back-link" @onclick="GoBack" title="Back to Buildplates">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+            <path fill-rule="evenodd"
+                  d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8" />
+        </svg>
+        <span>Back</span>
+    </button>
+    
+    <h2>Import Buildplate</h2>
+    <p>Upload your buildplates here.</p>
+
+    <div class="drop-zone @(isHovering ? "hovering" : "")" @ondragenter="@(() => isHovering = true)"
+         @ondragleave="@(() => isHovering = false)" @ondrop="@(() => isHovering = false)">
+        
+        <InputFile OnChange="HandleFileSelection" multiple accept=".zip,.json" class="file-input"
+                   disabled="@isUploading" />
+        
+        <div class="drop-zone-content">
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" class="upload-icon"
+                 viewBox="0 0 16 16">
+                <path
+                d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5" />
+                <path
+                d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708z" />
+            </svg>
+            <p><strong>Drag and drop</strong> your files here, or <strong>click to browse</strong></p>
+            <p class="file-hint">Accepts .zip (Vienna) or .json (Project Earth)</p>
+        </div>
+    </div>
+
+    @if (selectedFiles.Any())
+    {
+        <div class="file-list">
+            @foreach (var file in selectedFiles)
+            {
+                <div class="file-item">
+                    <div class="file-header">
+                        <span class="file-name">@file.File.Name</span>
+                        <div class="file-actions">
+                            @if (file.HasError && !isUploading)
+                            {
+                                <button class="btn-retry" @onclick="() => RetryFile(file)" title="Retry upload">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"
+                                         viewBox="0 0 16 16">
+                                        <path fill-rule="evenodd"
+                                              d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z" />
+                                        <path
+                                        d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z" />
+                                    </svg>
+                                    Retry
+                                </button>
+                            }
+                            <button class="btn-remove" @onclick="() => RemoveFile(file)"
+                                    disabled="@(file.IsComplete || isUploading)" title="Remove file">
+                                ✕
+                            </button>
+                        </div>
+                    </div>
+
+                    @if (file.HasError)
+                    {
+                        <span class="text-danger file-status">@file.ErrorMessage</span>
+                    }
+                    else if (file.IsComplete)
+                    {
+                        <span class="text-success file-status">Upload Complete</span>
+                    }
+                    else
+                    {
+                        <div class="progress-bar-container">
+                            <div class="progress-bar" style="width: @(file.ProgressPercentage)%"></div>
+                        </div>
+                        <span class="file-status">@(Math.Round(file.ProgressPercentage))%</span>
+                    }
+                </div>
+            }
+        </div>
+
+        <div class="button-group">
+            <button class="btn btn-primary import-btn" @onclick="ProcessUploads"
+                    disabled="@(isUploading || !selectedFiles.Any(f => !f.IsComplete && !f.HasError))">
+                @(isUploading ? "Importing..." : "Import Buildplates")
+            </button>
+            
+            @if (!isUploading)
+            {
+                <button class="btn btn-link" @onclick="GoBack">Cancel</button>
+            }
+        </div>
+    }
+</div>
+
+@if (showDialog)
+{
+    <div class="dialog-overlay">
+        <div class="dialog-card">
+            <h3 class="@(isSuccess ? "text-success" : "text-danger")">
+                @(isSuccess ? "Success" : "Finished with Errors")
+            </h3>
+            <p>@dialogMessage</p>
+            <button class="btn @(isSuccess ? "btn-primary" : "btn-secondary")" @onclick="CloseDialog">
+                @(isSuccess ? "Continue to Buildplates" : "Close")
+            </button>
+        </div>
+    </div>
+}
+
+<style>
+    .file-input {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        cursor: pointer;
+        z-index: 10;
+    }
+    
+    .file-input:disabled {
+        cursor: not-allowed;
+    }
+</style>
+
+@code {
+    private bool isHovering;
+    private bool isUploading;
+    private bool showDialog;
+    private bool isSuccess;
+    private string dialogMessage = string.Empty;
+
+    private const long MaxFileSize = 1024 * 1024 * 100; // 100MB
+    private List<FileUploadState> selectedFiles = new();
+
+    private class FileUploadState
+    {
+        public IBrowserFile File { get; set; } = default!;
+        public long UploadedBytes { get; set; }
+        public double ProgressPercentage => File.Size == 0 ? 0 : ((double)UploadedBytes / File.Size) * 100;
+        public bool IsComplete { get; set; }
+        public bool HasError { get; set; }
+        public string ErrorMessage { get; set; } = string.Empty;
+        public CancellationTokenSource Cts { get; set; } = new();
+
+        public void Reset()
+        {
+            HasError = false;
+            ErrorMessage = string.Empty;
+            UploadedBytes = 0;
+            IsComplete = false;
+            Cts = new CancellationTokenSource();
+        }
+    }
+
+    private void GoBack()
+        => NavManager.NavigateTo("/Buildplates");
+
+    private void HandleFileSelection(InputFileChangeEventArgs e)
+    {
+        foreach (var file in e.GetMultipleFiles())
+        {
+            string? ext = Path.GetExtension(file.Name).ToLowerInvariant();
+            if (ext is not (".zip" or ".json"))
+            {
+                selectedFiles.Add(new FileUploadState
+                {
+                    File = file,
+                    HasError = true,
+                    ErrorMessage = "Invalid format. Requires .zip or .json"
+                });
+
+                continue;
+            }
+
+            if (!selectedFiles.Any(f => f.File.Name == file.Name))
+            {
+                selectedFiles.Add(new FileUploadState { File = file });
+            }
+        }
+    }
+
+    private void RemoveFile(FileUploadState fileState)
+    {
+        if (isUploading && !fileState.IsComplete && !fileState.HasError)
+        {
+            fileState.Cts.Cancel();
+        }
+
+        selectedFiles.Remove(fileState);
+    }
+
+    private async Task RetryFile(FileUploadState fileState)
+    {
+        fileState.Reset();
+        await ProcessUploads();
+    }
+
+    private async Task ProcessUploads()
+    {
+        if (isUploading)
+        {
+            return;
+        }
+
+        var filesToUpload = selectedFiles.Where(f => !f.IsComplete && !f.HasError).ToList();
+        if (!filesToUpload.Any())
+        {
+            return;
+        }
+
+        isUploading = true;
+        StateHasChanged();
+
+        if (ServerManager.Status is not ServerStatus.Online)
+        {
+            ShowDialog(false, "The server must be running to import buildplates.");
+            isUploading = false;
+            return;
+        }
+
+        try
+        {
+            using var earthDB = EarthDB.Open(Settings.Instance.EarthDatabaseConnectionString ?? "");
+            using var eventBus = EventBusClient.Create($"localhost:{Settings.Instance.EventBusPort}");
+            using var objectStore = ObjectStoreClient.Create($"localhost:{Settings.Instance.ObjectStorePort}");
+            
+            var importer = new Importer(earthDB, eventBus, objectStore, Log.Logger);
+            int successCount = 0;
+
+            foreach (var fileState in filesToUpload)
+            {
+                try
+                {
+                    var rawName = Path.GetFileNameWithoutExtension(fileState.File.Name);
+                    var displayName = string.IsNullOrWhiteSpace(rawName) ? "imported buildplate" : rawName;
+
+                    using var memoryStream = new MemoryStream();
+                    await using var inputFilesStream = fileState.File.OpenReadStream(MaxFileSize, fileState.Cts.Token);
+                    
+                    var buffer = ArrayPool<byte>.Shared.Rent(81920); // 80KB
+                    int bytesRead;
+                    while ((bytesRead = await inputFilesStream.ReadAsync(buffer, fileState.Cts.Token)) > 0)
+                    {
+                        await memoryStream.WriteAsync(buffer.AsMemory(0, bytesRead), fileState.Cts.Token);
+                        fileState.UploadedBytes += bytesRead;
+                        StateHasChanged();
+                    }
+                    ArrayPool<byte>.Shared.Return(buffer);
+
+                    memoryStream.Position = 0;
+
+                    if (Path.GetExtension(fileState.File.Name) is ".json")
+                    {
+                        fileState.HasError = true;
+                        fileState.ErrorMessage = $"Project Earth buildplates aren't yet supported :/";
+                        continue;
+                    }
+
+                    await importer.ImportTemplateAsync(Guid.NewGuid().ToString(), displayName, memoryStream);
+                    fileState.IsComplete = true;
+                    successCount++;
+                }
+                catch (OperationCanceledException)
+                {
+                    fileState.HasError = true;
+                    fileState.ErrorMessage = "Upload cancelled.";
+                }
+                catch (Exception ex)
+                {
+                    fileState.HasError = true;
+                    fileState.ErrorMessage = $"Failed: {ex.Message}";
+                }
+
+                StateHasChanged();
+            }
+
+            int totalAttempted = filesToUpload.Count;
+            if (successCount == totalAttempted)
+            {
+                ShowDialog(true, $"Successfully imported {successCount} buildplate(s).");
+            }
+            else
+            {
+                ShowDialog(false, $"Finished. {successCount} succeeded, {totalAttempted - successCount} failed.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Failed to connect to backend services");
+            ShowDialog(false, "Could not connect to services. Please check if they are running.");
+        }
+        finally
+        {
+            isUploading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ShowDialog(bool success, string message)
+    {
+        isSuccess = success;
+        dialogMessage = message;
+        showDialog = true;
+    }
+
+    private void CloseDialog()
+    {
+        showDialog = false;
+        if (isSuccess) NavManager.NavigateTo("/Buildplates");
+    }
+}

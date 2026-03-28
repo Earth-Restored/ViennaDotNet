@@ -236,7 +236,7 @@ public static class Program
 
                     using (var buidplateData = buidplate.OpenRead())
                     {
-                        await importer.ImportTemplateAsync(buidplate.Id, buidplateData);
+                        await importer.ImportTemplateAsync(buidplate.Id, $"[SHOP] {buidplate.Id}", buidplateData);
                     }
                 }
                 catch (Exception ex)

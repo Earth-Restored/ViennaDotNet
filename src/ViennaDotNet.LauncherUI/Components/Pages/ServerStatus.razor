@@ -7,6 +7,8 @@
 @inject ServerManager ServerManager
 @inject IJSRuntime JS
 
+<PageTitle>Server Status - ViennaDotNet</PageTitle>
+
 <script>
     window.initLogScroller = (container) => {
         if (!container) return;
@@ -41,39 +43,43 @@
         </div>
     </div>
 
-    <div class="row g-2 mb-4">
-        <div class="col-12 col-md-4">
-            <button class="btn btn-lg btn-success w-100 py-3 d-flex flex-column align-items-center"
-                    disabled="@(IsButtonDisabled(Permissions.StartServer) || _currentStatus is LauncherUI.ServerStatus.Starting or LauncherUI.ServerStatus.Online or LauncherUI.ServerStatus.Stopping)"
-                    @onclick="() => StartServer()">
-                <i class="bi bi-play-fill fs-2"></i>
-                <span style="font-size: 0.9rem;">Start</span>
-            </button>
+    @if (!IsButtonDisabled(Permissions.StartServer) || !IsButtonDisabled(Permissions.RestartServer) ||
+        !IsButtonDisabled(Permissions.StopServer))
+    {
+        <div class="row g-2 mb-4">
+            <div class="col-12 col-md-4">
+                <button class="btn btn-lg btn-success w-100 py-3 d-flex flex-column align-items-center"
+                        disabled="@(IsButtonDisabled(Permissions.StartServer) || _currentStatus is LauncherUI.ServerStatus.Starting or LauncherUI.ServerStatus.Online or LauncherUI.ServerStatus.Stopping)"
+                        @onclick="() => StartServer()">
+                    <i class="bi bi-play-fill fs-2"></i>
+                    <span style="font-size: 0.9rem;">Start</span>
+                </button>
+            </div>
+            <div class="col-6 col-md-4">
+                <button class="btn btn-lg btn-warning w-100 py-3 d-flex flex-column align-items-center"
+                        disabled="@(IsButtonDisabled(Permissions.RestartServer) || _currentStatus is LauncherUI.ServerStatus.Offline or LauncherUI.ServerStatus.Stopping)"
+                        @onclick="() => RestartServer()">
+                    <i class="bi bi-arrow-clockwise fs-2"></i>
+                    <span style="font-size: 0.9rem;">Restart</span>
+                </button>
+            </div>
+            <div class="col-6 col-md-4">
+                <button class="btn btn-lg btn-danger w-100 py-3 d-flex flex-column align-items-center"
+                        disabled="@(IsButtonDisabled(Permissions.StopServer) || _currentStatus is LauncherUI.ServerStatus.Offline or LauncherUI.ServerStatus.Stopping)"
+                        @onclick="() => StopServer()">
+                    <i class="bi bi-stop-fill fs-2"></i>
+                    <span style="font-size: 0.9rem;">Stop</span>
+                </button>
+            </div>
+            <div class="col-12 mt-2">
+                <button class="btn btn-lg btn-outline-danger w-100 py-3 d-flex flex-column align-items-center"
+                        disabled="@IsButtonDisabled(Permissions.StopServer)" @onclick="() => KillAll()">
+                    <i class="bi bi-x-circle-fill fs-2"></i>
+                    <span style="font-size: 0.9rem; font-weight: bold;">KILL ALL PROCESSES</span>
+                </button>
+            </div>
         </div>
-        <div class="col-6 col-md-4">
-            <button class="btn btn-lg btn-warning w-100 py-3 d-flex flex-column align-items-center"
-                    disabled="@(IsButtonDisabled(Permissions.RestartServer) || _currentStatus is LauncherUI.ServerStatus.Offline or LauncherUI.ServerStatus.Stopping)"
-                    @onclick="() => RestartServer()">
-                <i class="bi bi-arrow-clockwise fs-2"></i>
-                <span style="font-size: 0.9rem;">Restart</span>
-            </button>
-        </div>
-        <div class="col-6 col-md-4">
-            <button class="btn btn-lg btn-danger w-100 py-3 d-flex flex-column align-items-center"
-                    disabled="@(IsButtonDisabled(Permissions.StopServer) || _currentStatus is LauncherUI.ServerStatus.Offline or LauncherUI.ServerStatus.Stopping)"
-                    @onclick="() => StopServer()">
-                <i class="bi bi-stop-fill fs-2"></i>
-                <span style="font-size: 0.9rem;">Stop</span>
-            </button>
-        </div>
-        <div class="col-12 mt-2">
-            <button class="btn btn-lg btn-outline-danger w-100 py-3 d-flex flex-column align-items-center"
-                    disabled="@IsButtonDisabled(Permissions.StopServer)" @onclick="() => KillAll()">
-                <i class="bi bi-x-circle-fill fs-2"></i>
-                <span style="font-size: 0.9rem; font-weight: bold;">KILL ALL PROCESSES</span>
-            </button>
-        </div>
-    </div>
+    }
 
     <div class="card shadow-sm border-0">
         <div class="card-header bg-white border-0 pt-3">

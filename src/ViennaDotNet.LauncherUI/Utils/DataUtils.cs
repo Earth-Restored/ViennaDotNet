@@ -1,4 +1,5 @@
 ﻿using Microsoft.Data.Sqlite;
+using Serilog;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
@@ -177,6 +178,39 @@ internal static class DataUtils
         catch (Exception ex)
         {
             Serilog.Log.Error($"Failed to update profile for {userId}: {ex}");
+        }
+    }
+
+    public static async Task DeletePlayerAsync(EarthDB earthDB, SqliteConnection? liveConnection, string userId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (liveConnection is not null)
+            {
+                using (var liveCommand = new SqliteCommand("""
+                    DELETE FROM Accounts WHERE Id = @id;
+                    """, liveConnection))
+                {
+                    liveCommand.Parameters.AddWithValue("@id", userId);
+                    await liveCommand.ExecuteNonQueryAsync(cancellationToken);
+                }
+            }
+
+            await earthDB.ExecuteCommandAsync(true, async command =>
+            {
+                command.CommandText = $"""
+                DELETE FROM {EarthDB.ObjectsTable} WHERE id = @id;
+                """;
+                command.Parameters.AddWithValue("@id", userId);
+                await command.ExecuteNonQueryAsync(cancellationToken);
+            }, cancellationToken);
+
+            Log.Information("Successfully deleted player {UserId}.", userId);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Failed to delete player {UserId}", userId);
+            throw;
         }
     }
 }

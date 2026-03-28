@@ -1,234 +1,177 @@
-﻿<html>
+<!DOCTYPE html>
+<html>
 <head>
     <title>Login/Register</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <script src="/js/jquery-3.6.3.min.js"></script>
     <style>
-        * {
-            box-sizing: border-box;
-        }
+        @font-face { font-family: "Minecraft"; src: url("https://sqlylxcnoqehorlgmztm.supabase.co/storage/v1/object/public/icons/fonts/minecraftfive-regular.ttf") format("truetype"); font-weight: 400; font-style: normal; font-display: block; }
+        @font-face { font-family: "Minecraft"; src: url("https://sqlylxcnoqehorlgmztm.supabase.co/storage/v1/object/public/icons/fonts/minecraftfive-bold.ttf") format("truetype"); font-weight: 700; font-style: normal; font-display: block; }
+        @font-face { font-family: "MinecraftTen"; src: url("https://sqlylxcnoqehorlgmztm.supabase.co/storage/v1/object/public/icons/fonts/minecraftten.ttf") format("truetype"); font-weight: 400; font-style: normal; }
+        @font-face { font-family: "MinecraftSeven"; src: url("https://sqlylxcnoqehorlgmztm.supabase.co/storage/v1/object/public/icons/fonts/minecraftseven.ttf") format("truetype"); font-weight: 400; font-style: normal; }
 
-        body, html {
-            margin: 0;
-            height: 100%;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
-            background: #f0f2f5;
-            color: #333;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: "Minecraft", sans-serif;
+            min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 1rem;
+            padding: 20px;
+            background: url("https://sqlylxcnoqehorlgmztm.supabase.co/storage/v1/object/public/icons/backgrounds/splash_screen.png") center center / cover no-repeat fixed;
+            image-rendering: pixelated;
+            -webkit-font-smoothing: none;
+        }
+
+        body::before {
+            content: ""; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.45); pointer-events: none; z-index: 0;
         }
 
         .container {
-            background: white;
-            padding: 2rem 3rem;
-            border-radius: 12px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+            background: #f5eed9;
+            border-radius: 4px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), inset 0 0 0 4px #8b7355;
+            max-width: 420px;
             width: 100%;
-            max-width: 400px;
+            padding: 24px 30px 30px;
+            position: relative;
+            z-index: 1;
+            border: 4px solid #5a4a3a;
             display: flex;
             flex-direction: column;
-            align-items: center;
+        }
+
+        h1 {
+            text-align: center; color: #6b8e23; margin-bottom: 5px; font-size: 2.2rem;
+            font-family: "MinecraftTen", "Minecraft", sans-serif; font-weight: 400;
+            text-transform: uppercase; letter-spacing: 2px;
+            text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.2);
+            filter: drop-shadow(0 6px 12px rgba(107, 142, 35, 0.4));
+        }
+
+        .subtitle {
+            text-align: center; color: #5a4a3a; margin-bottom: 20px; font-size: 1rem;
+            font-family: "MinecraftTen", "Minecraft", sans-serif; font-weight: 600;
+        }
+
+        .nav-tabs {
+            display: flex; gap: 0; margin-bottom: 20px; border-bottom: 3px solid #8b7355; width: 100%;
+        }
+
+        .nav-tab {
+            flex: 1; padding: 12px 8px; border: 3px solid #8b7355; border-bottom: none;
+            background: #d4c5a0; color: #3e2723; cursor: pointer; font-size: 0.9rem;
+            transition: all 0.15s; box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.1);
+            text-transform: uppercase; font-family: "MinecraftSeven", "Minecraft", sans-serif;
             text-align: center;
         }
 
-        h1#formTitle {
-            margin-bottom: 0.25rem;
-            font-size: 2.25rem;
-            font-weight: 700;
+        .nav-tab:first-child { border-radius: 4px 0 0 0; border-right: none; }
+        .nav-tab:last-child { border-radius: 0 4px 0 0; border-left: 3px solid #8b7355; }
+        .nav-tab:hover:not(.active) { background: #e0d5b0; transform: translatey(-3px); }
+
+        .nav-tab.active {
+            background: linear-gradient(180deg, #6b8e23 0%, #556b2f 100%); color: white;
+            box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.15), 0 5px 10px rgba(0, 0, 0, 0.2);
+            border-color: #4a5d23; transform: translatey(-2px);
         }
 
-        p {
-            margin-top: 0;
-            margin-bottom: 1.5rem;
-            font-size: 1rem;
-            color: #555;
+        .bp-form-row { margin-bottom: 16px; width: 100%; }
+        
+        .bp-form-row label {
+            display: block; font-weight: 700; color: #3e2723; margin-bottom: 6px;
+            font-size: 0.95rem; text-transform: uppercase; font-family: "Minecraft", sans-serif;
         }
 
-        .form-toggle {
-            margin-bottom: 1.5rem;
-            display: flex;
-            justify-content: center;
-            gap: 1rem;
-            width: 100%;
+        .bp-form-row input[type="text"], .bp-form-row input[type="password"] {
+            width: 100%; padding: 12px 14px; border: 3px solid #8b7355; border-radius: 2px;
+            background: #f5eed9; color: #3e2723; font-family: "Minecraft", sans-serif;
+            font-size: 1rem; font-weight: 600; outline: none; transition: border-color 0.15s;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1); box-sizing: border-box;
         }
 
-            .form-toggle button {
-                flex: 1;
-                padding: 0.75rem 1rem;
-                font-size: 1rem;
-                border: 2px solid #007bff;
-                background: white;
-                color: #007bff;
-                border-radius: 8px;
-                cursor: pointer;
-                transition: all 0.3s ease;
-                font-weight: 600;
-            }
-
-                .form-toggle button.active,
-                .form-toggle button:hover {
-                    background: #007bff;
-                    color: white;
-                }
-
-        form {
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-        }
-
-            form input[type="text"],
-            form input[type="password"] {
-                width: 100%;
-                padding: 0.75rem 1rem;
-                margin-bottom: 1rem;
-                font-size: 1rem;
-                border: 1.8px solid #ccc;
-                border-radius: 8px;
-                transition: border-color 0.3s ease;
-            }
-
-                form input[type="text"]:focus,
-                form input[type="password"]:focus {
-                    border-color: #007bff;
-                    outline: none;
-                }
-
-            form input[type="submit"] {
-                padding: 0.85rem 1rem;
-                font-size: 1.1rem;
-                font-weight: 700;
-                border-radius: 8px;
-                border: none;
-                background: #007bff;
-                color: white;
-                cursor: pointer;
-                transition: background-color 0.3s ease;
-            }
-
-                form input[type="submit"]:hover {
-                    background: #0056b3;
-                }
-
-            form label {
-                display: block;
-                margin-bottom: 0.3rem;
-                font-weight: 600;
-                font-size: 1rem;
-                color: #444;
-            }
+        .bp-form-row input:focus { border-color: #6b8e23; }
 
         .extra-fields {
-            overflow: hidden;
-            transition: max-height 0.4s ease, opacity 0.4s ease;
+            overflow: hidden; transition: max-height 0.4s ease, opacity 0.4s ease; width: 100%;
         }
 
-        /* Initially hidden */
-        #registerFields {
-            max-height: 0;
-            opacity: 0;
-            pointer-events: none;
+        #registerFields { max-height: 0; opacity: 0; pointer-events: none; }
+        #registerFields.active { max-height: 200px; opacity: 1; pointer-events: auto; }
+
+        .required { color: red; }
+
+        .bp-submit-btn {
+            width: 100%; padding: 12px 8px; background: linear-gradient(180deg, #6b8e23 0%, #556b2f 100%);
+            color: white; border: 2px solid #4a5d23; border-radius: 2px; cursor: pointer;
+            font-weight: 700; font-size: 1rem; transition: all 0.15s;
+            box-shadow: 0 4px 0 #3d4f1c; text-transform: uppercase; font-family: "Minecraft", sans-serif;
+            margin-top: 10px; box-sizing: border-box;
         }
 
-            /* Show register fields */
-            #registerFields.active {
-                max-height: 200px;
-                opacity: 1;
-                pointer-events: auto;
-            }
+        .bp-submit-btn:hover {
+            background: linear-gradient(180deg, #7cb342 0%, #689f38 100%);
+            transform: translatey(-2px); box-shadow: 0 6px 0 #3d4f1c;
+        }
+
+        .bp-submit-btn:active {
+            transform: translatey(3px); box-shadow: 0 1px 0 #3d4f1c;
+        }
+
+        .bp-status {
+            margin-top: 14px; padding: 12px 16px; border-radius: 2px; font-weight: 700;
+            text-align: center; display: none; font-family: "Minecraft", sans-serif; width: 100%; box-sizing: border-box;
+        }
+
+        .bp-status.error {
+            background: rgba(244, 67, 54, 0.15); border: 2px solid #f44336; color: #c62828; display: block;
+        }
 
         @media (max-width: 480px) {
-            .container {
-                padding: 1.5rem 2rem;
-                max-width: 100%;
-            }
-
-            h1#formTitle {
-                font-size: 1.8rem;
-            }
-
-            .form-toggle button {
-                font-size: 0.9rem;
-                padding: 0.6rem 0.8rem;
-            }
-
-            form input[type="text"],
-            form input[type="password"] {
-                font-size: 0.9rem;
-                padding: 0.65rem 0.9rem;
-            }
-
-            form input[type="submit"] {
-                font-size: 1rem;
-                padding: 0.75rem 1rem;
-            }
-
-            form label {
-                font-size: 0.9rem;
-            }
-        }
-
-        @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
-            .container {
-                box-shadow: 0 8px 28px rgba(0,0,0,0.12);
-            }
-        }
-
-        form input[type="text"],
-        form input[type="password"] {
-            margin-bottom: 1rem;
-        }
-
-        .required {
-            color: red;
-        }
-
-        #errorMsg {
-            margin-top: 1rem;
-            color: #b00020;
-            background: #fdecea;
-            border: 1px solid #f5c6cb;
-            padding: 0.75rem 1rem;
-            border-radius: 6px;
-            font-weight: 600;
-            font-size: 0.95rem;
-
-            word-break: break-word;
-            overflow-wrap: anywhere;
-            white-space: normal;
+            .container { padding: 20px; }
+            h1 { font-size: 1.8rem; }
+            .nav-tab { font-size: 0.8rem; padding: 10px 4px; }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1 id="formTitle">Login</h1>
-        <p>Please enter your credentials.</p>
+        <p class="subtitle">Please enter your credentials.</p>
 
-        <div class="form-toggle">
-            <button id="loginBtn" class="active">Login</button>
-            <button id="registerBtn">Register</button>
+        <div class="nav-tabs">
+            <button id="loginBtn" class="nav-tab active">Login</button>
+            <button id="registerBtn" class="nav-tab">Register</button>
         </div>
 
         <form id="loginForm">
-            <label for="username">Username <span class="required">*</span></label>
-            <input id="username" type="text" placeholder="Username" required minlength="3" maxlength="16" pattern="[a-z0-9_:]+" title="Lowercase letters, numbers, underscore, and colon only" />
-
-            <label for="password">Password <span class="required">*</span></label>
-            <input id="password" type="password" placeholder="Password" required minlength="4" maxlength="32" />
-
-            <div class="extra-fields" id="registerFields">
-                <label for="firstName">First Name</label>
-                <input id="firstName" type="text" placeholder="First Name" minlength="2" maxlength="100" />
-
-                <label for="lastName">Last Name</label>
-                <input id="lastName" type="text" placeholder="Last Name" minlength="2" maxlength="100" />
+            <div class="bp-form-row">
+                <label for="username">Username <span class="required">*</span></label>
+                <input id="username" type="text" placeholder="Username" required minlength="3" maxlength="16" pattern="[a-z0-9_:]+" title="Lowercase letters, numbers, underscore, and colon only" />
             </div>
 
-            <input type="submit" value="Submit" />
+            <div class="bp-form-row">
+                <label for="password">Password <span class="required">*</span></label>
+                <input id="password" type="password" placeholder="Password" required minlength="4" maxlength="32" />
+            </div>
 
-            <div id="errorMsg" role="alert" aria-live="assertive" style="display:none;"></div>
+            <div class="extra-fields" id="registerFields">
+                <div class="bp-form-row">
+                    <label for="firstName">First Name</label>
+                    <input id="firstName" type="text" placeholder="First Name" minlength="2" maxlength="100" />
+                </div>
+
+                <div class="bp-form-row">
+                    <label for="lastName">Last Name</label>
+                    <input id="lastName" type="text" placeholder="Last Name" minlength="2" maxlength="100" />
+                </div>
+            </div>
+
+            <button type="submit" class="bp-submit-btn">Submit</button>
+
+            <div id="errorMsg" class="bp-status error" role="alert" aria-live="assertive" style="display:none;"></div>
         </form>
     </div>
 
@@ -236,33 +179,33 @@
         $(document).ready(() => {
             let isRegister = false;
 
-            $('#loginBtn').click(() => {
+            $('#loginBtn').click((e) => {
+                e.preventDefault();
                 if (isRegister) {
                     isRegister = false;
                     $('#formTitle').text('Login');
                     $('#registerFields').removeClass('active');
                     $('#loginBtn').addClass('active');
                     $('#registerBtn').removeClass('active');
-
-                    // Clear error message
                     $('#errorMsg').hide().text('');
                 }
             });
 
-            $('#registerBtn').click(() => {
+            $('#registerBtn').click((e) => {
+                e.preventDefault();
                 if (!isRegister) {
                     isRegister = true;
                     $('#formTitle').text('Register');
                     $('#registerFields').addClass('active');
                     $('#registerBtn').addClass('active');
                     $('#loginBtn').removeClass('active');
-
-                    // Clear error message
                     $('#errorMsg').hide().text('');
                 }
             });
 
-            $('#loginForm').submit(() => {
+            $('#loginForm').submit((e) => {
+                e.preventDefault();
+                
                 const userData = {
                     username: $('#username').val(),
                     password: $('#password').val()
@@ -274,9 +217,7 @@
 
                     $.post('./register', userData)
                         .done(response => {
-                            // Clear any previous error
                             $('#errorMsg').hide().text('');
-
                             external.Property('DAToken', `<EncryptedData xmlns=\"http://www.w3.org/2001/04/xmlenc#\" Id=\"BinaryDAToken0\"><CipherData><CipherValue>${response.token}</CipherValue></CipherData></EncryptedData>`)
                             external.Property('DAStartTime', response.tokenIssuedAt)
                             external.Property('DAExpires', response.tokenExpires)
@@ -296,9 +237,7 @@
                 } else {
                     $.post('./login', userData)
                     .done(response => {
-                        // Clear any previous error
                         $('#errorMsg').hide().text('');
-
                         external.Property('DAToken', `<EncryptedData xmlns=\"http://www.w3.org/2001/04/xmlenc#\" Id=\"BinaryDAToken0\"><CipherData><CipherValue>${response.token}</CipherValue></CipherData></EncryptedData>`)
                         external.Property('DAStartTime', response.tokenIssuedAt)
                         external.Property('DAExpires', response.tokenExpires)
@@ -316,10 +255,10 @@
                         $('#errorMsg').text(errorText).show();
                     });
                 }
-
                 return false;
             });
         });
     </script>
 </body>
 </html>
+

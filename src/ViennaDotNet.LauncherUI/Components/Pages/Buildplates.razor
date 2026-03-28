@@ -1,0 +1,482 @@
+@page "/Buildplates"
+@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
+@using System.Diagnostics
+@using Serilog
+@using ViennaDotNet.BuildplateImporter
+@using ViennaDotNet.DB
+@using ViennaDotNet.EventBus.Client
+@using ViennaDotNet.LauncherUI.Utils
+@using ViennaDotNet.ObjectStore.Client
+@attribute [Authorize(Policy = Permissions.ViewBuildplates)]
+@rendermode InteractiveServer
+@inject AuthenticationStateProvider AuthStateProvider
+@inject ServerManager ServerManager
+
+<PageTitle>Buildplates - ViennaDotNet</PageTitle>
+
+<div class="container-fluid mt-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+        <div class="d-flex align-items-center">
+            <h2 class="mb-0">Buildplates</h2>
+            <span class="badge bg-secondary rounded-pill ms-2">
+                @(_totalBuildplateCount?.ToString() ?? "?")
+            </span>
+        </div>
+        
+        <div class="input-group" style="max-width: 400px;">
+            <input type="text" class="form-control" placeholder="Search by name..." @bind="_searchTerm"
+                   @bind:event="oninput" @onkeyup="HandleSearchKeyPress" />
+            <button class="btn btn-outline-secondary" type="button" @onclick="DoSearch">
+                <i class="bi bi-search"></i> Search
+            </button>
+        </div>
+
+        @if (HasPermission(Permissions.ManageBuildplates))
+        {
+            <a href="/Admin/ImportBuildplate" class="btn btn-primary fw-bold">
+                <i class="bi bi-plus-lg"></i> Import Buildplate(s)
+            </a>
+        }
+    </div>
+
+    <div class="row g-4">
+        @if (_buildplates == null || !_buildplates.Any())
+        {
+            <div class="col-12">
+                <div class="alert alert-info">
+                    @(string.IsNullOrWhiteSpace(_searchTerm)
+                        ? "No buildplates found. Try importing one!"
+                        : "No buildplates match your search.")
+                </div>
+            </div>
+        }
+        else
+        {
+            @foreach (var bp in _buildplates)
+            {
+                float scaleVal = 1f / bp.BlocksPerMeter;
+                string displayScale = scaleVal >= 1
+                    ? $"1:{scaleVal:0.##}"
+                    : $"{(1 / scaleVal):0.##}:1";
+
+                <div class="col-12 col-md-6 col-lg-4 col-xl-3">
+                    <div class="card h-100 shadow-sm @(bp.IsSaving ? "opacity-50" : "")">
+                        
+                        <div class="bg-dark text-secondary d-flex align-items-center justify-content-center position-relative"
+                             style="height: 220px; overflow: hidden;">
+                            <span>[ TODO: 3D Preview ]</span>
+                            
+                            <span class="position-absolute top-0 start-0 m-2 badge bg-info text-dark">
+                                @displayScale
+                            </span>
+
+                            <span
+                                class="position-absolute top-0 end-0 m-2 badge @(bp.IsNight ? "bg-secondary" : "bg-info text-dark")">
+                                @(bp.IsNight ? "Night" : "Day")
+                            </span>
+                        </div>
+
+                        <div class="card-body">
+                            @if (!string.IsNullOrEmpty(bp.ErrorMessage))
+                            {
+                                <div class="alert alert-danger alert-dismissible fade show small py-2" role="alert">
+                                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                    @bp.ErrorMessage
+                                    <button type="button" class="btn-close small" style="padding: 0.75rem"
+                                            @onclick="() => bp.ErrorMessage = null"></button>
+                                </div>
+                            }
+                            <div class="mb-3">
+                                <label class="form-label visually-hidden">Buildplate Name</label>
+                                <input type="text" minlength="1" maxlength="100" class="form-control fw-bold border-0 bg-light"
+                                       @bind="bp.Name" @bind:event="oninput"
+                                       disabled="@(!HasPermission(Permissions.ManageBuildplates) || bp.IsSaving)" />
+                            </div>
+
+                            <div class="row text-muted small">
+                                <div class="col-6 mb-2">
+                                    <span class="d-block fw-bold text-uppercase">Size</span>
+                                    <span>@(bp.Size)x@(bp.Size)</span>
+                                </div>
+                                <div class="col-6 mb-2">
+                                    <span class="d-block fw-bold text-uppercase">Blocks per meter</span>
+                                    <input type="number" min="1" max="100"
+                                           class="form-control form-control-sm border-0 bg-light" @bind="bp.BlocksPerMeter"
+                                           @bind:event="oninput"
+                                           disabled="@(!HasPermission(Permissions.ManageBuildplates) || bp.IsSaving)" />
+                                </div>
+                                <div class="col-12">
+                                    <span class="d-block fw-bold text-uppercase">Offset</span>
+                                    <span>@bp.Offset</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        @if (HasPermission(Permissions.ManageBuildplates))
+                        {
+                            <div class="card-footer bg-transparent border-top-0 pb-3 d-flex justify-content-between">
+                                <button class="btn btn-outline-danger btn-sm" @onclick="() => RequestDelete(bp)"
+                                        disabled="@bp.IsSaving">
+                                    Delete
+                                </button>
+                                @if (bp.IsDirty || bp.IsSaving)
+                                {
+                                    <button class="btn btn-success btn-sm fw-bold" @onclick="() => SaveBuildplate(bp)"
+                                            disabled="@bp.IsSaving">
+                                        @if (bp.IsSaving)
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-1"></span>
+                                        }
+                                        Save
+                                    </button>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        }
+    </div>
+
+    @if (TotalPages > 1)
+    {
+        <div class="d-flex justify-content-center mt-5 mb-3">
+            <nav aria-label="Buildplate pagination">
+                <ul class="pagination">
+                    <li class="page-item @(_currentPage == 1 ? "disabled" : "")">
+                        <button class="page-link" @onclick="PrevPage" tabindex="-1">Previous</button>
+                    </li>
+                    <li class="page-item disabled">
+                        <span class="page-link text-dark">Page @_currentPage of @TotalPages</span>
+                    </li>
+                    <li class="page-item @(_currentPage == TotalPages ? "disabled" : "")">
+                        <button class="page-link" @onclick="NextPage">Next</button>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    }
+</div>
+
+@if (_showDeleteModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Deletion</h5>
+                    <button type="button" class="btn-close" @onclick="CancelDelete"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete <strong>@_bpToDelete?.Name</strong>?</p>
+                    
+                    <div class="form-check form-switch mt-3">
+                        <input class="form-check-input" type="checkbox" id="removeTemplateCheckbox"
+                               @bind="_removeTemplateFromPlayers">
+                            <label class="form-check-label text-danger" for="removeTemplateToggle">
+                                Also remove this template from all players inventories
+                            </label>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-secondary" @onclick="CancelDelete"
+                                disabled="@_isDeleting">Cancel</button>
+                        <button type="button" class="btn btn-danger" @onclick="ConfirmDelete" disabled="@_isDeleting"
+                                style="min-width: 100px;">
+                            @if (_isDeleting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                <span>Deleting...</span>
+                            }
+                            else
+                            {
+                                <span>Delete</span>
+                            }
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(_deleteErrorMessage))
+    {
+        <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.6); z-index: 1060;">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-danger shadow-lg">
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title"><i class="bi bi-exclamation-octagon-fill me-2"></i>Deletion Failed</h5>
+                        <button type="button" class="btn-close btn-close-white" @onclick="CloseErrorModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>An error occurred while trying to delete <strong>@_bpToDelete?.Name</strong>:</p>
+                        <div class="alert alert-light border small text-break">
+                            @_deleteErrorMessage
+                        </div>
+                        <p class="mb-0">Please try again or report the issue if it persists.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseErrorModal">Close</button>
+                        <button type="button" class="btn btn-danger" @onclick="ConfirmDelete">
+                            <i class="bi bi-arrow-clockwise me-1"></i> Retry
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+@code {
+    private ClaimsPrincipal? _user;
+    private List<Buildplate> _buildplates = new();
+
+    private int? _totalBuildplateCount;
+    
+    // Search and Pagination State
+    private string _searchTerm = string.Empty;
+    private int _currentPage = 1;
+    private int _pageSize = 8;
+    private int _totalItems = 0;
+    private int TotalPages => Math.Max(1, (int)Math.Ceiling((double)_totalItems / _pageSize));
+
+    // Modal State
+    private bool _showDeleteModal = false;
+    private bool _isDeleting = false;
+    private Buildplate? _bpToDelete;
+    private bool _removeTemplateFromPlayers = false;
+    private string? _deleteErrorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        _user = authState.User;
+
+        await LoadBuildplates();
+    }
+
+    private async Task LoadBuildplates()
+    {
+        try
+        {
+            using var earthDB = EarthDB.Open(Settings.Instance.EarthDatabaseConnectionString ?? "");
+
+            int skip = (_currentPage - 1) * _pageSize;
+            string? searchFilter = string.IsNullOrWhiteSpace(_searchTerm) ? null : _searchTerm;
+
+            var results = await new EarthDB.ObjectQuery(false)
+                .SearchBuildplates(out var searchArguments, true, true, skip: skip, take: _pageSize, name: searchFilter?.Trim())
+                .ExecuteAsync(earthDB, default);
+
+            var (buildplates, buildplatesCount, totalCount) = results.GetBuildplates(searchArguments);
+            
+            Debug.Assert(totalCount is not null);
+            _totalItems = totalCount.Value;
+            if (string.IsNullOrWhiteSpace(searchFilter))
+            {
+                _totalBuildplateCount = totalCount.Value;
+            }
+            _buildplates.Clear(); // Clear current page data
+
+            foreach (var (buildplateId, dbBuildplate) in buildplates)
+            {
+                Debug.Assert(dbBuildplate is not null);
+            
+                var buildplate = new Buildplate()
+                {
+                    Id = buildplateId,
+                    Name = dbBuildplate.Name,
+                    Size = dbBuildplate.Size,
+                    Offset = dbBuildplate.Offset,
+                    BlocksPerMeter = dbBuildplate.Scale,
+                    IsNight = dbBuildplate.Night,
+                    ServerDataObjectId = dbBuildplate.ServerDataObjectId,
+                    PreviewObjectId = dbBuildplate.PreviewObjectId,
+                };
+                buildplate.AcceptChanges();
+
+                _buildplates.Add(buildplate);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"Could not connect to earth db: {ex}");
+        }
+    }
+
+    // --- Search Handlers ---
+    private async Task DoSearch()
+    {
+        _currentPage = 1; // Reset to page 1 on new search
+        await LoadBuildplates();
+    }
+
+    private async Task HandleSearchKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await DoSearch();
+        }
+    }
+
+    // --- Pagination Handlers ---
+    private async Task PrevPage()
+    {
+        if (_currentPage > 1)
+        {
+            _currentPage--;
+            await LoadBuildplates();
+        }
+    }
+
+    private async Task NextPage()
+    {
+        if (_currentPage < TotalPages)
+        {
+            _currentPage++;
+            await LoadBuildplates();
+        }
+    }
+
+    private async Task SaveBuildplate(Buildplate bp)
+    {
+        if (!HasPermission(Permissions.ManageBuildplates))
+        {
+            return;
+        }
+
+        bp.IsSaving = true;
+        bp.ErrorMessage = null;
+
+        bp.Name = bp.Name.Trim();
+
+        if (string.IsNullOrEmpty(bp.Name))
+        {
+            bp.ErrorMessage = "Name cannot be empty.";
+            bp.IsSaving = false;
+            return;
+        }
+
+        try
+        {
+            var earthDB = EarthDB.Open(Settings.Instance.EarthDatabaseConnectionString ?? "");
+            
+            await new EarthDB.ObjectQuery(true)
+                .UpdateBuildplate(bp.Id, new DB.Models.Global.TemplateBuildplate(bp.Name, bp.Size, bp.Offset, bp.BlocksPerMeter,
+bp.IsNight, bp.ServerDataObjectId, bp.PreviewObjectId))
+                .ExecuteAsync(earthDB, default);
+
+            await Task.Delay(250);
+
+            bp.AcceptChanges();
+            Log.Information($"Successfully updated buildplate {bp.Id}");
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"Failed to save buildplate '{bp.Id}'': {ex}");
+            bp.ErrorMessage = "Failed to save. Try again?";
+        }
+        finally
+        {
+            bp.IsSaving = false;
+        }
+    }
+
+    private void RequestDelete(Buildplate bp)
+    {
+        _bpToDelete = bp;
+        _removeTemplateFromPlayers = false;
+        _deleteErrorMessage = null;
+        _showDeleteModal = true;
+    }
+
+    private void CancelDelete()
+    {
+        _bpToDelete = null;
+        _removeTemplateFromPlayers = false;
+        _deleteErrorMessage = null;
+        _showDeleteModal = false;
+    }
+
+    private async Task ConfirmDelete()
+    {
+        _deleteErrorMessage = null;
+
+        if (ServerManager.Status is not ViennaDotNet.LauncherUI.ServerStatus.Online)
+        {
+            _deleteErrorMessage = "The server must be running to delete buildplates.";
+            return;
+        }
+        
+        if (_bpToDelete is not null && HasPermission(Permissions.ManageBuildplates))
+        {
+            try
+            {
+                _isDeleting = true;
+                StateHasChanged();
+
+                using var earthDB = EarthDB.Open(Settings.Instance.EarthDatabaseConnectionString ?? "");
+                using var eventBus = EventBusClient.Create($"localhost:{Settings.Instance.EventBusPort}");
+                using var objectStore = ObjectStoreClient.Create($"localhost:{Settings.Instance.ObjectStorePort}");
+            
+                var importer = new Importer(earthDB, eventBus, objectStore, Log.Logger);
+
+                if (!await importer.RemoveTemplateAsync(_bpToDelete.Id, _removeTemplateFromPlayers, default))
+                {
+                    _deleteErrorMessage = "Failed to delete buildplate, check Launcher logs for details.";
+                    return;
+                }
+                
+                await LoadBuildplates();
+                CancelDelete();
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Failed to delete buildplate");
+                _deleteErrorMessage = $"Failed to delete the buildplate: {ex.Message}";
+            }
+            finally
+            {
+                _isDeleting = false;
+            }
+        }
+    }
+
+    private void CloseErrorModal()
+    {
+        _deleteErrorMessage = null;
+    }
+
+    private bool HasPermission(string permission)
+        => _user?.HasPermission(permission) ?? false;
+
+    public sealed class Buildplate
+    {
+        public required string Id { get; set; }
+        
+        public required string Name { get; set; }
+        public int BlocksPerMeter { get; set; }
+        public int Size { get; set; }
+        public int Offset { get; set; }
+        public bool IsNight { get; set; }
+
+        public required string ServerDataObjectId { get; set; }
+        public required string PreviewObjectId { get; set; }
+
+        // Change Tracking
+        private string? _originalName;
+        private int _originalBlocksPerMeter = -1;
+
+        public bool IsDirty => Name != _originalName || BlocksPerMeter != _originalBlocksPerMeter;
+
+        // UI State
+        public bool IsSaving { get; set; }
+        public string? ErrorMessage { get; set; }
+
+        public void AcceptChanges()
+        {
+            _originalName = Name;
+            _originalBlocksPerMeter = BlocksPerMeter;
+        }
+    }
+}

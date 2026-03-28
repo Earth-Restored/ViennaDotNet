@@ -61,8 +61,9 @@ $launcherDir = Join-Path $PSScriptRoot "launcher"
 try {
     Set-Location -Path $launcherDir
 
-    if ($IsWindows) {
-        Start-Process -FilePath "./Launcher.exe" -Wait
+    if ((-not (Test-Path variable:IsWindows)) -or $IsWindows) {
+        $fullPath = Join-Path $launcherDir "Launcher.exe"
+        Start-Process -FilePath $fullPath -Wait
     } else {
         chmod +x ./Launcher
         ./Launcher

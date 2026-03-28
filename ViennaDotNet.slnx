@@ -10,8 +10,6 @@
   <Project Path="src/ViennaDotNet.Buildplate/ViennaDotNet.Buildplate.csproj">
   </Project>
   <Project Path="src/ViennaDotNet.BuildplateImporter/ViennaDotNet.BuildplateImporter.csproj" />
-  <Project Path="src/ViennaDotNet.Buildplate_Importer/ViennaDotNet.Buildplate_Importer.csproj">
-  </Project>
   <Project Path="src/ViennaDotNet.Common/ViennaDotNet.Common.csproj">
   </Project>
   <Project Path="src/ViennaDotNet.DB/ViennaDotNet.DB.csproj">

@@ -6,7 +6,7 @@
 @rendermode InteractiveServer
 @inject IJSRuntime JSRuntime
 
-<PageTitle>System Settings</PageTitle>
+<PageTitle>Server Options - ViennaDotNet</PageTitle>
 
 <div class="container mt-4">
     <h2>System Configuration</h2>
@@ -54,7 +54,7 @@
                             <ValidationMessage For="@(() => SettingsModel.ObjectStorePort)" />
                         </div>
                         <div class="col-12">
-                            <label class="form-label">IPv4 Address</label>
+                            <label class="form-label">PC Ipv4 Address or Hostname (without port)</label>
                             <InputText @bind-Value="SettingsModel.IPv4" class="form-control" placeholder="192.168.x.x" />
                             <ValidationMessage For="@(() => SettingsModel.IPv4)" />
                         </div>
@@ -216,8 +216,7 @@
             get; set;
         }
 
-        [Required(AllowEmptyStrings = false), RegularExpression(@"^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$", ErrorMessage =
-"Invalid IPv4 address format.")]
+        [Required(AllowEmptyStrings = false)]
         public string? IPv4 { get; set; }
 
         [Required(AllowEmptyStrings = false)]
@@ -237,18 +236,25 @@
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
+            UriHostNameType nameType = Uri.CheckHostName(IPv4);
+            if (nameType is not (UriHostNameType.Dns or UriHostNameType.IPv4))
+            {
+                yield return new ValidationResult("PC address is not a valid IPv4 or hostname.", new[] {
+nameof(IPv4) });
+            }
+
             if (EnableTileRendering)
             {
                 if (TileDataSource is Settings.TileDataSourceEnum.MapTiler && string.IsNullOrWhiteSpace(MapTilerApiKey))
                 {
-                    yield return new ValidationResult("MapTiler API Key is required when using MapTiler source.", new[] {
-nameof(MapTilerApiKey) });
+                    yield return new ValidationResult("MapTiler API Key is required when using MapTiler source.", new[]
+{nameof(MapTilerApiKey) });
                 }
 
                 if (TileDataSource is Settings.TileDataSourceEnum.PostgreSQL && string.IsNullOrWhiteSpace(TileDatabaseConnectionString))
                 {
-                    yield return new ValidationResult("Tile database connection string is required for PostgreSQL source.", new[] {
-nameof(TileDatabaseConnectionString) });
+                    yield return new ValidationResult("Tile database connection string is required for PostgreSQL source.", new[]
+{nameof(TileDatabaseConnectionString) });
                 }
             }
         }

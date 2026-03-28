@@ -1,6 +1,9 @@
 ﻿using Microsoft.Data.Sqlite;
+using Serilog;
+using System.Buffers;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Text.Json;
 using ViennaDotNet.Common;
 using ViennaDotNet.Common.Excceptions;
@@ -8,6 +11,7 @@ using ViennaDotNet.Common.Utils;
 
 [assembly: InternalsVisibleTo("Launcher")]
 [assembly: InternalsVisibleTo("ViennaDotNet.LauncherUI")]
+[assembly: InternalsVisibleTo("ViennaDotNet.BuildplateImporter")]
 
 namespace ViennaDotNet.DB;
 
@@ -172,7 +176,7 @@ public sealed class EarthDB : IDisposable
 
         private sealed record ExtrasEntry(string name, object value);
 
-        private sealed record ThenFunctionEntry(Func<Results, Task<Query>> function, bool replaceResults);
+        private sealed record ThenFunctionEntry(Func<Results, Task<Query?>> function, bool replaceResults);
 
         public Query(bool write)
         {
@@ -214,19 +218,19 @@ public sealed class EarthDB : IDisposable
             return this;
         }
 
-        public Query Then(Func<Results, Task<Query>> function)
+        public Query Then(Func<Results, Task<Query?>> function)
             => Then(function, true);
 
-        public Query Then(Func<Results, Task<Query>> function, bool replaceResults)
+        public Query Then(Func<Results, Task<Query?>> function, bool replaceResults)
         {
             thenFunctions.Add(new ThenFunctionEntry(function, replaceResults));
             return this;
         }
 
-        public Query Then(Func<Results, Query> function)
+        public Query Then(Func<Results, Query?> function)
             => Then(function, true);
 
-        public Query Then(Func<Results, Query> function, bool replaceResults)
+        public Query Then(Func<Results, Query?> function, bool replaceResults)
         {
             thenFunctions.Add(new ThenFunctionEntry(results => Task.FromResult(function(results)), replaceResults));
             return this;
@@ -400,7 +404,12 @@ public sealed class EarthDB : IDisposable
 
             foreach (var entry in thenFunctions)
             {
-                Query query = await entry.function(results);
+                Query? query = await entry.function(results);
+                if (query is null)
+                {
+                    continue;
+                }
+
                 Results innerResults = await query.ExecuteInternalAsync(transaction, write, updates, cancellationToken);
                 if (entry.replaceResults)
                 {
@@ -417,16 +426,29 @@ public sealed class EarthDB : IDisposable
         private readonly bool _write;
         private readonly List<WriteObjectsEntry> writeObjects = [];
         private readonly List<ReadObjectsEntry> readObjects = [];
+        private readonly List<SearchEntry> searchEntries = [];
         private readonly List<ExtrasEntry> extras = [];
         private readonly List<ThenFunctionEntry> thenFunctions = [];
 
-        private sealed record WriteObjectsEntry(string Table, object Id, string Value);
+        private sealed record WriteObjectsEntry(string Table, object Id, string? Value);
 
         private sealed record ReadObjectsEntry(string Table, object Id);
+
+        private sealed record SearchEntry(string Table, SearchArguments Arguments);
 
         private sealed record ExtrasEntry(string name, object value);
 
         private sealed record ThenFunctionEntry(Func<ObjectResults, ObjectQuery> function, bool replaceResults);
+
+        public readonly record struct SearchArguments(bool IncludeValues, bool GetTotalCount, int? Skip = null, int? Take = null, Dictionary<string, MatchValue>? MatchJson = null);
+
+        public readonly record struct MatchValue(string Value, MatchType Type);
+
+        public enum MatchType
+        {
+            Exact,
+            Like, // sql LIKE
+        }
 
         public ObjectQuery(bool write)
         {
@@ -434,7 +456,8 @@ public sealed class EarthDB : IDisposable
         }
 
         #region methods
-        public ObjectQuery UpdateTile(ulong pos, string objectId)
+        // null to remove
+        public ObjectQuery UpdateTile(ulong pos, string? objectId)
         {
             if (!_write)
             {
@@ -445,14 +468,15 @@ public sealed class EarthDB : IDisposable
             return this;
         }
 
-        public ObjectQuery UpdateBuildplate(string name, Models.Global.TemplateBuildplate buildplate)
+        // null to remove
+        public ObjectQuery UpdateBuildplate(string id, Models.Global.TemplateBuildplate? buildplate)
         {
             if (!_write)
             {
                 throw new UnsupportedOperationException();
             }
 
-            writeObjects.Add(new WriteObjectsEntry(BuildplatesTable, name, ToJson(buildplate)));
+            writeObjects.Add(new WriteObjectsEntry(BuildplatesTable, id, buildplate is null ? null : ToJson(buildplate)));
             return this;
         }
 
@@ -485,6 +509,26 @@ public sealed class EarthDB : IDisposable
                 GetBuildplate(name);
             }
 
+            return this;
+        }
+
+        public ObjectQuery SearchBuildplates(out SearchArguments arguments, bool includeValues, bool getTotalCount, int? skip = null, int? take = null, string? name = null)
+        {
+            Dictionary<string, MatchValue>? matchJson = null;
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                matchJson ??= [];
+                matchJson.Add("$.name", new MatchValue($"%{name}%", MatchType.Like));
+            }
+
+            arguments = new SearchArguments(includeValues, getTotalCount, skip, take, matchJson);
+
+            return SearchBuildplatesInternal(arguments);
+        }
+
+        public ObjectQuery SearchBuildplatesInternal(SearchArguments arguments)
+        {
+            searchEntries.Add(new SearchEntry(BuildplatesTable, arguments));
             return this;
         }
 
@@ -537,17 +581,27 @@ public sealed class EarthDB : IDisposable
                 throw new UnsupportedOperationException();
             }
 
-            ObjectResults results = new ObjectResults();
+            var results = new ObjectResults();
 
             foreach (WriteObjectsEntry entry in writeObjects)
             {
                 using (var command = transaction.Connection!.CreateCommand())
                 {
                     command.CommandTimeout = TRANSACTION_TIMEOUT;
-                    command.CommandText = $"INSERT OR REPLACE INTO {entry.Table}(id, value) VALUES ($id, $value)";
 
-                    command.Parameters.AddWithValue("$id", entry.Id);
-                    command.Parameters.AddWithValue("$value", entry.Value);
+                    if (entry.Value is null)
+                    {
+                        command.CommandText = $"DELETE FROM {entry.Table} WHERE id = $id";
+                        command.Parameters.AddWithValue("$id", entry.Id);
+                    }
+                    else
+                    {
+                        command.CommandText = $"INSERT OR REPLACE INTO {entry.Table}(id, value) VALUES ($id, $value)";
+
+                        command.Parameters.AddWithValue("$id", entry.Id);
+                        command.Parameters.AddWithValue("$value", entry.Value);
+                    }
+
                     await command.ExecuteNonQueryAsync(cancellationToken);
                 }
             }
@@ -573,6 +627,101 @@ public sealed class EarthDB : IDisposable
                         }
                     }
                 }
+            }
+
+            foreach (SearchEntry entry in searchEntries)
+            {
+                var list = new List<(string Id, string? Value)>();
+                var args = entry.Arguments;
+
+                int? totalCount = null;
+
+                using (var command = transaction.Connection!.CreateCommand())
+                {
+                    command.CommandTimeout = TRANSACTION_TIMEOUT;
+
+                    var whereClauses = new List<string>();
+
+                    if (args.MatchJson is not null && args.MatchJson.Count > 0)
+                    {
+                        int pIndex = 0;
+                        foreach (var kvp in args.MatchJson)
+                        {
+                            string op = kvp.Value.Type == MatchType.Like ? "LIKE" : "=";
+                            string pathParamName = $"@path_{pIndex}";
+                            string valParamName = $"@val_{pIndex}";
+
+                            whereClauses.Add($"json_extract(value, {pathParamName}) {op} {valParamName}");
+
+                            var pathParam = command.CreateParameter();
+                            pathParam.ParameterName = pathParamName;
+                            pathParam.Value = kvp.Key;
+                            command.Parameters.Add(pathParam);
+
+                            var valParam = command.CreateParameter();
+                            valParam.ParameterName = valParamName;
+                            valParam.Value = kvp.Value.Value ?? (object)DBNull.Value;
+                            command.Parameters.Add(valParam);
+
+                            pIndex++;
+                        }
+                    }
+
+                    string whereSql = whereClauses.Count > 0 ? "WHERE " + string.Join(" AND ", whereClauses) : "";
+
+                    string limitSql = "";
+                    if (args.Take.HasValue)
+                    {
+                        limitSql = $"LIMIT {args.Take.Value}";
+                        if (args.Skip.HasValue)
+                        {
+                            limitSql += $" OFFSET {args.Skip.Value}";
+                        }
+                    }
+                    else if (args.Skip.HasValue)
+                    {
+                        // SQLite requires LIMIT to be present if OFFSET is used
+                        limitSql = $"LIMIT -1 OFFSET {args.Skip.Value}";
+                    }
+
+                    string columns = args.IncludeValues ? "id, value" : "id";
+
+                    var sqlBuilder = new StringBuilder();
+
+                    if (args.GetTotalCount)
+                    {
+                        sqlBuilder.AppendLine($"SELECT COUNT(*) FROM {entry.Table} {whereSql};");
+                    }
+
+                    sqlBuilder.AppendLine($"SELECT {columns} FROM {entry.Table} {whereSql}");
+                    sqlBuilder.AppendLine("ORDER BY id");
+                    sqlBuilder.AppendLine(limitSql + ";");
+
+                    command.CommandText = sqlBuilder.ToString();
+
+                    using (var reader = await command.ExecuteReaderAsync(cancellationToken))
+                    {
+                        if (args.GetTotalCount)
+                        {
+                            if (await reader.ReadAsync(cancellationToken))
+                            {
+                                totalCount = reader.GetInt32(0);
+                            }
+
+                            await reader.NextResultAsync(cancellationToken);
+                        }
+
+                        while (await reader.ReadAsync(cancellationToken))
+                        {
+                            string id = reader.GetString(0);
+                            string? value = args.IncludeValues ? reader.GetString(1) : null;
+
+                            list.Add((id, value));
+                        }
+                    }
+                }
+
+                results.searchResults[(entry.Table, args)] = (list, totalCount);
             }
 
             foreach (ExtrasEntry entry in extras)
@@ -661,9 +810,11 @@ public sealed class EarthDB : IDisposable
         public record struct Result<T>(T Value, int Version);
     }
 
-    public class ObjectResults
+    public sealed class ObjectResults
     {
-        public Dictionary<(string, object), string?> getValues = [];
+        public Dictionary<(string TableName, ObjectQuery.SearchArguments SearchArguments), (List<(string Id, string? Value)> Results, int? TotalCount)> searchResults = [];
+
+        public Dictionary<(string TableName, object Id), string?> getValues = [];
         public Dictionary<string, object> extras = [];
 
         public ObjectResults()
@@ -680,6 +831,18 @@ public sealed class EarthDB : IDisposable
             => !getValues.TryGetValue((BuildplatesTable, id), out string? buildplateJson)
             ? null
             : buildplateJson is null ? null : FromJson<Models.Global.TemplateBuildplate>(buildplateJson);
+
+        public (IEnumerable<(string Id, Models.Global.TemplateBuildplate? Buildplate)> Buildplates, int Count, int? TotalCount) GetBuildplates(ObjectQuery.SearchArguments arguments)
+        {
+            if (!searchResults.TryGetValue((BuildplatesTable, arguments), out var item))
+            {
+                return ([], 0, 0);
+            }
+
+            var (results, totalCount) = item;
+
+            return (results.Select(result => (result.Id, result.Value is null ? null : FromJson<Models.Global.TemplateBuildplate>(result.Value))), results.Count, totalCount);
+        }
 
         public object GetExtra(string name)
             => !extras.TryGetValue(name, out object? value) || value is null

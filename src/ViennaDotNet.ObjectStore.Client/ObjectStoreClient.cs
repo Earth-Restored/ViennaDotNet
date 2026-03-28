@@ -4,7 +4,7 @@ using System.Text;
 
 namespace ViennaDotNet.ObjectStore.Client;
 
-public class ObjectStoreClient
+public class ObjectStoreClient : IDisposable
 {
     public static ObjectStoreClient Create(string connectionString)
     {
@@ -63,7 +63,7 @@ public class ObjectStoreClient
     private bool _closed = false;
 
     private Command? _currentCommand = null;
-    private LinkedList<Command> _queuedCommands = new();
+    private readonly LinkedList<Command> _queuedCommands = new();
 
     private ObjectStoreClient(Socket socket)
     {
@@ -242,6 +242,9 @@ public class ObjectStoreClient
             }
         }
     }
+
+    public void Dispose()
+        => Close();
 
     private void InitiateClose()
     {

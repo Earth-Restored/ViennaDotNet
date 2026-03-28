@@ -119,7 +119,9 @@ public sealed class Settings
             anyErrors = true;
         }
 
-        if (settings.IPv4 is null || !IPAddress.TryParse(settings.IPv4, out _))
+        UriHostNameType nameType = Uri.CheckHostName(settings.IPv4);
+
+        if (nameType != UriHostNameType.IPv4 && nameType != UriHostNameType.Dns)
         {
             Log.Warning($"IPv4 is invalid, using default: '{Default.IPv4}' (Change this in Options/IPv4)");
             settings.IPv4 = Default.IPv4;

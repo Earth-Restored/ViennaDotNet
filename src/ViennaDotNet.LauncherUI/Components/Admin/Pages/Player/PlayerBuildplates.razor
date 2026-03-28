@@ -1,0 +1,431 @@
+@page "/Admin/Players/{PlayerId}/Buildplates"
+@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
+@using System.Diagnostics
+@using Serilog
+@using ViennaDotNet.BuildplateImporter
+@using ViennaDotNet.DB
+@using ViennaDotNet.EventBus.Client
+@using ViennaDotNet.LauncherUI.Utils
+@using ViennaDotNet.ObjectStore.Client
+@attribute [Authorize(Policy = Permissions.ManagePlayers)]
+@rendermode InteractiveServer
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavManager
+@inject ServerManager ServerManager
+
+<PageTitle>Player Buildplates - ViennaDotNet</PageTitle>
+
+<div class="container-fluid py-3 px-md-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+        <a href="/Admin/Players" class="btn btn-link text-decoration-none p-0 mb-2">
+            <i class="bi bi-arrow-left"></i> Back to Players
+        </a>
+        <div class="d-flex align-items-baseline gap-2">
+            <h2 class="mb-0">
+                <i class="bi bi-boxes text-info me-2"></i>Buildplates for Player @(string.IsNullOrEmpty(_username) ?
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                PlayerId : $"{_username} (ID: {PlayerId})")
+            </h2>
+        </div>
+        
+        <button class="btn btn-primary fw-bold" @onclick="OpenAddModal">
+            <i class="bi bi-plus-lg"></i> Add Buildplate
+        </button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show shadow-sm mb-4" role="alert">
+            <i class="bi bi-exclamation-octagon-fill me-2"></i>
+            <strong>Error:</strong> @_errorMessage
+            <button type="button" class="btn-close" @onclick="() => _errorMessage = null" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="row g-4">
+        @if (_playerBuildplates is null)
+        {
+            <div class="col-12">
+                <div class="alert alert-info">
+                    Loading player buildplates...
+                </div>
+            </div>
+        }
+        else if (!_playerBuildplates.Any())
+        {
+            <div class="col-12">
+                <div class="alert alert-info">
+                    This player doesn't have any buildplates yet.
+                </div>
+            </div>
+        }
+        else
+        {
+            @foreach (var bp in _playerBuildplates)
+            {
+                <div class="col-12 col-md-6 col-lg-4 col-xl-3">
+                    <div class="card h-100 shadow-sm">
+                        <div class="bg-dark text-secondary d-flex align-items-center justify-content-center position-relative"
+                             style="height: 150px; overflow: hidden;">
+                            <span>[ TODO: 3D Preview ]</span>
+                            <span
+                                class="position-absolute top-0 end-0 m-2 badge @(bp.IsNight ? "bg-secondary" : "bg-info text-dark")">
+                                @(bp.IsNight ? "Night" : "Day")
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <h5 class="card-title text-truncate" title="@bp.Name">@bp.Name</h5>
+                            <div class="row text-muted small mt-3">
+                                <div class="col-6 mb-2">
+                                    <span class="d-block fw-bold text-uppercase">Size</span>
+                                    <span>@(bp.Size)x@(bp.Size)</span>
+                                </div>
+                                <div class="col-6 mb-2">
+                                    <span class="d-block fw-bold text-uppercase">BPM</span>
+                                    <span>@bp.BlocksPerMeter</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-transparent border-top-0 pb-3">
+                            <button class="btn btn-outline-danger btn-sm w-100"
+                                    @onclick="() => OpenRemoveBuildplateModal(bp.Id)">
+                                <i class="bi bi-trash me-1"></i> Remove
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@if (_showAddModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Select Template Buildplate</h5>
+                    <button type="button" class="btn-close" @onclick="CloseAddModal"></button>
+                </div>
+                <div class="modal-body bg-light">
+                    @if (_templates is null)
+                    {
+                        <div class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status"></div>
+                            <div class="mt-2 text-muted">Loading templates...</div>
+                        </div>
+                    }
+                    else if (!_templates.Any())
+                    {
+                        <div class="alert alert-warning">No template buildplates found in the database.</div>
+                    }
+                    else
+                    {
+                        <div class="list-group">
+                            @foreach (var template in _templates)
+                            {
+                                <div
+                                    class="list-group-item list-group-item-action d-flex justify-content-between align-items-center mb-2 shadow-sm rounded border">
+                                    <div>
+                                        <h6 class="mb-1 fw-bold">@template.Name</h6>
+                                        <small class="text-muted">
+                                            Size: @(template.Size)x@(template.Size) | BPM: @template.BlocksPerMeter |
+                                            @(template.IsNight ? "Night" : "Day")
+                                        </small>
+                                    </div>
+                                    <button class="btn btn-sm btn-success"
+                                            @onclick="async () => await AddBuildplateFromTemplate(template)">
+                                        <i class="bi bi-plus-circle me-1"></i> Add
+                                    </button>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseAddModal">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (_showDeleteModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.6);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-danger shadow-lg">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="bi bi-exclamation-triangle me-2"></i>Confirm Removal</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseDeleteModal"></button>
+                </div>
+                <div class="modal-body py-4 text-center">
+                    <p class="mb-1">Are you sure you want to remove this buildplate from the player?</p>
+                    <strong class="fs-5">@_nameToDelete</strong>
+                    <div class="text-muted small mt-2">This action cannot be undone.</div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseDeleteModal">Cancel</button>
+                    <button type="button" class="btn btn-danger px-4" @onclick="ConfirmDelete">Remove Buildplate</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public required string PlayerId { get; set; }
+
+    private ClaimsPrincipal? _user;
+    private string? _username;
+
+    // State
+    private List<PlayerBuildplate>? _playerBuildplates;
+    private List<TemplateDto>? _templates;
+    private bool _showAddModal = false;
+    private string? _errorMessage; // New error state
+
+    // State for Deletion
+    private bool _showDeleteModal = false;
+    private string? _idToDelete;
+    private string? _nameToDelete;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        _user = authState.User;
+
+        try
+        {
+            using var liveDb = DataUtils.OpenLiveDB(Settings.Instance);
+            if (liveDb is not null)
+            {
+                _username = await DataUtils.GetUsername(PlayerId, liveDb);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"Failed to get username for player '{PlayerId}': {ex}");
+        }
+
+        await LoadPlayerBuildplates();
+
+        await LoadBuildplateTemplates();
+    }
+
+    private async Task LoadPlayerBuildplates()
+    {
+        _errorMessage = null; // Clear previous errors
+
+        DB.Models.Player.Buildplates buildplatesModel;
+        try
+        {
+            using var earthDB = EarthDB.Open(Settings.Instance.EarthDatabaseConnectionString ?? "");
+
+            EarthDB.Results results = await new EarthDB.Query(false)
+                .Get("buildplates", PlayerId, typeof(DB.Models.Player.Buildplates))
+                .ExecuteAsync(earthDB, default);
+            buildplatesModel = results.Get<DB.Models.Player.Buildplates>("buildplates");
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"Failed to load buildplates for player '{PlayerId}': {ex}");
+            _errorMessage = "Could not load buildplates. Please check the database connection.";
+            _playerBuildplates = new();
+            return;
+        }
+
+        _playerBuildplates = new(buildplatesModel._buildplates.Count);
+        foreach (var (buildplateId, buildplate) in buildplatesModel._buildplates)
+        {
+            _playerBuildplates.Add(new PlayerBuildplate()
+            {
+                Id = buildplateId,
+                Name = buildplate.Name,
+                Size = buildplate.Size,
+                BlocksPerMeter = buildplate.Scale,
+                IsNight = buildplate.Night,
+            });
+        }
+    }
+
+    private async Task LoadBuildplateTemplates()
+    {
+        try
+        {
+            using var earthDB = EarthDB.Open(Settings.Instance.EarthDatabaseConnectionString ?? "");
+
+            // todo: "pagination" by loading on scroll and search
+            var results = await new EarthDB.ObjectQuery(false)
+                .SearchBuildplates(out var searchArguments, true, true)
+                .ExecuteAsync(earthDB, default);
+
+            var (buildplates, _, _) = results.GetBuildplates(searchArguments);
+
+            _templates = new List<TemplateDto>();
+
+            foreach (var (id, dbBp) in buildplates)
+            {
+                if (dbBp != null)
+                {
+                    _templates.Add(new TemplateDto
+                    {
+                        Id = id,
+                        Name = dbBp.Name,
+                        Size = dbBp.Size,
+                        BlocksPerMeter = dbBp.Scale,
+                        IsNight = dbBp.Night
+                    });
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"Could not load templates for player assignment: {ex}");
+            _templates = new List<TemplateDto>();
+        }
+    }
+
+    private void OpenAddModal()
+        => _showAddModal = true;
+
+    private void CloseAddModal()
+        => _showAddModal = false;
+
+    private async Task AddBuildplateFromTemplate(TemplateDto template)
+    {
+        if (_playerBuildplates is null)
+        {
+            return;
+        }
+
+        _errorMessage = null;
+
+        if (ServerManager.Status is not ServerStatus.Online)
+        {
+            _errorMessage = "The server must be running to add buildplates to the player.";
+            CloseAddModal();
+            return;
+        }
+
+        try
+        {
+            using var earthDB = EarthDB.Open(Settings.Instance.EarthDatabaseConnectionString ?? "");
+            using var eventBus = EventBusClient.Create($"localhost:{Settings.Instance.EventBusPort}");
+            using var objectStore = ObjectStoreClient.Create($"localhost:{Settings.Instance.ObjectStorePort}");
+
+            var importer = new Importer(earthDB, eventBus, objectStore, Log.Logger);
+
+            var buildplateId = await importer.AddBuidplateToPlayer(template.Id, PlayerId, default);
+            if (buildplateId is null)
+            {
+                _errorMessage = $"The importer failed to add template '{template.Name}' to the player.";
+                CloseAddModal();
+                return;
+            }
+
+            _playerBuildplates.Add(new PlayerBuildplate
+            {
+                Id = buildplateId,
+                Name = template.Name,
+                Size = template.Size,
+                BlocksPerMeter = template.BlocksPerMeter,
+                IsNight = template.IsNight
+            });
+
+            CloseAddModal();
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"Failed to add buildplate '{template.Id}' to player '{PlayerId}': {ex}");
+            _errorMessage = $"An error occurred while importing the buildplate: {ex.Message}";
+            CloseAddModal();
+        }
+    }
+
+    private void OpenRemoveBuildplateModal(string id)
+    {
+        _errorMessage = null;
+
+        var item = _playerBuildplates?.FirstOrDefault(x => x.Id == id);
+        if (item is not null)
+        {
+            if (ServerManager.Status is not ServerStatus.Online)
+            {
+                _errorMessage = "The server must be running to add buildplates to the player.";
+                return;
+            }
+
+            _idToDelete = id;
+            _nameToDelete = item.Name;
+            _showDeleteModal = true;
+        }
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (_idToDelete != null && _playerBuildplates != null)
+        {
+            var item = _playerBuildplates.FirstOrDefault(x => x.Id == _idToDelete);
+            if (item is not null)
+            {
+                try
+                {
+                    if (await RemoveBuildplate(_idToDelete))
+                    {
+                        _playerBuildplates.Remove(item);
+                    }
+                    else
+                    {
+                        _errorMessage = $"An error occurred while removing the buildplate.";
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.Error($"Failed to remove buildplate '{_idToDelete}' from player '{PlayerId}': {ex}");
+                    _errorMessage = $"An error occurred while removing the buildplate: {ex.Message}";
+                }
+            }
+        }
+
+        CloseDeleteModal();
+    }
+
+    private async Task<bool> RemoveBuildplate(string id)
+    {
+        using var earthDB = EarthDB.Open(Settings.Instance.EarthDatabaseConnectionString ?? "");
+        using var eventBus = EventBusClient.Create($"localhost:{Settings.Instance.EventBusPort}");
+        using var objectStore = ObjectStoreClient.Create($"localhost:{Settings.Instance.ObjectStorePort}");
+
+        var importer = new Importer(earthDB, eventBus, objectStore, Log.Logger);
+
+        return await importer.RemoveBuildplateFromPlayer(id, PlayerId, default);
+    }
+
+    private void CloseDeleteModal()
+    {
+        _showDeleteModal = false;
+        _idToDelete = null;
+        _nameToDelete = null;
+    }
+
+    public class PlayerBuildplate
+    {
+        public required string Id { get; set; }
+        public required string Name { get; set; }
+        public int Size { get; set; }
+        public int BlocksPerMeter { get; set; }
+        public bool IsNight { get; set; }
+    }
+
+    public class TemplateDto
+    {
+        public required string Id { get; set; }
+        public required string Name { get; set; }
+        public int Size { get; set; }
+        public int BlocksPerMeter { get; set; }
+        public bool IsNight { get; set; }
+    }
+}

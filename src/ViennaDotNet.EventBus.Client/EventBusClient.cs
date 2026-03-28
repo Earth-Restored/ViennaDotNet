@@ -6,7 +6,7 @@ using ViennaDotNet.Common.Utils;
 
 namespace ViennaDotNet.EventBus.Client;
 
-public sealed class EventBusClient
+public sealed class EventBusClient : IDisposable
 {
     public static EventBusClient Create(string connectionString)
     {
@@ -237,6 +237,9 @@ public sealed class EventBusClient
             Log.Error($"Exception in outgoing thread: {ex}");
         }
     }
+
+    public void Dispose()
+        => Close();
 
     private void InitiateClose()
     {
