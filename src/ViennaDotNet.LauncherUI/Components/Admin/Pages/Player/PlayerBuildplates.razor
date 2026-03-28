@@ -24,7 +24,7 @@
         <div class="d-flex align-items-baseline gap-2">
             <h2 class="mb-0">
                 <i class="bi bi-boxes text-info me-2"></i>Buildplates for Player @(string.IsNullOrEmpty(_username) ?
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                PlayerId : $"{_username} (ID: {PlayerId})")
+                                                                                                                                                                         PlayerId : $"{_username} (ID: {PlayerId})")
             </h2>
         </div>
         
@@ -63,33 +63,90 @@
         {
             @foreach (var bp in _playerBuildplates)
             {
+                float scaleVal = 1f / bp.BlocksPerMeter;
+                string displayScale = scaleVal >= 1
+                    ? $"1:{scaleVal:0.##}"
+                    : $"{(1 / scaleVal):0.##}:1";
+
                 <div class="col-12 col-md-6 col-lg-4 col-xl-3">
-                    <div class="card h-100 shadow-sm">
+                    <div class="card h-100 shadow-sm @(bp.IsBusy ? "opacity-50" : "")">
                         <div class="bg-dark text-secondary d-flex align-items-center justify-content-center position-relative"
                              style="height: 150px; overflow: hidden;">
                             <span>[ TODO: 3D Preview ]</span>
+                            
+                            <span class="position-absolute top-0 start-0 m-2 badge bg-info text-dark">
+                                @displayScale
+                            </span>
+
                             <span
                                 class="position-absolute top-0 end-0 m-2 badge @(bp.IsNight ? "bg-secondary" : "bg-info text-dark")">
                                 @(bp.IsNight ? "Night" : "Day")
                             </span>
                         </div>
                         <div class="card-body">
-                            <h5 class="card-title text-truncate" title="@bp.Name">@bp.Name</h5>
-                            <div class="row text-muted small mt-3">
+                            @if (!string.IsNullOrEmpty(bp.ErrorMessage))
+                            {
+                                <div class="alert alert-danger alert-dismissible fade show small py-2" role="alert">
+                                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                    @bp.ErrorMessage
+                                    <button type="button" class="btn-close small" style="padding: 0.75rem"
+                                            @onclick="() => bp.ErrorMessage = null"></button>
+                                </div>
+                            }
+                            
+                            <div class="mb-3">
+                                <label class="form-label visually-hidden">Buildplate Name</label>
+                                <input type="text" minlength="1" maxlength="100" class="form-control fw-bold border-0 bg-light"
+                                       @bind="bp.Name" @bind:event="oninput"
+                                       disabled="@(!HasPermission(Permissions.ManagePlayers) || bp.IsBusy)" />
+                            </div>
+
+                            <div class="row text-muted small">
                                 <div class="col-6 mb-2">
                                     <span class="d-block fw-bold text-uppercase">Size</span>
                                     <span>@(bp.Size)x@(bp.Size)</span>
                                 </div>
                                 <div class="col-6 mb-2">
                                     <span class="d-block fw-bold text-uppercase">BPM</span>
-                                    <span>@bp.BlocksPerMeter</span>
+                                    <input type="number" min="1" max="100"
+                                           class="form-control form-control-sm border-0 bg-light" @bind="bp.BlocksPerMeter"
+                                           @bind:event="oninput"
+                                           disabled="@(!HasPermission(Permissions.ManagePlayers) || bp.IsBusy)" />
                                 </div>
                             </div>
                         </div>
-                        <div class="card-footer bg-transparent border-top-0 pb-3">
-                            <button class="btn btn-outline-danger btn-sm w-100"
-                                    @onclick="() => OpenRemoveBuildplateModal(bp.Id)">
-                                <i class="bi bi-trash me-1"></i> Remove
+                        <div class="card-footer bg-transparent border-top-0 pb-3 d-flex flex-column gap-2">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <button class="btn btn-outline-danger btn-sm" @onclick="() => OpenRemoveBuildplateModal(bp.Id)"
+                                        disabled="@bp.IsBusy">
+                                    <i class="bi bi-trash me-1"></i> Remove
+                                </button>
+
+                                @if (bp.IsDirty || bp.IsSaving)
+                                {
+                                    <button class="btn btn-success btn-sm fw-bold" @onclick="() => SaveBuildplate(bp)"
+                                            disabled="@bp.IsBusy">
+                                        @if (bp.IsSaving)
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-1"></span>
+                                        }
+                                        Save
+                                    </button>
+                                }
+                            </div>
+                            
+                            <button class="btn btn-outline-primary btn-sm w-100 fw-bold" @onclick="() => RegeneratePreview(bp)"
+                                    disabled="@bp.IsBusy">
+                                @if (bp.IsRegeneratingPreview)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                    <span>Regenerating...</span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-gear-fill me-1"></i>
+                                    <span>Regenerate In-Game Preview</span>
+                                }
                             </button>
                         </div>
                     </div>
@@ -240,14 +297,18 @@
         _playerBuildplates = new(buildplatesModel._buildplates.Count);
         foreach (var (buildplateId, buildplate) in buildplatesModel._buildplates)
         {
-            _playerBuildplates.Add(new PlayerBuildplate()
+            var bp = new PlayerBuildplate()
             {
                 Id = buildplateId,
                 Name = buildplate.Name,
                 Size = buildplate.Size,
                 BlocksPerMeter = buildplate.Scale,
                 IsNight = buildplate.Night,
-            });
+            };
+
+            bp.AcceptChanges();
+
+            _playerBuildplates.Add(bp);
         }
     }
 
@@ -312,11 +373,7 @@
 
         try
         {
-            using var earthDB = EarthDB.Open(Settings.Instance.EarthDatabaseConnectionString ?? "");
-            using var eventBus = EventBusClient.Create($"localhost:{Settings.Instance.EventBusPort}");
-            using var objectStore = ObjectStoreClient.Create($"localhost:{Settings.Instance.ObjectStorePort}");
-
-            var importer = new Importer(earthDB, eventBus, objectStore, Log.Logger);
+            using var importer = await Importer.CreateFromSettings(Settings.Instance, Log.Logger);
 
             var buildplateId = await importer.AddBuidplateToPlayer(template.Id, PlayerId, default);
             if (buildplateId is null)
@@ -395,11 +452,7 @@
 
     private async Task<bool> RemoveBuildplate(string id)
     {
-        using var earthDB = EarthDB.Open(Settings.Instance.EarthDatabaseConnectionString ?? "");
-        using var eventBus = EventBusClient.Create($"localhost:{Settings.Instance.EventBusPort}");
-        using var objectStore = ObjectStoreClient.Create($"localhost:{Settings.Instance.ObjectStorePort}");
-
-        var importer = new Importer(earthDB, eventBus, objectStore, Log.Logger);
+        using var importer = await Importer.CreateFromSettings(Settings.Instance, Log.Logger);
 
         return await importer.RemoveBuildplateFromPlayer(id, PlayerId, default);
     }
@@ -411,6 +464,103 @@
         _nameToDelete = null;
     }
 
+    private async Task SaveBuildplate(PlayerBuildplate bp)
+    {
+        if (!HasPermission(Permissions.ManagePlayers))
+        {
+            return;
+        }
+
+        bp.IsSaving = true;
+        bp.ErrorMessage = null;
+        bp.Name = bp.Name.Trim();
+
+        if (string.IsNullOrEmpty(bp.Name))
+        {
+            bp.ErrorMessage = "Name cannot be empty.";
+            bp.IsSaving = false;
+            return;
+        }
+
+        try
+        {
+            using var earthDB = EarthDB.Open(Settings.Instance.EarthDatabaseConnectionString ?? "");
+
+            var results = await new EarthDB.Query(false)
+                .Get("buildplates", PlayerId, typeof(DB.Models.Player.Buildplates))
+                .ExecuteAsync(earthDB, default);
+            var playerBuildplates = results.Get<DB.Models.Player.Buildplates>("buildplates");
+
+            if (playerBuildplates._buildplates.TryGetValue(bp.Id, out var dbBuildplate))
+            {
+                dbBuildplate = dbBuildplate with { Name = bp.Name, Scale = bp.BlocksPerMeter, };
+                playerBuildplates.AddBuildplate(bp.Id, dbBuildplate);
+
+                await new EarthDB.Query(true)
+                    .Update("buildplates", PlayerId, playerBuildplates)
+                    .ExecuteAsync(earthDB, default);
+
+                await Task.Delay(250);
+                
+                bp.AcceptChanges();
+                Log.Information($"Successfully updated buildplate {bp.Id} for player {PlayerId}");
+            }
+            else
+            {
+                bp.ErrorMessage = "Buildplate not found in database.";
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"Failed to save buildplate '{bp.Id}' for player '{PlayerId}': {ex}");
+            bp.ErrorMessage = "Failed to save. Try again?";
+        }
+        finally
+        {
+            bp.IsSaving = false;
+        }
+    }
+
+    private async Task RegeneratePreview(PlayerBuildplate bp)
+    {
+        if (!HasPermission(Permissions.ManagePlayers)) return;
+
+        bp.IsRegeneratingPreview = true;
+        bp.ErrorMessage = null;
+
+        if (ServerManager.Status is not ViennaDotNet.LauncherUI.ServerStatus.Online)
+        {
+            bp.ErrorMessage = "The server must be running.";
+            bp.IsRegeneratingPreview = false;
+            return;
+        }
+
+        try
+        {
+            using var importer = await Importer.CreateFromSettings(Settings.Instance, Log.Logger);
+
+            if (!await importer.RegeneratePlayerBuildplatePreviewAsync(PlayerId, bp.Id, default))
+            {
+                bp.ErrorMessage = "Failed to regenerate preview, check Launcher logs for details.";
+                return;
+            }
+
+            Log.Information($"Successfully regenerated preview for player buildplate {bp.Id}");
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"Failed to regenerate preview for player buildplate '{bp.Id}': {ex}");
+            bp.ErrorMessage = "Failed to regenerate preview. Try again?";
+        }
+        finally
+        {
+            bp.IsRegeneratingPreview = false;
+        }
+    }
+
+    private bool HasPermission(string permission)
+        => _user?.HasPermission(permission) ?? false;
+
     public class PlayerBuildplate
     {
         public required string Id { get; set; }
@@ -418,6 +568,24 @@
         public int Size { get; set; }
         public int BlocksPerMeter { get; set; }
         public bool IsNight { get; set; }
+
+        // Change Tracking
+        private string? _originalName;
+        private int _originalBlocksPerMeter = -1;
+
+        public bool IsDirty => Name != _originalName || BlocksPerMeter != _originalBlocksPerMeter;
+
+        // UI State
+        public bool IsSaving { get; set; }
+        public bool IsRegeneratingPreview { get; set; }
+        public bool IsBusy => IsSaving || IsRegeneratingPreview;
+        public string? ErrorMessage { get; set; }
+
+        public void AcceptChanges()
+        {
+            _originalName = Name;
+            _originalBlocksPerMeter = BlocksPerMeter;
+        }
     }
 
     public class TemplateDto

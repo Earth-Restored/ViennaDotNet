@@ -143,14 +143,14 @@ public class BuildplatesController : ViennaControllerBase
             return NotFound();
         }
 
-        byte[]? serverData = await objectStoreClient.Get(buildplate.ServerDataObjectId).Task as byte[];
+        byte[]? serverData = (await objectStoreClient.Get(buildplate.ServerDataObjectId).Task) as byte[];
         if (serverData is null)
         {
             Log.Error($"Data object {buildplate.ServerDataObjectId} for buildplate {buildplateId} could not be loaded from object store");
             return StatusCode(StatusCodes.Status500InternalServerError);
         }
 
-        string? sharedBuildplateServerDataObjectId = await objectStoreClient.Store(serverData).Task as string;
+        string? sharedBuildplateServerDataObjectId = (await objectStoreClient.Store(serverData).Task) as string;
         if (sharedBuildplateServerDataObjectId is null)
         {
             Log.Error("Could not store data object for shared buildplate in object store");

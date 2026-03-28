@@ -5,6 +5,7 @@
 @using ViennaDotNet.BuildplateImporter
 @using ViennaDotNet.DB
 @using ViennaDotNet.EventBus.Client
+@using ViennaDotNet.LauncherUI.Utils
 @using ViennaDotNet.ObjectStore.Client
 @attribute [Authorize(Policy = Permissions.ManageBuildplates)]
 @rendermode InteractiveServer
@@ -236,11 +237,7 @@
 
         try
         {
-            using var earthDB = EarthDB.Open(Settings.Instance.EarthDatabaseConnectionString ?? "");
-            using var eventBus = EventBusClient.Create($"localhost:{Settings.Instance.EventBusPort}");
-            using var objectStore = ObjectStoreClient.Create($"localhost:{Settings.Instance.ObjectStorePort}");
-            
-            var importer = new Importer(earthDB, eventBus, objectStore, Log.Logger);
+            using var importer = await Importer.CreateFromSettings(Settings.Instance, Log.Logger);
             int successCount = 0;
 
             foreach (var fileState in filesToUpload)

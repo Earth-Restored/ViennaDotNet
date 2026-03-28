@@ -10,6 +10,7 @@ An unofficial port of [Project Vienna](https://github.com/Project-Genoa/Vienna) 
 **ViennaDotNet** is an independent, community-driven project and is **not affiliated with, authorized, maintained, endorsed, or sponsored** by Microsoft Corporation, Mojang Studios, or any of their affiliates or subsidiaries.
 
 * *Minecraft Earth™* is a trademark of Microsoft Corporation. All trademarks and registered trademarks are the property of their respective owners.
+* This project does not distribute, host, or provide access to original game assets, proprietary binaries, or resource packs. Users are responsible for providing their own legally obtained assets.
 * This software is provided solely for educational, research, and archival purposes to restore functionality to a discontinued service.
 * This project is provided "as-is" without any warranty of any kind, express or implied. In no event shall the authors be held liable for any claim, damages, or other liability.
 
