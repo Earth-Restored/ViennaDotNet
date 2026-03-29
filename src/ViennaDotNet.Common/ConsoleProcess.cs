@@ -72,31 +72,14 @@ public sealed class ConsoleProcess
         {
             Process.StartInfo.WorkingDirectory = workingDir;
         }
-
-        var formattedArgs = args.Select(a =>
-        {
-            if (string.IsNullOrEmpty(a))
-            {
-                return "\"\"";
-            }
-
-            if (a.Contains(" ") || a.Contains("{") || a.Contains("\""))
-            {
-                return $"\"{a.Replace("\"", "\\\"")}\"";
-            }
-
-            return a;
-        });
-
-        string arguments = string.Join(" ", formattedArgs);
-
+        
         if (OpenInNewWindow)
         {
-            ApplyTerminalWrapper(arguments);
+            ApplyTerminalWrapper(args);
         }
         else
         {
-            Process.StartInfo.Arguments = arguments;
+            Process.StartInfo.Arguments = FormatStandardArguments(args);
         }
 
         Process.Start();
@@ -108,7 +91,6 @@ public sealed class ConsoleProcess
             Process.BeginErrorReadLine();
         }
     }
-
 
     public void Write(string data)
     {
@@ -129,6 +111,26 @@ public sealed class ConsoleProcess
     public void WriteLine(string data)
         => Write(data + Environment.NewLine);
 
+    private static string FormatStandardArguments(IEnumerable<string> args)
+    {
+        var formattedArgs = args.Select(a =>
+        {
+            if (string.IsNullOrEmpty(a))
+            {
+                return "\"\"";
+            }
+
+            if (a.Contains(" ") || a.Contains("{") || a.Contains("\""))
+            {
+                return $"\"{a.Replace("\"", "\\\"")}\"";
+            }
+
+            return a;
+        });
+
+        return string.Join(" ", formattedArgs);
+    }
+
     private void OnProcessExited()
         => ProcessExited?.Invoke(this, EventArgs.Empty);
 
@@ -138,25 +140,38 @@ public sealed class ConsoleProcess
     public void StopAndWait(int timeout = 15 * 1000)
         => Process.StopGracefullyOrKill(timeout);
 
-    private void ApplyTerminalWrapper(string formattedArgs)
+    private void ApplyTerminalWrapper(IEnumerable<string> args)
     {
         Process.StartInfo.UseShellExecute = true;
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             Process.StartInfo.FileName = "cmd.exe";
-
-            Process.StartInfo.Arguments = $"/k \"\"{_filePath}\" {formattedArgs}\"";
+            string arguments = FormatStandardArguments(args);
+            Process.StartInfo.Arguments = $"/k \"\"{_filePath}\" {arguments}\"";
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
         {
             Process.StartInfo.FileName = "x-terminal-emulator";
-            Process.StartInfo.Arguments = $"-e bash -c \"'{_filePath}' {formattedArgs}; exec bash\"";
+
+            var linuxArgs = args.Select(a => $"'{a.Replace("'", "'\\''")}'");
+
+            string innerCommand = $"'{_filePath.Replace("'", "'\\''")}' {string.Join(" ", linuxArgs)}; exec bash";
+
+            string safeInnerCommand = innerCommand
+                .Replace("\\", "\\\\")
+                .Replace("$", "\\$")
+                .Replace("\"", "\\\"");
+
+            Process.StartInfo.Arguments = $"-e bash -c \"{safeInnerCommand}\"";
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
-            string command = $"'{_filePath}' {formattedArgs}";
+            // todo: currently not tested
+            string arguments = FormatStandardArguments(args);
+            string command = $"'{_filePath}' {arguments}";
             string appleScript = $"tell application \"Terminal\" to do script \"{command.Replace("\"", "\\\"")}\"";
+
             Process.StartInfo.FileName = "osascript";
             Process.StartInfo.Arguments = $"-e \"{appleScript}\"";
         }
