@@ -36,12 +36,6 @@ internal static class Program
 
     private static int Main(string[] args)
     {
-        Console.CancelKeyPress += (sender, e) =>
-        {
-            Log.Information("Ctrl+C received, ignored");
-            e.Cancel = true;
-        };
-
         if (!Debugger.IsAttached)
         {
             AppDomain.CurrentDomain.UnhandledException += (object sender, UnhandledExceptionEventArgs e) =>
@@ -104,6 +98,13 @@ internal static class Program
         string javaCmd = JavaLocator.Locate();
         Starter starter = new Starter(eventBusClient, options.EventBusConnectionString, options.PublicAddress, javaCmd, options.BridgeJar, options.ServerTemplateDir, options.FabricJarName, options.ConnectorPluginJar);
         InstanceManager instanceManager = new InstanceManager(eventBusClient, starter);
+
+        Console.CancelKeyPress += (sender, e) =>
+        {
+            Log.Information("Ctrl+C received");
+            instanceManager.Shutdown();
+            e.Cancel = true;
+        };
 
         AppDomain.CurrentDomain.ProcessExit += (sender, e) =>
         {

@@ -17,10 +17,15 @@
 - Show roles on profile page
 - Export buildplates in both formats
 - Launch/connect to remote components - e.g. run buildplate launcher on another PC
+- Detect if the server is already running - require: EventBus, ObjetcStore, ApiServer and BuildplateLauncher
 - Edit player buildplate name and scale
 - View the player buildplate's template (if exists) - open page, search id?
 - Add the level reward buildplates and add them to level ups
 - NFC mini figures
+- Some kind of auth for the logs, maybe pass a random secret to the cli args and verify it in the controller?
+- A lot of things are quite slower on windows, investigate and/or add spinners
+- Associate a player profile with a user, permissions that only allow editing the associated player.
+- find out the tokens for the first time tutorial, daily login and possibly more
 
 ## Refactoring
 

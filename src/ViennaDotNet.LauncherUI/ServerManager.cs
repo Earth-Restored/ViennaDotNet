@@ -132,9 +132,11 @@ public class ServerManager
 
         await Task.Delay(1500, cancellationToken); // required for next components, wait for startup
 
-        ApiServer.Run(settings, logger);
-        cancellationToken.ThrowIfCancellationRequested();
         BuildplateLauncher.Run(settings, logger);
+
+        await Task.Delay(1500, cancellationToken); // required for api server preview generation, wait for startup
+
+        ApiServer.Run(settings, logger);
         cancellationToken.ThrowIfCancellationRequested();
         TappablesGenerator.Run(settings, logger);
         if (settings.EnableTileRenderingLabel ?? true)

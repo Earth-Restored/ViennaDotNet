@@ -58,15 +58,31 @@ foreach ($buildProfile in $profiles) {
 $originalPath = Get-Location
 $launcherDir = Join-Path $PSScriptRoot "launcher"
 
+if ((-not $isWindows) -and (-not $isLinux)) {
+    $isWindows = [System.Environment]::OSVersion.Platform -eq [System.PlatformID]::Win32NT
+    $isLinux = [System.Environment]::OSVersion.Platform -eq [System.PlatformID]::Unix
+}
+
 try {
     Set-Location -Path $launcherDir
+    
+    if ($isWindows) {
+        $originalTitle = $Host.UI.RawUI.WindowTitle
+        $Host.UI.RawUI.WindowTitle = "ViennaDotNet Launcher"
 
-    if ((-not (Test-Path variable:IsWindows)) -or $IsWindows) {
         $fullPath = Join-Path $launcherDir "Launcher.exe"
-        Start-Process -FilePath $fullPath -Wait
+        $launcher = Start-Process -FilePath $fullPath -PassThru
+        Wait-Process -Id $launcher.Id
+    } elseif ($isLinux) {
+        $originalTitle = $null
+        Write-Host "`e]0;ViennaDotNet Launcher`a"
+
+        $fullPath = Join-Path $launcherDir "Launcher"
+        chmod +x $fullPath
+        $launcher = Start-Process -FilePath $fullPath -PassThru
+        Wait-Process -Id $launcher.Id
     } else {
-        chmod +x ./Launcher
-        ./Launcher
+        Write-Host "Unsupported platform"
     }
 }
 catch {
@@ -74,6 +90,14 @@ catch {
 }
 finally {
     Set-Location -Path $originalPath
+    
+    if ($isWindows) {
+        $Host.UI.RawUI.WindowTitle = $originalTitle
+    } elseif ($isLinux) {
+        Write-Host "`e]0;$originalTitle`a"
+    } else {
+        Write-Host "Unsupported platform"
+    }
 }
 '@
     $startScriptContent | Out-File -FilePath "$publishDir/run_launcher.ps1" -Encoding utf8

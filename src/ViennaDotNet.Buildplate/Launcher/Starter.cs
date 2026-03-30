@@ -52,7 +52,7 @@ public class Starter
 
         int port = FindPort(portsInUse, BASE_PORT);
         int serverInternalPort = FindPort(serverInternalPortsInUse, SERVER_INTERNAL_BASE_PORT);
-        Instance instance = Instance.Run(_eventBusClient, playerId, buildplateId, buildplateSource, instanceId, survival, night, saveEnabled, inventoryType, shutdownTime, _publicAddress, port, serverInternalPort, _javaCmd, _fountainBridgeJar, _serverTemplateDir, _fabricJarName, _connectorPluginJar, baseDir, _eventBusConnectionString);
+        var instance = Instance.Run(_eventBusClient, playerId, buildplateId, buildplateSource, instanceId, survival, night, saveEnabled, inventoryType, shutdownTime, _publicAddress, port, serverInternalPort, _javaCmd, _fountainBridgeJar, _serverTemplateDir, _fabricJarName, _connectorPluginJar, baseDir, _eventBusConnectionString);
         new Thread(() =>
         {
             instance.WaitForShutdown();
@@ -89,7 +89,7 @@ public class Starter
 
     private DirectoryInfo? CreateInstanceBaseDir(string instanceId)
     {
-        DirectoryInfo file = new DirectoryInfo(Path.Combine(_tmpDir.FullName, $"vienna-buildplate-instance_{instanceId}"));
+        var file = new DirectoryInfo(Path.Combine(_tmpDir.FullName, $"vienna-buildplate-instance_{instanceId}"));
         if (!file.TryCreate())
         {
             Log.Error($"Error creating instance base directory for {instanceId}");

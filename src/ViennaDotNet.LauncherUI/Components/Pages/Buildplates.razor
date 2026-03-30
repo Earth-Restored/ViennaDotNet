@@ -61,7 +61,7 @@
                     : $"{(1 / scaleVal):0.##}:1";
 
                 <div class="col-12 col-md-6 col-lg-4 col-xl-3">
-                    <div class="card h-100 shadow-sm @(bp.IsSaving ? "opacity-50" : "")">
+                    <div class="card h-100 shadow-sm @(bp.IsBusy ? "opacity-50" : "")">
                         
                         <div class="bg-dark text-secondary d-flex align-items-center justify-content-center position-relative"
                              style="height: 220px; overflow: hidden;">
@@ -91,7 +91,7 @@
                                 <label class="form-label visually-hidden">Buildplate Name</label>
                                 <input type="text" minlength="1" maxlength="100" class="form-control fw-bold border-0 bg-light"
                                        @bind="bp.Name" @bind:event="oninput"
-                                       disabled="@(!HasPermission(Permissions.ManageBuildplates) || bp.IsSaving)" />
+                                       disabled="@(!HasPermission(Permissions.ManageBuildplates) || bp.IsBusy)" />
                             </div>
 
                             <div class="row text-muted small">
@@ -104,7 +104,7 @@
                                     <input type="number" min="1" max="100"
                                            class="form-control form-control-sm border-0 bg-light" @bind="bp.BlocksPerMeter"
                                            @bind:event="oninput"
-                                           disabled="@(!HasPermission(Permissions.ManageBuildplates) || bp.IsSaving)" />
+                                           disabled="@(!HasPermission(Permissions.ManageBuildplates) || bp.IsBusy)" />
                                 </div>
                                 <div class="col-12">
                                     <span class="d-block fw-bold text-uppercase">Offset</span>
@@ -115,22 +115,39 @@
 
                         @if (HasPermission(Permissions.ManageBuildplates))
                         {
-                            <div class="card-footer bg-transparent border-top-0 pb-3 d-flex justify-content-between">
-                                <button class="btn btn-outline-danger btn-sm" @onclick="() => RequestDelete(bp)"
-                                        disabled="@bp.IsSaving">
-                                    Delete
-                                </button>
-                                @if (bp.IsDirty || bp.IsSaving)
-                                {
-                                    <button class="btn btn-success btn-sm fw-bold" @onclick="() => SaveBuildplate(bp)"
-                                            disabled="@bp.IsSaving">
-                                        @if (bp.IsSaving)
-                                        {
-                                            <span class="spinner-border spinner-border-sm me-1"></span>
-                                        }
-                                        Save
+                            <div class="card-footer bg-transparent border-top-0 pb-3 d-flex flex-column gap-2">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <button class="btn btn-outline-danger btn-sm" @onclick="() => RequestDelete(bp)"
+                                            disabled="@bp.IsBusy">
+                                        Delete
                                     </button>
-                                }
+
+                                    @if (bp.IsDirty || bp.IsSaving)
+                                    {
+                                        <button class="btn btn-success btn-sm fw-bold" @onclick="() => SaveBuildplate(bp)"
+                                                disabled="@bp.IsBusy">
+                                            @if (bp.IsSaving)
+                                            {
+                                                <span class="spinner-border spinner-border-sm me-1"></span>
+                                            }
+                                            Save
+                                        </button>
+                                    }
+                                </div>
+                            
+                                <button class="btn btn-outline-primary btn-sm w-100 fw-bold" @onclick="() => RegeneratePreview(bp)"
+                                        disabled="@bp.IsBusy">
+                                    @if (bp.IsRegeneratingPreview)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                        <span>Regenerating...</span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-gear-fill me-1"></i>
+                                        <span>Regenerate In-Game Preview</span>
+                                    }
+                                </button>
                             </div>
                         }
                     </div>
@@ -338,6 +355,46 @@
         }
     }
 
+    private async Task RegeneratePreview(Buildplate bp)
+    {
+        if (!HasPermission(Permissions.ManageBuildplates))
+        {
+            return;
+        }
+
+        bp.IsRegeneratingPreview = true;
+        bp.ErrorMessage = null;
+
+        if (ServerManager.Status is not ViennaDotNet.LauncherUI.ServerStatus.Online)
+        {
+            bp.ErrorMessage = "The server must be running.";
+            bp.IsRegeneratingPreview = false;
+            return;
+        }
+
+        try
+        {
+            using var importer = await Importer.CreateFromSettings(Settings.Instance, Log.Logger);
+
+            if (!await importer.RegenerateTemplatePreviewAsync(bp.Id, default))
+            {
+                bp.ErrorMessage = "Failed to regenerate preview, check Launcher logs for details.";
+                return;
+            }
+
+            Log.Information($"Successfully regenerated preview for buildplate {bp.Id}");
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"Failed to regenerate preview: {ex}");
+            bp.ErrorMessage = "Failed to regenerate preview. Try again?";
+        }
+        finally
+        {
+            bp.IsRegeneratingPreview = false;
+        }
+    }
+
     private async Task SaveBuildplate(Buildplate bp)
     {
         if (!HasPermission(Permissions.ManageBuildplates))
@@ -415,11 +472,7 @@ bp.IsNight, bp.ServerDataObjectId, bp.PreviewObjectId))
                 _isDeleting = true;
                 StateHasChanged();
 
-                using var earthDB = EarthDB.Open(Settings.Instance.EarthDatabaseConnectionString ?? "");
-                using var eventBus = EventBusClient.Create($"localhost:{Settings.Instance.EventBusPort}");
-                using var objectStore = ObjectStoreClient.Create($"localhost:{Settings.Instance.ObjectStorePort}");
-            
-                var importer = new Importer(earthDB, eventBus, objectStore, Log.Logger);
+                using var importer = await Importer.CreateFromSettings(Settings.Instance, Log.Logger);
 
                 if (!await importer.RemoveTemplateAsync(_bpToDelete.Id, _removeTemplateFromPlayers, default))
                 {
@@ -471,6 +524,10 @@ bp.IsNight, bp.ServerDataObjectId, bp.PreviewObjectId))
 
         // UI State
         public bool IsSaving { get; set; }
+        public bool IsRegeneratingPreview { get; set; }
+        
+        public bool IsBusy => IsSaving || IsRegeneratingPreview;
+
         public string? ErrorMessage { get; set; }
 
         public void AcceptChanges()

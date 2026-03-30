@@ -6,6 +6,8 @@
 *app.db*
 test/
 
+build/
+
 # dotenv files
 .env
 
