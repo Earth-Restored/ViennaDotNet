@@ -1,10 +1,11 @@
 ﻿@page "/bptest"
+@using HomagGroup.Blazor3D.Extras.Core
 @rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
 
 <PageTitle>Counter</PageTitle>
 
 <p>
-    ABC sdfsd
+    Buildplate render test
 </p>
 
 <div class="row justify-content-center">
@@ -18,8 +19,6 @@
     </div>
 </div>
 
-
-
 @code {
     private Viewer View3D1 = null!;
     private Viewer View3D2 = null!;
@@ -30,12 +29,14 @@
     private ViewerSettings settings2 = new ViewerSettings()
     {
         ContainerId = "example2",
+        ShowViewHelper = false,
     };
 
     private Scene scene1 = new Scene();
     private Scene scene2 = new Scene();
-    protected override Task OnInitializedAsync()
+    protected override async Task OnInitializedAsync()
     {
+        // View3D1.Import3DModelAsync()
         scene1.Add(new AmbientLight());
         scene1.Add(new PointLight()
         {
@@ -46,6 +47,7 @@
                 Z = 0
             }
         });
+        
         scene2.Add(new AmbientLight());
         scene2.Add(new PointLight()
         {
@@ -56,6 +58,7 @@
                 Z = 0
             }
         });
+        
         scene1.Add(new Mesh());
         scene1.Add(new Mesh
         {
@@ -109,6 +112,6 @@
             }
         });
 
-        return base.OnInitializedAsync();
+        await base.OnInitializedAsync();
     }
 }
