@@ -1,11 +1,114 @@
 ﻿@page "/bptest"
-@using System.Numerics
 @rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
 
 <PageTitle>Counter</PageTitle>
 
 <p>
-    ABC
+    ABC sdfsd
 </p>
 
-<Viewer UseDefaultScene=@true></Viewer>
+<div class="row justify-content-center">
+    <div class="col-6 v3d">
+        <Viewer @ref="View3D1" ViewerSettings=@settings1 Scene=scene1 />
+    </div>
+</div>
+<div class="row justify-content-center">
+    <div class="col-6 v3d">
+        <Viewer @ref="View3D2" ViewerSettings=@settings2 Scene=scene2 />
+    </div>
+</div>
+
+
+
+@code {
+    private Viewer View3D1 = null!;
+    private Viewer View3D2 = null!;
+    private ViewerSettings settings1 = new ViewerSettings()
+    {
+        ContainerId = "example1",
+    };
+    private ViewerSettings settings2 = new ViewerSettings()
+    {
+        ContainerId = "example2",
+    };
+
+    private Scene scene1 = new Scene();
+    private Scene scene2 = new Scene();
+    protected override Task OnInitializedAsync()
+    {
+        scene1.Add(new AmbientLight());
+        scene1.Add(new PointLight()
+        {
+            Position = new Vector3
+            {
+                X = 1,
+                Y = 3,
+                Z = 0
+            }
+        });
+        scene2.Add(new AmbientLight());
+        scene2.Add(new PointLight()
+        {
+            Position = new Vector3
+            {
+                X = 1,
+                Y = 3,
+                Z = 0
+            }
+        });
+        scene1.Add(new Mesh());
+        scene1.Add(new Mesh
+        {
+            Geometry = new BoxGeometry
+            {
+                Width = 2,
+                Height = 0.5f
+            },
+            Position = new Vector3
+            {
+                X = -1,
+                Y = 1,
+                Z = -1
+            }
+                        ,
+            Rotation = new Euler
+            {
+                X = Math.PI / 4
+            }
+        });
+
+        scene1.Add(new Mesh
+        {
+            Geometry = new CircleGeometry(),
+            Position = new Vector3
+            {
+                X = 1,
+                Y = 1,
+                Z = -1
+            },
+            Scale = new Vector3(0.5f, 1f, 1f)
+        });
+
+        scene2.Add(new Mesh
+        {
+            Geometry = new BoxGeometry
+            {
+                Width = 5,
+                Height = 0.7f
+            },
+            Position = new Vector3
+            {
+                X = -1,
+                Y = 0,
+                Z = -1
+            }
+                        ,
+            Rotation = new Euler
+            {
+                X = Math.PI / 4
+            }
+        });
+
+        return base.OnInitializedAsync();
+    }
+}
