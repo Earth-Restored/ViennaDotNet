@@ -47,7 +47,7 @@ public sealed class BlockElementJson
 
     public Vector3 To { get; init; }
 
-    // todo: rotation
+    public BlockElementRotationJson? Rotation { get; init; }
 
     public bool Shade { get; init; }
 
@@ -57,19 +57,73 @@ public sealed class BlockElementJson
     public BlockElementFacesJson Faces { get; init; }
 }
 
+[StructLayout(LayoutKind.Auto)]
+public readonly struct BlockElementRotationJson
+{
+    // the center of the rotation
+    public Vector3 Origin { get; init; }
+
+    // whether or not to scale the faces across the whole block by scaling the non-rotated faces by 1 / cos(angle)
+    [JsonPropertyName("rescale")]
+    public bool ReScale { get; init; }
+
+    // either all angles
+    // in degrees
+    public float X { get; init; }
+
+    public float Y { get; init; }
+
+    public float Z { get; init; }
+
+    // or axis
+    public Axis? Axis { get; init; }
+
+    // in degrees
+    public float? Angle { get; init; }
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum Axis
+{
+    [JsonStringEnumMemberName("x")] X,
+    [JsonStringEnumMemberName("y")] Y,
+    [JsonStringEnumMemberName("z")] Z
+}
+
 public sealed class BlockElement
 {
+    // 0 to 15 -> 0 to 1
     public Vector3 From { get; init; }
 
+    // 0 to 15 -> 0 to 1
     public Vector3 To { get; init; }
 
-    // todo: rotation
+    public BlockElementRotation? Rotation { get; init; }
 
     public bool Shade { get; init; }
 
+    // 0 - 15
     public int LightEmission { get; init; }
 
     public BlockElementFaces Faces { get; init; }
+}
+
+[StructLayout(LayoutKind.Auto)]
+public readonly struct BlockElementRotation
+{
+    // the center of the rotation
+    public Vector3 Origin { get; init; }
+
+    // whether or not to scale the faces across the whole block by scaling the non-rotated faces by 1 / cos(angle)
+    [JsonPropertyName("rescale")]
+    public bool ReScale { get; init; }
+
+    // in degrees
+    public float X { get; init; }
+
+    public float Y { get; init; }
+
+    public float Z { get; init; }
 }
 
 [StructLayout(LayoutKind.Auto)]
@@ -113,6 +167,7 @@ public sealed class BlockFaceJson
 
 public sealed class BlockFace
 {
+    // 0 to 15 -> 0 to 1
     public UVCoordinates UV { get; init; }
 
     // not the final texture, but the texture variable

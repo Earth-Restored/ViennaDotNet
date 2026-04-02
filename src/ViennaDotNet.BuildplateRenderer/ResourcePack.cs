@@ -194,6 +194,33 @@ public sealed class ResourcePack
 
                 foreach (var element in json.Elements)
                 {
+                    BlockElementRotation? rotation = null;
+                    if (element.Rotation is { } eRot)
+                    {
+                        if (eRot.Axis is { } axis && eRot.Angle is { } angle)
+                        {
+                            rotation = new BlockElementRotation()
+                            {
+                                Origin = eRot.Origin,  
+                                ReScale = eRot.ReScale,  
+                                X = axis is Axis.X ? angle : 0,
+                                Y = axis is Axis.Y ? angle : 0,
+                                Z = axis is Axis.Z ? angle : 0,
+                            };
+                        }
+                        else
+                        {
+                            rotation = new BlockElementRotation()
+                            {
+                                Origin = eRot.Origin,  
+                                ReScale = eRot.ReScale,  
+                                X = eRot.X,
+                                Y = eRot.Y,
+                                Z = eRot.Z,
+                            };
+                        }
+                    }
+
                     var faces = new BlockElementFaces();
                     faces[0] = CreateBlockFace(element.Faces.East, element.From, element.To, 0);
                     faces[1] = CreateBlockFace(element.Faces.West, element.From, element.To, 1);
@@ -206,6 +233,7 @@ public sealed class ResourcePack
                     {
                         From = element.From,
                         To = element.To,
+                        Rotation = rotation,
                         Shade = element.Shade,
                         LightEmission = element.LightEmission,
                         Faces = faces,

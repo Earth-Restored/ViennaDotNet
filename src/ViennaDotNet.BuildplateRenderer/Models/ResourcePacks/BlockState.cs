@@ -153,6 +153,7 @@ public sealed class VariantModel : IEquatable<VariantModel>
     [JsonPropertyName("z")]
     public int RotationZ { get; init; } // in degrees
 
+    // locks the rotation of the texture of a block, if set to true. This way the texture does not rotate with the block when the x and y rotation.
     [JsonPropertyName("uvlock")]
     public bool UVLock { get; init; }
 

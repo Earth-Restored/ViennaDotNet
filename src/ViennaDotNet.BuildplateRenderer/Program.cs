@@ -21,4 +21,6 @@ if (worldData is null)
 
 var meshGenerator = new MeshGenerator(resourcePack);
 
-await meshGenerator.GenerateAsync(worldData);
+var mesh = await meshGenerator.GenerateAsync(worldData);
+
+Console.WriteLine("Done");
