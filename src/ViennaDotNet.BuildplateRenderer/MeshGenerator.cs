@@ -235,6 +235,7 @@ internal sealed class MeshGenerator
                     var neighbor = getBlockAtPos(neighborPos);
                     if (neighbor is not null)
                     {
+                        // todo: compute faceGrid for this face too, cull if they are equal
                         if (IsBlockFullAndOpaque(neighbor.Value, (Direction)((int)actualCullDir ^ 1)))
                         {
                             disposeBlockState(neighbor.Value);

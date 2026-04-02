@@ -55,7 +55,7 @@ internal class Program
             var material = new MaterialBuilder(textureId)
                 .WithBaseColor(new SharpGLTF.Memory.MemoryImage(textureBytes))
                 .WithDoubleSide(false)
-                .WithAlpha(AlphaMode.OPAQUE); // todo: BLEND
+                .WithAlpha(AlphaMode.MASK); // todo: BLEND
 
             var textureBuilder = material.GetChannel(KnownChannel.BaseColor).Texture;
             textureBuilder.MinFilter = SharpGLTF.Schema2.TextureMipMapFilter.NEAREST;
