@@ -36,17 +36,6 @@ public class MeshData
 
 internal sealed class MeshGenerator
 {
-    private static readonly FrozenSet<string> InvisibleBlocks = new HashSet<string>()
-    {
-        "minecraft:air",
-        "fountain:solid_air",
-        "fountain:non_replaceable_air",
-        "fountain:invisible_constraint",
-        "fountain:blend_constraint",
-        "fountain:border_constraint",
-    }.ToFrozenSet(StringComparer.Ordinal);
-
-
     private const float BlockModelScale = 1f / 16f;
 
     private readonly ResourcePack _resourcePack;
@@ -117,7 +106,7 @@ internal sealed class MeshGenerator
         bool foundVisibleBlock = false;
         foreach (var entry in palette)
         {
-            if (!InvisibleBlocks.Contains(((StringTag)((CompoundTag)entry)["Name"]).Value))
+            if (!ChunkUtils.InvisibleBlocks.Contains(((StringTag)((CompoundTag)entry)["Name"]).Value))
             {
                 foundVisibleBlock = true;
                 break;
@@ -128,6 +117,8 @@ internal sealed class MeshGenerator
         {
             return;
         }
+
+        var chunkBlockPosition = chunkPosition * ChunkUtils.SubChunkSize;
 
         var blocks = blockStates.ContainsKey("data")
             ? ChunkUtils.ReadBlockData((LongArrayTag)blockStates["data"])
@@ -141,14 +132,14 @@ internal sealed class MeshGenerator
         foreach (var blockIndex in blocks)
         {
             Debug.Assert(blockPosition.X is >= 0 and < ChunkUtils.Width);
-            Debug.Assert(blockPosition.Y is >= 0 and < ChunkUtils.SubChunkHeight);
+            Debug.Assert(blockPosition.Y is >= 0 and < ChunkUtils.SubChunkSize);
             Debug.Assert(blockPosition.Z is >= 0 and < ChunkUtils.Width);
 
             var paletteEntry = (CompoundTag)palette[blockIndex];
 
             string blockName = ((StringTag)paletteEntry["Name"]).Value;
 
-            if (!InvisibleBlocks.Contains(blockName))
+            if (!ChunkUtils.InvisibleBlocks.Contains(blockName))
             {
                 if (blockName is "minecraft:water" or "minecraft:lava")
                 {
@@ -161,11 +152,6 @@ internal sealed class MeshGenerator
                 {
                     foreach (var item in (ICollection<KeyValuePair<string, Tag>>)(CompoundTag)propertiesTag)
                     {
-                        // if (item.Key is "waterlogged")
-                        // {
-                        //     continue;
-                        // }
-
                         if (propertiesArrayLength >= propertiesArray.Length)
                         {
                             ArrayPool<KeyValuePair<string, string>>.Shared.Return(propertiesArray);
@@ -176,12 +162,22 @@ internal sealed class MeshGenerator
                     }
                 }
 
-                var blockState = Models.ResourcePacks.BlockState.CreateNoCopy(blockName, propertiesArray, propertiesArrayLength);
+                var blockState = BlockState.CreateNoCopy(blockName, propertiesArray, propertiesArrayLength);
 
                 var modelVariantsLength = _resourcePack.GetModelVariant(blockState, _rng, modelVariants);
                 foreach (var modelVariant in modelVariants.AsSpan(0, modelVariantsLength))
                 {
-                    GenerateBlockMesh(modelVariant, chunkPosition + blockPosition, mesh);
+                    GenerateBlockMesh(modelVariant, chunkBlockPosition + blockPosition, mesh, blockPosition =>
+                    {
+                        var localPosition = blockPosition - chunkBlockPosition;
+
+                        if (!localPosition.InBounds(ChunkUtils.SubChunkSize, ChunkUtils.SubChunkSize, ChunkUtils.SubChunkSize))
+                        {
+                            return null;
+                        }
+
+                        return ChunkUtils.TagToBlockStateVisibleFromPool((CompoundTag)palette[blocks[localPosition.X + localPosition.Z * ChunkUtils.Width + localPosition.Y * ChunkUtils.Width * ChunkUtils.Width]]);
+                    }, blockState => ArrayPool<KeyValuePair<string, string>>.Shared.Return(blockState._properties));
                 }
             }
 
@@ -202,7 +198,7 @@ internal sealed class MeshGenerator
         ArrayPool<VariantModel>.Shared.Return(modelVariants);
     }
 
-    private void GenerateBlockMesh(VariantModel modelVariant, int3 blockPosition, MeshData mesh)
+    private void GenerateBlockMesh(VariantModel modelVariant, int3 blockPosition, MeshData mesh, Func<int3, BlockState?> getBlockAtPos, Action<BlockState> disposeBlockState)
     {
         var model = _resourcePack.GetBlockModel(modelVariant.Model);
 
@@ -218,13 +214,35 @@ internal sealed class MeshGenerator
 
             for (int i = 0; i < 6; i++)
             {
-                var direction = (Direcion)i;
+                var direction = (Direction)i;
 
                 BlockFace? face = element.Faces[(int)direction];
 
                 if (face is null)
                 {
                     continue;
+                }
+
+                if (face.CullFace.HasValue)
+                {
+                    // Rotate the defined cull direction based on the variant's transform
+                    Vector3 cullNormal = GetDirectionVector3(face.CullFace.Value);
+                    var rotatedNormal = Vector3.TransformNormal(cullNormal, variantTransform);
+                    Direction actualCullDir = GetClosestDirection(rotatedNormal);
+
+                    int3 neighborPos = blockPosition + GetDirectionOffset(actualCullDir);
+
+                    var neighbor = getBlockAtPos(neighborPos);
+                    if (neighbor is not null)
+                    {
+                        if (IsBlockFullAndOpaque(neighbor.Value, (Direction)((int)actualCullDir ^ 1)))
+                        {
+                            disposeBlockState(neighbor.Value);
+                            continue;
+                        }
+
+                        disposeBlockState(neighbor.Value);
+                    }
                 }
 
                 string actualTexture = face.Texture;
@@ -244,7 +262,7 @@ internal sealed class MeshGenerator
         }
     }
 
-    private static void BuildFace(Vector3 blockPosition, Direcion dir, Vector3 from, Vector3 to, BlockFace face, Matrix4x4 transform, bool uvLock, MeshPrimitive primitive)
+    private static void BuildFace(Vector3 blockPosition, Direction dir, Vector3 from, Vector3 to, BlockFace face, Matrix4x4 transform, bool uvLock, MeshPrimitive primitive)
     {
         int startIndex = primitive.Vertices.Count;
 
@@ -337,49 +355,49 @@ internal sealed class MeshGenerator
              * Matrix4x4.CreateTranslation(center);
     }
 
-    private static void GetFaceVertices(Direcion dir, Vector3 from, Vector3 to, Span<Vector3> corners, out Vector3 normal)
+    private static void GetFaceVertices(Direction dir, Vector3 from, Vector3 to, Span<Vector3> corners, out Vector3 normal)
     {
         Debug.Assert(corners.Length is 4);
 
         // Z may need to be flipped
         switch (dir)
         {
-            case Direcion.Up: // +Y
+            case Direction.Up: // +Y
                 normal = Vector3.UnitY;
                 corners[0] = new Vector3(from.X, to.Y, from.Z);
                 corners[1] = new Vector3(from.X, to.Y, to.Z);
                 corners[2] = new Vector3(to.X, to.Y, to.Z);
                 corners[3] = new Vector3(to.X, to.Y, from.Z);
                 break;
-            case Direcion.Down: // -Y
+            case Direction.Down: // -Y
                 normal = -Vector3.UnitY;
                 corners[0] = new Vector3(from.X, from.Y, to.Z);
                 corners[1] = new Vector3(from.X, from.Y, from.Z);
                 corners[2] = new Vector3(to.X, from.Y, from.Z);
                 corners[3] = new Vector3(to.X, from.Y, to.Z);
                 break;
-            case Direcion.East: // +X
+            case Direction.East: // +X
                 normal = Vector3.UnitX;
                 corners[0] = new Vector3(to.X, to.Y, to.Z);
                 corners[1] = new Vector3(to.X, from.Y, to.Z);
                 corners[2] = new Vector3(to.X, from.Y, from.Z);
                 corners[3] = new Vector3(to.X, to.Y, from.Z);
                 break;
-            case Direcion.West: // -X
+            case Direction.West: // -X
                 normal = -Vector3.UnitX;
                 corners[0] = new Vector3(from.X, to.Y, from.Z);
                 corners[1] = new Vector3(from.X, from.Y, from.Z);
                 corners[2] = new Vector3(from.X, from.Y, to.Z);
                 corners[3] = new Vector3(from.X, to.Y, to.Z);
                 break;
-            case Direcion.North: // -Z
+            case Direction.North: // -Z
                 normal = -Vector3.UnitZ;
                 corners[0] = new Vector3(to.X, to.Y, from.Z);
                 corners[1] = new Vector3(to.X, from.Y, from.Z);
                 corners[2] = new Vector3(from.X, from.Y, from.Z);
                 corners[3] = new Vector3(from.X, to.Y, from.Z);
                 break;
-            case Direcion.South: // +Z
+            case Direction.South: // +Z
                 normal = Vector3.UnitZ;
                 corners[0] = new Vector3(from.X, to.Y, to.Z);
                 corners[1] = new Vector3(from.X, from.Y, to.Z);
@@ -436,6 +454,188 @@ internal sealed class MeshGenerator
                 result[2] = result[1];
                 result[1] = result[0];
                 result[0] = tmp;
+            }
+        }
+    }
+
+    private static int3 GetDirectionOffset(Direction dir)
+        => dir switch
+        {
+            Direction.East => new int3(1, 0, 0),
+            Direction.West => new int3(-1, 0, 0),
+            Direction.Up => new int3(0, 1, 0),
+            Direction.Down => new int3(0, -1, 0),
+            Direction.South => new int3(0, 0, 1),
+            Direction.North => new int3(0, 0, -1),
+            _ => int3.Zero
+        };
+
+    private static Vector3 GetDirectionVector3(Direction dir)
+        => dir switch
+        {
+            Direction.East => Vector3.UnitX,
+            Direction.West => -Vector3.UnitX,
+            Direction.Up => Vector3.UnitY,
+            Direction.Down => -Vector3.UnitY,
+            Direction.South => Vector3.UnitZ,
+            Direction.North => -Vector3.UnitZ,
+            _ => Vector3.Zero
+        };
+
+    private static Direction GetClosestDirection(Vector3 normal)
+    {
+        normal = Vector3.Normalize(normal);
+        float maxDot = -2f; // init lower than any possible dot product (-1 to 1)
+        Direction closest = Direction.Up;
+
+        for (int i = 0; i < 6; i++)
+        {
+            var dir = (Direction)i;
+            float dot = Vector3.Dot(normal, GetDirectionVector3(dir));
+            if (dot > maxDot)
+            {
+                maxDot = dot;
+                closest = dir;
+            }
+        }
+
+        return closest;
+    }
+
+    private bool IsBlockFullAndOpaque(BlockState blockState, Direction faceDirection)
+    {
+        var modelVariants = ArrayPool<VariantModel>.Shared.Rent(64);
+
+        // todo: the rng doesn't change this... right?
+        var modelVariantsLength = _resourcePack.GetModelVariant(blockState, _rng, modelVariants);
+
+        bool result = IsFaceFullAndOpaque(modelVariants.AsSpan(0, modelVariantsLength), faceDirection);
+
+        ArrayPool<VariantModel>.Shared.Return(modelVariants);
+
+        return result;
+    }
+
+    private bool IsFaceFullAndOpaque(ReadOnlySpan<VariantModel> modelVariants, Direction faceDirection)
+    {
+        Span<bool> faceGrid = stackalloc bool[16 * 16];
+        faceGrid.Clear();
+
+        Vector3 normal = GetDirectionVector3(faceDirection);
+
+        foreach (var modelVariant in modelVariants)
+        {
+            var model = _resourcePack.GetBlockModel(modelVariant.Model);
+            if (model is null || model.Elements.IsDefaultOrEmpty)
+            {
+                continue;
+            }
+
+            Matrix4x4 variantTransform = CreateVariantTransform(modelVariant);
+
+            foreach (var element in model.Elements)
+            {
+                Vector3 from = element.From * BlockModelScale;
+                Vector3 to = element.To * BlockModelScale;
+
+                Matrix4x4 elementTransform = CreateElementTransform(element.Rotation);
+                Matrix4x4 finalTransform = elementTransform * variantTransform;
+
+                CalculateTransformedAABB(from, to, finalTransform, out Vector3 min, out Vector3 max);
+
+                ProjectElementToFaceGrid(min, max, normal, faceGrid);
+            }
+        }
+
+        for (int i = 0; i < 256; i++)
+        {
+            if (!faceGrid[i])
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static void CalculateTransformedAABB(Vector3 from, Vector3 to, Matrix4x4 transform, out Vector3 min, out Vector3 max)
+    {
+        min = new Vector3(float.MaxValue);
+        max = new Vector3(float.MinValue);
+
+        Span<Vector3> corners =
+        [
+            new Vector3(from.X, from.Y, from.Z),
+            new Vector3(to.X, from.Y, from.Z),
+            new Vector3(from.X, to.Y, from.Z),
+            new Vector3(to.X, to.Y, from.Z),
+            new Vector3(from.X, from.Y, to.Z),
+            new Vector3(to.X, from.Y, to.Z),
+            new Vector3(from.X, to.Y, to.Z),
+            new Vector3(to.X, to.Y, to.Z)
+        ];
+
+        for (int i = 0; i < 8; i++)
+        {
+            var transformed = Vector3.Transform(corners[i], transform);
+            min = Vector3.Min(min, transformed);
+            max = Vector3.Max(max, transformed);
+        }
+    }
+
+    private static void ProjectElementToFaceGrid(Vector3 min, Vector3 max, Vector3 normal, Span<bool> grid)
+    {
+        const float Epsilon = 0.01f;
+        float uMin = 0, uMax = 0, vMin = 0, vMax = 0;
+        bool touchesFace = false;
+
+        if (normal.X < -0.5f)      // West Face
+        {
+            touchesFace = min.X <= Epsilon;
+            uMin = min.Z; uMax = max.Z; vMin = min.Y; vMax = max.Y;
+        }
+        else if (normal.X > 0.5f)  // East Face
+        {
+            touchesFace = max.X >= 1.0f - Epsilon;
+            uMin = min.Z; uMax = max.Z; vMin = min.Y; vMax = max.Y;
+        }
+        else if (normal.Y < -0.5f) // Down Face
+        {
+            touchesFace = min.Y <= Epsilon;
+            uMin = min.X; uMax = max.X; vMin = min.Z; vMax = max.Z;
+        }
+        else if (normal.Y > 0.5f)  // Up Face
+        {
+            touchesFace = max.Y >= 1.0f - Epsilon;
+            uMin = min.X; uMax = max.X; vMin = min.Z; vMax = max.Z;
+        }
+        else if (normal.Z < -0.5f) // North Face
+        {
+            touchesFace = min.Z <= Epsilon;
+            uMin = min.X; uMax = max.X; vMin = min.Y; vMax = max.Y;
+        }
+        else if (normal.Z > 0.5f)  // South Face
+        {
+            touchesFace = max.Z >= 1.0f - Epsilon;
+            uMin = min.X; uMax = max.X; vMin = min.Y; vMax = max.Y;
+        }
+
+        if (!touchesFace)
+        {
+            return;
+        }
+
+        // Convert normalized (0.0 - 1.0) coordinates to grid indices (0 - 16)
+        int startU = Math.Clamp((int)Math.Round(uMin * 16), 0, 16);
+        int endU = Math.Clamp((int)Math.Round(uMax * 16), 0, 16);
+        int startV = Math.Clamp((int)Math.Round(vMin * 16), 0, 16);
+        int endV = Math.Clamp((int)Math.Round(vMax * 16), 0, 16);
+
+        for (int v = startV; v < endV; v++)
+        {
+            for (int u = startU; u < endU; u++)
+            {
+                grid[u + v * 16] = true;
             }
         }
     }

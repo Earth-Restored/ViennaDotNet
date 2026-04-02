@@ -15,7 +15,7 @@ public readonly struct BlockState : IEquatable<BlockState>
 {
     public readonly string BlockId;
 
-    private readonly KeyValuePair<string, string>[] _properties;
+    internal readonly KeyValuePair<string, string>[] _properties;
     private readonly short _propertiesLength;
     private readonly int _hashCode;
 

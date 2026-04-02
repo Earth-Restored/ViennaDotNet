@@ -157,7 +157,7 @@ public sealed class BlockFaceJson
     public required string Texture { get; init; }
 
     [JsonPropertyName("cullface")]
-    public DirecionJson CullFace { get; init; }
+    public DirectionJson? CullFace { get; init; }
 
     public int Rotation { get; init; }
 
@@ -173,7 +173,7 @@ public sealed class BlockFace
     // not the final texture, but the texture variable
     public required string Texture { get; init; }
 
-    public Direcion CullFace { get; init; }
+    public Direction? CullFace { get; init; }
 
     public int Rotation { get; init; }
 
@@ -181,7 +181,7 @@ public sealed class BlockFace
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
-public enum DirecionJson
+public enum DirectionJson
 {
     [JsonStringEnumMemberName("down")] Down,
     [JsonStringEnumMemberName("bottom")] Bottom,
@@ -194,7 +194,7 @@ public enum DirecionJson
 }
 
 // +X, -X, +Y, -Y, +Z, -Z
-public enum Direcion
+public enum Direction
 {
     East = 0,
     West = 1,
