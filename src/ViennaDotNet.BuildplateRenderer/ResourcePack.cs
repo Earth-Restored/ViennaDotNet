@@ -12,6 +12,7 @@ using MPSBufferArray = BitcoderCZ.Buffers.FixedArray1<string>;
 using MPSBuffer = BitcoderCZ.Buffers.ImmutableInlineArray<BitcoderCZ.Buffers.FixedArray1<string>, string>;
 using System.Runtime.InteropServices;
 using BitcoderCZ.Utils;
+using System.Buffers;
 
 namespace ViennaDotNet.BuildplateRenderer;
 
@@ -19,15 +20,24 @@ namespace ViennaDotNet.BuildplateRenderer;
 // https://minecraft.wiki/w/Model
 public sealed class ResourcePack
 {
+    private readonly DirectoryInfo _rootDir;
+    private readonly DirectoryInfo _texturesDir;
+
     private readonly FrozenDictionary<string, BlockModel> _blockModels;
+    private readonly FrozenDictionary<string, HashSet<string>> _variantPropertySchema;
     private readonly FrozenDictionary<BlockState, (BSVBuffer Buffer, int TotalWeight)> _blockStatesVariant;
     private readonly FrozenDictionary<string, ImmutableArray<MultipartCase>> _blockStatesMultipart;
 
-    public ResourcePack(FrozenDictionary<string, BlockModel> blockModels, FrozenDictionary<BlockState, (BSVBuffer Buffer, int TotalWeight)> blockStates, FrozenDictionary<string, ImmutableArray<MultipartCase>> blockStatesMultipart)
+    private readonly Dictionary<string, byte[]> _textures = [];
+
+    public ResourcePack(DirectoryInfo rootDir, FrozenDictionary<string, BlockModel> blockModels, FrozenDictionary<string, HashSet<string>> variantPropertySchema, FrozenDictionary<BlockState, (BSVBuffer Buffer, int TotalWeight)> blockStatesVariant, FrozenDictionary<string, ImmutableArray<MultipartCase>> blockStatesMultipart)
     {
         _blockModels = blockModels;
-        _blockStatesVariant = blockStates;
+        _variantPropertySchema = variantPropertySchema;
+        _blockStatesVariant = blockStatesVariant;
         _blockStatesMultipart = blockStatesMultipart;
+        _rootDir = rootDir;
+        _texturesDir = new DirectoryInfo(Path.Combine(_rootDir.FullName, "textures"));
     }
 
     public static ResourcePack Load(DirectoryInfo rootDir)
@@ -70,7 +80,7 @@ public sealed class ResourcePack
                 foreach (var variant in json.Variants)
                 {
                     var props = ParseVariantString(variant.Key);
-                    var state = new BlockState(blockName, props);
+                    var state = BlockState.CreateNoCopy(blockName, props);
 
                     int totalWeight = 0;
                     foreach (var item in variant.Value)
@@ -156,7 +166,24 @@ public sealed class ResourcePack
             }
         }
 
-        return new ResourcePack(blockModels.ToFrozenDictionary(), blockStatesVariant.ToFrozenDictionary(), blockStatesMultipart.ToFrozenDictionary());
+        Dictionary<string, HashSet<string>> variantPropertySchema = new(blockStatesVariant.Count);
+        foreach (var item in blockStatesVariant)
+        {
+            if (variantPropertySchema.ContainsKey(item.Key.BlockId))
+            {
+                continue;
+            }
+
+            var propertyNames = new HashSet<string>(item.Key.PropertyCount);
+            foreach (var prop in item.Key.Properties)
+            {
+                propertyNames.Add(prop.Key);
+            }
+
+            variantPropertySchema.Add(item.Key.BlockId, propertyNames);
+        }
+
+        return new ResourcePack(rootDir, blockModels.ToFrozenDictionary(), variantPropertySchema.ToFrozenDictionary(), blockStatesVariant.ToFrozenDictionary(), blockStatesMultipart.ToFrozenDictionary());
 
         BlockModel ResolveBlockModel(string name)
         {
@@ -201,8 +228,8 @@ public sealed class ResourcePack
                         {
                             rotation = new BlockElementRotation()
                             {
-                                Origin = eRot.Origin,  
-                                ReScale = eRot.ReScale,  
+                                Origin = eRot.Origin,
+                                ReScale = eRot.ReScale,
                                 X = axis is Axis.X ? angle : 0,
                                 Y = axis is Axis.Y ? angle : 0,
                                 Z = axis is Axis.Z ? angle : 0,
@@ -212,8 +239,8 @@ public sealed class ResourcePack
                         {
                             rotation = new BlockElementRotation()
                             {
-                                Origin = eRot.Origin,  
-                                ReScale = eRot.ReScale,  
+                                Origin = eRot.Origin,
+                                ReScale = eRot.ReScale,
                                 X = eRot.X,
                                 Y = eRot.Y,
                                 Z = eRot.Z,
@@ -343,12 +370,43 @@ public sealed class ResourcePack
         ThrowHelper.ThrowIfLessThan(result.Length, 1);
 
         // way more variant blocks, so try variant first
-        if (_blockStatesVariant.TryGetValue(blockState, out var variant))
+        if (_variantPropertySchema.TryGetValue(blockState.BlockId, out var propertySchema))
         {
-            var (variants, totalWeight) = variant;
+            if (blockState.PropertyCount == propertySchema.Count && _blockStatesVariant.TryGetValue(blockState, out var variant))
+            {
+                var (variants, totalWeight) = variant;
 
-            result[0] = PickRandomVariant(variants, totalWeight, rng);
-            return 1;
+                result[0] = PickRandomVariant(variants, totalWeight, rng);
+                return 1;
+            }
+
+            if (propertySchema.Count is 0 && _blockStatesVariant.TryGetValue(new BlockState(blockState.BlockId), out variant))
+            {
+                var (variants, totalWeight) = variant;
+
+                result[0] = PickRandomVariant(variants, totalWeight, rng);
+                return 1;
+            }
+
+            var propertiesArray = ArrayPool<KeyValuePair<string, string>>.Shared.Rent(propertySchema.Count);
+            int propertiesArrayLength = 0;
+            foreach (var item in blockState.Properties)
+            {
+                if (propertySchema.Contains(item.Key))
+                {
+                    propertiesArray[propertiesArrayLength++] = item;
+                }
+            }
+
+            if (_blockStatesVariant.TryGetValue(BlockState.CreateNoCopy(blockState.BlockId, propertiesArray, propertiesArrayLength), out variant))
+            {
+                var (variants, totalWeight) = variant;
+
+                result[0] = PickRandomVariant(variants, totalWeight, rng);
+                return 1;
+            }
+
+            ArrayPool<KeyValuePair<string, string>>.Shared.Return(propertiesArray);
         }
 
         if (!_blockStatesMultipart.TryGetValue(blockState.BlockId, out var multipart))
@@ -427,7 +485,7 @@ public sealed class ResourcePack
 
         static bool StateSatisfiesRequirement(BlockState blockState, string key, MPSBuffer allowedValues)
         {
-            foreach (var property in blockState.Properties.AsSpan())
+            foreach (var property in blockState.Properties)
             {
                 if (property.Key == key)
                 {
@@ -449,6 +507,17 @@ public sealed class ResourcePack
 
     public BlockModel GetBlockModel(string modelName)
         => _blockModels[modelName];
+
+    public Task<byte[]> GetTextureDataPNGAsync(string name, CancellationToken cancellationToken = default)
+    {
+        if (name.StartsWith("minecraft:"))
+        {
+            name = name["minecraft:".Length..];
+        }
+
+        var file = Path.Combine(_texturesDir.FullName, name) + ".png";
+        return File.ReadAllBytesAsync(file, cancellationToken);
+    }
 
     private static IReadOnlyDictionary<TKey, TValue> MergeDictionaries<TKey, TValue>(IReadOnlyDictionary<TKey, TValue>? @new, IReadOnlyDictionary<TKey, TValue>? @base)
         where TKey : notnull

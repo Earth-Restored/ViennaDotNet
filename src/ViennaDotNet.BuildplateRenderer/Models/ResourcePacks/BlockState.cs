@@ -5,6 +5,8 @@ using System.Text.Json.Serialization;
 using ViennaDotNet.BuildplateRenderer.JsonConverters;
 using MPSBufferArray = BitcoderCZ.Buffers.FixedArray1<string>;
 using MPSBuffer = BitcoderCZ.Buffers.ImmutableInlineArray<BitcoderCZ.Buffers.FixedArray1<string>, string>;
+using BitcoderCZ.Utils;
+using System.Diagnostics;
 
 namespace ViennaDotNet.BuildplateRenderer.Models.ResourcePacks;
 
@@ -12,44 +14,46 @@ namespace ViennaDotNet.BuildplateRenderer.Models.ResourcePacks;
 public readonly struct BlockState : IEquatable<BlockState>
 {
     public readonly string BlockId;
-    public readonly KeyValuePair<string, string>[] Properties;
 
+    private readonly KeyValuePair<string, string>[] _properties;
+    private readonly short _propertiesLength;
     private readonly int _hashCode;
 
-    public BlockState(string blockId, ReadOnlySpan<KeyValuePair<string, string>> properties)
+    public BlockState(string blockId)
     {
         BlockId = blockId;
+        _properties = [];
 
-        Properties = new KeyValuePair<string, string>[properties.Length];
-        properties.CopyTo(Properties);
-        Properties.AsSpan().Sort((a, b) => a.Key.CompareTo(b.Key));
-
-        var hash = new HashCode();
-        hash.Add(BlockId);
-        foreach (var prop in Properties)
-        {
-            hash.Add(prop.Key);
-            hash.Add(prop.Value);
-        }
-
-        _hashCode = hash.ToHashCode();
+        _hashCode = CalculateHash();
     }
 
-    public BlockState(string blockId, IEnumerable<KeyValuePair<string, string>> properties)
+    private BlockState(string blockId, KeyValuePair<string, string>[] properties, short propertiesLength)
     {
         BlockId = blockId;
 
-        Properties = [.. properties.OrderBy(p => p.Key)];
+        _properties = properties;
+        _propertiesLength = propertiesLength;
+        _properties.AsSpan(0, _propertiesLength).Sort((a, b) => a.Key.CompareTo(b.Key));
 
-        var hash = new HashCode();
-        hash.Add(BlockId);
-        foreach (var prop in Properties)
-        {
-            hash.Add(prop.Key);
-            hash.Add(prop.Value);
-        }
+        _hashCode = CalculateHash();
+    }
 
-        _hashCode = hash.ToHashCode();
+    public int PropertyCount => _propertiesLength;
+
+    public ReadOnlySpan<KeyValuePair<string, string>> Properties => _properties.AsSpan(0, _propertiesLength);
+
+    public static BlockState Create(string blockId, IEnumerable<KeyValuePair<string, string>> properties)
+        => CreateNoCopy(blockId, [.. properties.OrderBy(p => p.Key)]);
+
+    public static BlockState CreateNoCopy(string blockId, KeyValuePair<string, string>[] properties)
+        => CreateNoCopy(blockId, properties, properties.Length);
+
+    public static BlockState CreateNoCopy(string blockId, KeyValuePair<string, string>[] properties, int propertiesLength)
+    {
+        Debug.Assert(propertiesLength >= 0);
+        Debug.Assert(propertiesLength <= properties.Length);
+
+        return new BlockState(blockId, properties, (short)propertiesLength);
     }
 
     public static bool operator ==(BlockState left, BlockState right)
@@ -62,15 +66,15 @@ public readonly struct BlockState : IEquatable<BlockState>
     {
         if (_hashCode != other._hashCode ||
             BlockId != other.BlockId ||
-            Properties.Length != other.Properties.Length)
+            _propertiesLength != other._propertiesLength)
         {
             return false;
         }
 
-        for (int i = 0; i < Properties.Length; i++)
+        for (int i = 0; i < _propertiesLength; i++)
         {
-            if (Properties[i].Key != other.Properties[i].Key ||
-                Properties[i].Value != other.Properties[i].Value)
+            if (_properties[i].Key != other._properties[i].Key ||
+                _properties[i].Value != other._properties[i].Value)
             {
                 return false;
             }
@@ -84,6 +88,19 @@ public readonly struct BlockState : IEquatable<BlockState>
 
     public override int GetHashCode()
         => _hashCode;
+
+    private int CalculateHash()
+    {
+        var hash = new HashCode();
+        hash.Add(BlockId);
+        foreach (var prop in Properties)
+        {
+            hash.Add(prop.Key);
+            hash.Add(prop.Value);
+        }
+
+        return hash.ToHashCode();
+    }
 }
 
 // https://minecraft.wiki/w/Blockstates_definition#JSON_format
@@ -114,7 +131,7 @@ public sealed class MultipartCase
 
     public required List<VariantModel> Apply { get; init; }
 
-    public int TotalWeight {get; init;}
+    public int TotalWeight { get; init; }
 }
 
 [StructLayout(LayoutKind.Auto)]

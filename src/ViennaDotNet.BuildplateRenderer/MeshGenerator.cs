@@ -161,10 +161,10 @@ internal sealed class MeshGenerator
                 {
                     foreach (var item in (ICollection<KeyValuePair<string, Tag>>)(CompoundTag)propertiesTag)
                     {
-                        if (item.Key is "waterlogged")
-                        {
-                            continue;
-                        }
+                        // if (item.Key is "waterlogged")
+                        // {
+                        //     continue;
+                        // }
 
                         if (propertiesArrayLength >= propertiesArray.Length)
                         {
@@ -176,8 +176,7 @@ internal sealed class MeshGenerator
                     }
                 }
 
-                // todo: non allocating ctor, add a short PropertiesLength field
-                var blockState = new Models.ResourcePacks.BlockState(blockName, propertiesArray.AsSpan()[..propertiesArrayLength]);
+                var blockState = Models.ResourcePacks.BlockState.CreateNoCopy(blockName, propertiesArray, propertiesArrayLength);
 
                 var modelVariantsLength = _resourcePack.GetModelVariant(blockState, _rng, modelVariants);
                 foreach (var modelVariant in modelVariants.AsSpan(0, modelVariantsLength))
