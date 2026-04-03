@@ -29,15 +29,13 @@ internal static class ChunkUtils
 		"fountain:border_constraint",
 	}.ToFrozenSet(StringComparer.Ordinal);
 
-
-
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static int2 BlockToChunk(int2 blockPosition)
 		=> new int2(blockPosition.X >> 4, blockPosition.Y >> 4);
 
 	public static int[] ReadBlockData(LongArrayTag nbt)
 	{
-		if (nbt.Count is 0)
+		if (nbt.Count == 0)
 		{
 			return EmptySubChunk;
 		}
@@ -97,7 +95,7 @@ internal static class ChunkUtils
 			return null;
 		}
 
-        var propertiesArray = ArrayPool<KeyValuePair<string, string>>.Shared.Rent(64);
+		var propertiesArray = ArrayPool<KeyValuePair<string, string>>.Shared.Rent(64);
 		int propertiesArrayLength = 0;
 		if (paletteEntry.TryGetValue("Properties", out var propertiesTag))
 		{

@@ -119,6 +119,7 @@ internal sealed class MeshGenerator
         }
 
         var chunkBlockPosition = chunkPosition * ChunkUtils.SubChunkSize;
+        Console.WriteLine(chunkBlockPosition);
 
         var blocks = blockStates.ContainsKey("data")
             ? ChunkUtils.ReadBlockData((LongArrayTag)blockStates["data"])
@@ -144,7 +145,7 @@ internal sealed class MeshGenerator
                 if (blockName is "minecraft:water" or "minecraft:lava")
                 {
                     // TODO:
-                    continue;
+                    goto incrementPos;
                 }
 
                 int propertiesArrayLength = 0;
@@ -181,18 +182,21 @@ internal sealed class MeshGenerator
                 }
             }
 
+            incrementPos:
             blockPosition.X++;
             if (blockPosition.X >= ChunkUtils.Width)
             {
                 blockPosition.X = 0;
                 blockPosition.Z++;
-                if (blockPosition.Z >= 16)
+                if (blockPosition.Z >= ChunkUtils.Width)
                 {
                     blockPosition.Z = 0;
                     blockPosition.Y++;
                 }
             }
         }
+
+        Debug.Assert(blockPosition == new int3(0, ChunkUtils.SubChunkSize, 0));
 
         ArrayPool<KeyValuePair<string, string>>.Shared.Return(propertiesArray);
         ArrayPool<VariantModel>.Shared.Return(modelVariants);
@@ -505,6 +509,7 @@ internal sealed class MeshGenerator
 
     private bool IsBlockFullAndOpaque(BlockState blockState, Direction faceDirection)
     {
+        return false;
         var modelVariants = ArrayPool<VariantModel>.Shared.Rent(64);
 
         // todo: the rng doesn't change this... right?
