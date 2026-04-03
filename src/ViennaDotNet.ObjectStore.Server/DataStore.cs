@@ -30,7 +30,7 @@ public class DataStore
 
         try
         {
-            using (FileStream fileOutputStream = file.OpenWrite())
+            using (FileStream fileOutputStream = file.OpenWriteNew())
             {
                 fileOutputStream.Write(data);
             }

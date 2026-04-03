@@ -8,6 +8,8 @@ test/
 
 build/
 
+.vscode/
+
 # dotenv files
 .env
 

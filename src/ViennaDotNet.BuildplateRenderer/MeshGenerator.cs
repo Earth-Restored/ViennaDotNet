@@ -38,10 +38,10 @@ internal sealed class MeshGenerator
 {
     private const float BlockModelScale = 1f / 16f;
 
-    private readonly ResourcePack _resourcePack;
+    private readonly ResourcePackManager _resourcePack;
     private readonly Random _rng = new();
 
-    public MeshGenerator(ResourcePack resourcePack)
+    public MeshGenerator(ResourcePackManager resourcePack)
     {
         _resourcePack = resourcePack;
     }
@@ -164,7 +164,7 @@ internal sealed class MeshGenerator
 
                 var blockState = BlockState.CreateNoCopy(blockName, propertiesArray, propertiesArrayLength);
 
-                var modelVariantsLength = _resourcePack.GetModelVariant(blockState, _rng, modelVariants);
+                var modelVariantsLength = _resourcePack.GetModelVariants(blockState, _rng, modelVariants);
                 foreach (var modelVariant in modelVariants.AsSpan(0, modelVariantsLength))
                 {
                     GenerateBlockMesh(modelVariant, chunkBlockPosition + blockPosition, mesh, blockPosition =>
@@ -508,7 +508,7 @@ internal sealed class MeshGenerator
         var modelVariants = ArrayPool<VariantModel>.Shared.Rent(64);
 
         // todo: the rng doesn't change this... right?
-        var modelVariantsLength = _resourcePack.GetModelVariant(blockState, _rng, modelVariants);
+        var modelVariantsLength = _resourcePack.GetModelVariants(blockState, _rng, modelVariants);
 
         bool result = IsFaceFullAndOpaque(modelVariants.AsSpan(0, modelVariantsLength), faceDirection);
 

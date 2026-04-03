@@ -13,6 +13,7 @@ using MPSBuffer = BitcoderCZ.Buffers.ImmutableInlineArray<BitcoderCZ.Buffers.Fix
 using System.Runtime.InteropServices;
 using BitcoderCZ.Utils;
 using System.Buffers;
+using System.Diagnostics.CodeAnalysis;
 
 namespace ViennaDotNet.BuildplateRenderer;
 
@@ -20,6 +21,7 @@ namespace ViennaDotNet.BuildplateRenderer;
 // https://minecraft.wiki/w/Model
 public sealed class ResourcePack
 {
+    private readonly string _namePrefix;
     private readonly DirectoryInfo _rootDir;
     private readonly DirectoryInfo _texturesDir;
 
@@ -30,8 +32,10 @@ public sealed class ResourcePack
 
     private readonly Dictionary<string, byte[]> _textures = [];
 
-    public ResourcePack(DirectoryInfo rootDir, FrozenDictionary<string, BlockModel> blockModels, FrozenDictionary<string, HashSet<string>> variantPropertySchema, FrozenDictionary<BlockState, (BSVBuffer Buffer, int TotalWeight)> blockStatesVariant, FrozenDictionary<string, ImmutableArray<MultipartCase>> blockStatesMultipart)
+    public ResourcePack(string name, DirectoryInfo rootDir, FrozenDictionary<string, BlockModel> blockModels, FrozenDictionary<string, HashSet<string>> variantPropertySchema, FrozenDictionary<BlockState, (BSVBuffer Buffer, int TotalWeight)> blockStatesVariant, FrozenDictionary<string, ImmutableArray<MultipartCase>> blockStatesMultipart)
     {
+        Name = name;
+        _namePrefix = $"{Name}:";
         _blockModels = blockModels;
         _variantPropertySchema = variantPropertySchema;
         _blockStatesVariant = blockStatesVariant;
@@ -40,21 +44,26 @@ public sealed class ResourcePack
         _texturesDir = new DirectoryInfo(Path.Combine(_rootDir.FullName, "textures"));
     }
 
-    public static ResourcePack Load(DirectoryInfo rootDir)
+    public string Name { get; }
+
+    public static ResourcePack Load(string packName, DirectoryInfo rootDir, Func<string, BlockModel?>? fallbackResolver = null)
     {
         var blockModelsDir = new DirectoryInfo(Path.Combine(rootDir.FullName, "models", "block"));
         var blockModelsJson = new Dictionary<string, BlockModelJson>();
 
-        foreach (var file in blockModelsDir.EnumerateFiles())
+        if (blockModelsDir.Exists)
         {
-            string modelName = Path.GetFileNameWithoutExtension(file.Name);
-            BlockModelJson model;
-            using (var fs = File.OpenRead(file.FullName))
+            foreach (var file in blockModelsDir.EnumerateFiles())
             {
-                model = JsonUtils.DeserializeJson<BlockModelJson>(fs) ?? new();
-            }
+                string modelName = Path.GetFileNameWithoutExtension(file.Name);
+                BlockModelJson model;
+                using (var fs = File.OpenRead(file.FullName))
+                {
+                    model = JsonUtils.DeserializeJson<BlockModelJson>(fs) ?? new();
+                }
 
-            blockModelsJson.Add($"minecraft:block/{modelName}", model);
+                blockModelsJson.Add($"{packName}:block/{modelName}", model);
+            }
         }
 
         var blockModels = new Dictionary<string, BlockModel>(blockModelsJson.Count);
@@ -66,103 +75,106 @@ public sealed class ResourcePack
         var blockStatesDir = new DirectoryInfo(Path.Combine(rootDir.FullName, "blockstates"));
         Dictionary<BlockState, (BSVBuffer Buffer, int TotalWeight)> blockStatesVariant = [];
         Dictionary<string, ImmutableArray<MultipartCase>> blockStatesMultipart = [];
-        foreach (var file in blockStatesDir.EnumerateFiles())
+        if (blockStatesDir.Exists)
         {
-            string blockName = $"minecraft:{Path.GetFileNameWithoutExtension(file.Name)}";
-            BlockStateJson json;
-            using (var fs = File.OpenRead(file.FullName))
+            foreach (var file in blockStatesDir.EnumerateFiles())
             {
-                json = JsonUtils.DeserializeJson<BlockStateJson>(fs) ?? new();
-            }
-
-            if (json.Variants is not null)
-            {
-                foreach (var variant in json.Variants)
+                string blockName = $"{packName}:{Path.GetFileNameWithoutExtension(file.Name)}";
+                BlockStateJson json;
+                using (var fs = File.OpenRead(file.FullName))
                 {
-                    var props = ParseVariantString(variant.Key);
-                    var state = BlockState.CreateNoCopy(blockName, props);
-
-                    int totalWeight = 0;
-                    foreach (var item in variant.Value)
-                    {
-                        totalWeight += item.Weight;
-                    }
-
-                    blockStatesVariant[state] = (ImmutableInlineArray.Create<BSVBufferArray, VariantModel>(variant.Value), totalWeight);
-                }
-            }
-            else if (json.Multipart is not null)
-            {
-                var builder = ImmutableArray.CreateBuilder<MultipartCase>(json.Multipart.Length);
-                foreach (var @case in json.Multipart)
-                {
-                    int totalWeight = 0;
-                    foreach (var item in @case.Apply)
-                    {
-                        totalWeight += item.Weight;
-                    }
-
-                    // Or<And<State>>
-                    //public ImmutableArray<ImmutableArray<KeyValuePair<string, MPSBuffer>>> Conditions { get; init; }
-                    ImmutableArray<ImmutableArray<KeyValuePair<string, MPSBuffer>>> conditions = default;
-                    if (@case.When is { } when)
-                    {
-                        if (when.And is not null)
-                        {
-                            var conditionsBuilder = ImmutableArray.CreateBuilder<KeyValuePair<string, MPSBuffer>>(when.And.Count);
-
-                            foreach (var list in when.And)
-                            {
-                                foreach (var item in list)
-                                {
-                                    conditionsBuilder.Add(new(item.Key, CreateMultiPartState(item.Value)));
-                                }
-                            }
-
-                            conditions = [conditionsBuilder.DrainToImmutable()];
-                        }
-                        else if (when.Or is not null)
-                        {
-                            var conditionsBuilder = ImmutableArray.CreateBuilder<ImmutableArray<KeyValuePair<string, MPSBuffer>>>(when.Or.Count);
-                            var innerConditionsBuilder = ImmutableArray.CreateBuilder<KeyValuePair<string, MPSBuffer>>(4);
-
-                            foreach (var list in when.Or)
-                            {
-                                foreach (var item in list)
-                                {
-                                    innerConditionsBuilder.Add(new(item.Key, CreateMultiPartState(item.Value)));
-                                }
-
-                                conditionsBuilder.Add(innerConditionsBuilder.DrainToImmutable());
-                            }
-
-                            conditions = conditionsBuilder.DrainToImmutable();
-                        }
-                        else if (when.Properties is not null)
-                        {
-                            var conditionsBuilder = ImmutableArray.CreateBuilder<KeyValuePair<string, MPSBuffer>>(when.Properties.Count);
-
-                            foreach (var item in when.Properties)
-                            {
-                                conditionsBuilder.Add(new(item.Key, CreateMultiPartState(item.Value.GetString() ?? "")));
-                            }
-
-                            conditions = [conditionsBuilder.DrainToImmutable()];
-                        }
-                    }
-
-                    builder.Add(new MultipartCase()
-                    {
-                        When = new MultipartCaseCondition()
-                        {
-                            Conditions = conditions,
-                        },
-                        Apply = @case.Apply,
-                        TotalWeight = totalWeight,
-                    });
+                    json = JsonUtils.DeserializeJson<BlockStateJson>(fs) ?? new();
                 }
 
-                blockStatesMultipart[blockName] = builder.DrainToImmutable();
+                if (json.Variants is not null)
+                {
+                    foreach (var variant in json.Variants)
+                    {
+                        var props = ParseVariantString(variant.Key);
+                        var state = BlockState.CreateNoCopy(blockName, props);
+
+                        int totalWeight = 0;
+                        foreach (var item in variant.Value)
+                        {
+                            totalWeight += item.Weight;
+                        }
+
+                        blockStatesVariant[state] = (ImmutableInlineArray.Create<BSVBufferArray, VariantModel>(variant.Value), totalWeight);
+                    }
+                }
+                else if (json.Multipart is not null)
+                {
+                    var builder = ImmutableArray.CreateBuilder<MultipartCase>(json.Multipart.Length);
+                    foreach (var @case in json.Multipart)
+                    {
+                        int totalWeight = 0;
+                        foreach (var item in @case.Apply)
+                        {
+                            totalWeight += item.Weight;
+                        }
+
+                        // Or<And<State>>
+                        //public ImmutableArray<ImmutableArray<KeyValuePair<string, MPSBuffer>>> Conditions { get; init; }
+                        ImmutableArray<ImmutableArray<KeyValuePair<string, MPSBuffer>>> conditions = default;
+                        if (@case.When is { } when)
+                        {
+                            if (when.And is not null)
+                            {
+                                var conditionsBuilder = ImmutableArray.CreateBuilder<KeyValuePair<string, MPSBuffer>>(when.And.Count);
+
+                                foreach (var list in when.And)
+                                {
+                                    foreach (var item in list)
+                                    {
+                                        conditionsBuilder.Add(new(item.Key, CreateMultiPartState(item.Value)));
+                                    }
+                                }
+
+                                conditions = [conditionsBuilder.DrainToImmutable()];
+                            }
+                            else if (when.Or is not null)
+                            {
+                                var conditionsBuilder = ImmutableArray.CreateBuilder<ImmutableArray<KeyValuePair<string, MPSBuffer>>>(when.Or.Count);
+                                var innerConditionsBuilder = ImmutableArray.CreateBuilder<KeyValuePair<string, MPSBuffer>>(4);
+
+                                foreach (var list in when.Or)
+                                {
+                                    foreach (var item in list)
+                                    {
+                                        innerConditionsBuilder.Add(new(item.Key, CreateMultiPartState(item.Value)));
+                                    }
+
+                                    conditionsBuilder.Add(innerConditionsBuilder.DrainToImmutable());
+                                }
+
+                                conditions = conditionsBuilder.DrainToImmutable();
+                            }
+                            else if (when.Properties is not null)
+                            {
+                                var conditionsBuilder = ImmutableArray.CreateBuilder<KeyValuePair<string, MPSBuffer>>(when.Properties.Count);
+
+                                foreach (var item in when.Properties)
+                                {
+                                    conditionsBuilder.Add(new(item.Key, CreateMultiPartState(item.Value.GetString() ?? "")));
+                                }
+
+                                conditions = [conditionsBuilder.DrainToImmutable()];
+                            }
+                        }
+
+                        builder.Add(new MultipartCase()
+                        {
+                            When = new MultipartCaseCondition()
+                            {
+                                Conditions = conditions,
+                            },
+                            Apply = @case.Apply,
+                            TotalWeight = totalWeight,
+                        });
+                    }
+
+                    blockStatesMultipart[blockName] = builder.DrainToImmutable();
+                }
             }
         }
 
@@ -183,21 +195,29 @@ public sealed class ResourcePack
             variantPropertySchema.Add(item.Key.BlockId, propertyNames);
         }
 
-        return new ResourcePack(rootDir, blockModels.ToFrozenDictionary(), variantPropertySchema.ToFrozenDictionary(), blockStatesVariant.ToFrozenDictionary(), blockStatesMultipart.ToFrozenDictionary());
+        return new ResourcePack(packName, rootDir, blockModels.ToFrozenDictionary(), variantPropertySchema.ToFrozenDictionary(), blockStatesVariant.ToFrozenDictionary(), blockStatesMultipart.ToFrozenDictionary());
 
-        BlockModel ResolveBlockModel(string name)
+        BlockModel? ResolveBlockModel(string modelName)
         {
-            if (!name.Contains(':'))
+            if (!modelName.Contains(':'))
             {
-                name = $"minecraft:{name}";
+                modelName = $"{packName}:{modelName}";
             }
 
-            if (blockModels.TryGetValue(name, out var existingModel))
+            if (blockModels.TryGetValue(modelName, out var existingModel))
             {
                 return existingModel;
             }
 
-            var json = blockModelsJson[name];
+            if (!blockModelsJson.TryGetValue(modelName, out var json))
+            {
+                if (fallbackResolver is not null)
+                {
+                    return fallbackResolver(modelName);
+                }
+
+                return null;
+            }
 
             var parent = json.Parent is null ? null : ResolveBlockModel(json.Parent);
 
@@ -277,7 +297,7 @@ public sealed class ResourcePack
                 Elements = elements,
             };
 
-            blockModels[name] = model;
+            blockModels[modelName] = model;
 
             return model;
         }
@@ -366,9 +386,14 @@ public sealed class ResourcePack
     /// <param name="rng">The RNG deciding which model to choose.</param>
     /// <param name="result">The result model variants.</param>
     /// <returns>The number of model variants.</returns>
-    public int GetModelVariant(BlockState blockState, Random rng, Span<VariantModel> result)
+    public int GetModelVariants(BlockState blockState, Random rng, Span<VariantModel> result)
     {
         ThrowHelper.ThrowIfLessThan(result.Length, 1);
+
+        if (!blockState.BlockId.StartsWith(_namePrefix))
+        {
+            return 0;
+        }
 
         // way more variant blocks, so try variant first
         if (_variantPropertySchema.TryGetValue(blockState.BlockId, out var propertySchema))
@@ -412,7 +437,7 @@ public sealed class ResourcePack
 
         if (!_blockStatesMultipart.TryGetValue(blockState.BlockId, out var multipart))
         {
-            ThrowHelper.ThrowKeyNotFound(blockState);
+            return 0;
         }
 
         int resultLength = 0;
@@ -509,15 +534,42 @@ public sealed class ResourcePack
     public BlockModel GetBlockModel(string modelName)
         => _blockModels[modelName];
 
-    public Task<byte[]> GetTextureDataPNGAsync(string name, CancellationToken cancellationToken = default)
+    public bool TryGetBlockModel(string modelName, [NotNullWhen(true)] out BlockModel? model)
+        => _blockModels.TryGetValue(modelName, out model);
+
+    public async Task<byte[]> GetTextureDataPNGAsync(string name, CancellationToken cancellationToken = default)
     {
-        if (name.StartsWith("minecraft:"))
+        var textureData = await TryGetTextureDataPNGAsync(name, cancellationToken);
+
+        if (textureData is null)
         {
-            name = name["minecraft:".Length..];
+            throw new FileNotFoundException();
+        }
+
+        return textureData;
+    }
+
+    public async Task<byte[]?> TryGetTextureDataPNGAsync(string name, CancellationToken cancellationToken = default)
+    {
+        if (name.StartsWith(_namePrefix))
+        {
+            name = name[_namePrefix.Length..];
         }
 
         var file = Path.Combine(_texturesDir.FullName, name) + ".png";
-        return File.ReadAllBytesAsync(file, cancellationToken);
+        if (!File.Exists(file))
+        {
+            return null;
+        }
+
+        try
+        {
+            return await File.ReadAllBytesAsync(file, cancellationToken);
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private static IReadOnlyDictionary<TKey, TValue> MergeDictionaries<TKey, TValue>(IReadOnlyDictionary<TKey, TValue>? @new, IReadOnlyDictionary<TKey, TValue>? @base)

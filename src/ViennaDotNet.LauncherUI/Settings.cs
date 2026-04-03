@@ -1,6 +1,7 @@
 ﻿using Serilog;
 using System.Net;
 using System.Text.Json;
+using ViennaDotNet.Common.Utils;
 
 namespace ViennaDotNet.LauncherUI;
 
@@ -59,7 +60,7 @@ public sealed class Settings
 
     public async Task SaveAsync(string path)
     {
-        using (var fs = File.OpenWrite(path))
+        using (var fs = File.OpenWriteNew(path))
         {
             await JsonSerializer.SerializeAsync(fs, this, jsonOptions);
         }

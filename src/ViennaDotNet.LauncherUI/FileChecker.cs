@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Reflection;
 using ViennaDotNet.Common;
+using ViennaDotNet.Common.Utils;
 using ViennaDotNet.LauncherUI.Programs;
 using ILogger = Serilog.ILogger;
 
@@ -118,7 +119,7 @@ internal static class FileChecker
                 logger.Warning("Fabric api mod not found, downloading");
 
                 var response = await httpClient.GetAsync("https://cdn.modrinth.com/data/P7dR8mSH/versions/xklQBMta/fabric-api-0.97.0%2B1.20.4.jar", cancellationToken);
-                using (var fs = File.OpenWrite(Path.Combine(Program.StaticDataDir, "server_template_dir", "mods", "fabric-api-0.97.0+1.20.4.jar")))
+                using (var fs = File.OpenWriteNew(Path.Combine(Program.StaticDataDir, "server_template_dir", "mods", "fabric-api-0.97.0+1.20.4.jar")))
                 {
                     await response.Content.CopyToAsync(fs, cancellationToken);
                 }
@@ -131,7 +132,7 @@ internal static class FileChecker
                 logger.Warning("Fabric server not found, downloading");
 
                 var response = await httpClient.GetAsync("https://meta.fabricmc.net/v2/versions/loader/1.20.4/0.15.10/1.0.1/server/jar", cancellationToken);
-                using (var fs = File.OpenWrite(Path.Combine(Program.StaticDataDir, "server_template_dir", BuildplateLauncher.ServerJarName)))
+                using (var fs = File.OpenWriteNew(Path.Combine(Program.StaticDataDir, "server_template_dir", BuildplateLauncher.ServerJarName)))
                 {
                     await response.Content.CopyToAsync(fs, cancellationToken);
                 }
