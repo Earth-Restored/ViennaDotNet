@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Serilog;
 
 namespace ViennaDotNet.Common.Utils;
 
@@ -146,10 +147,21 @@ public static partial class ProcessExtensions
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
         {
-            string fd0 = File.ReadAllText($"/proc/{process.Id}/fd/0");
-            if (!string.IsNullOrEmpty(fd0) && fd0.Contains("/dev/tty", StringComparison.Ordinal))
+            string fd0Path = $"/proc/{process.Id}/fd/0";
+            try
             {
-                return "INT";
+                var fileInfo = new FileInfo(fd0Path);
+
+                FileSystemInfo? target = fileInfo.ResolveLinkTarget(returnFinalTarget: true);
+
+                if (target is not null && target.FullName.Contains("/dev/tty", StringComparison.Ordinal))
+                {
+                    return "INT";
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warning($"Could not resolve link target for process '{process.Id}': {ex.Message}");
             }
         }
         else

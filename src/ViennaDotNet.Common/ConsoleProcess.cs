@@ -43,6 +43,11 @@ public sealed class ConsoleProcess
             throw new InvalidOperationException("Can't redirect std in/out when useShellExecute is true");
         }
 
+        if (OperatingSystem.IsLinux() && openInNewWindow && !IsXTerminalEmulatorPresent())
+        {
+            openInNewWindow = false;
+        }
+
         _filePath = appName;
         IORedirected = redirect;
         OpenInNewWindow = openInNewWindow;
@@ -72,7 +77,7 @@ public sealed class ConsoleProcess
         {
             Process.StartInfo.WorkingDirectory = workingDir;
         }
-        
+
         if (OpenInNewWindow)
         {
             ApplyTerminalWrapper(args);
@@ -174,6 +179,34 @@ public sealed class ConsoleProcess
 
             Process.StartInfo.FileName = "osascript";
             Process.StartInfo.Arguments = $"-e \"{appleScript}\"";
+        }
+    }
+
+    private static bool IsXTerminalEmulatorPresent()
+    {
+        try
+        {
+            using var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = "/bin/sh",
+                    Arguments = "-c \"command -v x-terminal-emulator\"",
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                }
+            };
+
+            process.Start();
+            process.WaitForExit();
+
+            // exit code 0 - command was found
+            return process.ExitCode == 0;
+        }
+        catch
+        {
+            return false;
         }
     }
 }

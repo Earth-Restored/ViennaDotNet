@@ -16,7 +16,7 @@ public class InstanceManager
     private readonly RequestHandler _requestHandler;
     private int _runningInstanceCount = 0;
     private bool _shuttingDown = false;
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
 
     [JsonConverter(typeof(JsonStringEnumConverter))]
     private enum InstanceType
@@ -61,17 +61,17 @@ public class InstanceManager
         _requestHandler = eventBusClient.AddRequestHandler("buildplates", new RequestHandler.Handler(
            async request =>
             {
-                if (request.Type == "start")
+                if (request.Type is "start")
                 {
-                    Monitor.Enter(_lock);
+                    _lock.Enter();
                     if (_shuttingDown)
                     {
-                        Monitor.Exit(_lock);
+                        _lock.Exit();
                         return null;
                     }
 
                     _runningInstanceCount += 1;
-                    Monitor.Exit(_lock);
+                    _lock.Exit();
 
                     StartRequest startRequest;
                     try
@@ -127,14 +127,14 @@ public class InstanceManager
 
                         SendEventBusMessage("stopped", instance.InstanceId);
 
-                        Monitor.Enter(_lock);
+                        _lock.Enter();
                         _runningInstanceCount -= 1;
-                        Monitor.Exit(_lock);
+                        _lock.Exit();
                     }).Start();
 
                     return instanceId;
                 }
-                else if (request.Type == "preview")
+                else if (request.Type is "preview")
                 {
                     PreviewRequest previewRequest;
                     byte[] serverData;
@@ -161,6 +161,7 @@ public class InstanceManager
                 }
                 else
                 {
+                    Log.Warning($"Unknown InstanceManager request: '{request.Type}'");
                     return null;
                 }
             },
@@ -175,20 +176,27 @@ public class InstanceManager
         => _publisher.Publish("buildplates", type, message).ContinueWith(task =>
         {
             if (!task.Result)
+            {
                 Log.Error("Event bus publisher error");
+            }
         });
 
     public void Shutdown()
     {
         _requestHandler.Close();
 
-        Monitor.Enter(_lock);
+        _lock.Enter();
+        if (_shuttingDown)
+        {
+            return;
+        }
+
         _shuttingDown = true;
         Log.Information($"Shutdown signal received, no new buildplate instances will be started, waiting for {_runningInstanceCount} instances to finish");
         while (_runningInstanceCount > 0)
         {
             int runningInstanceCount = _runningInstanceCount;
-            Monitor.Exit(_lock);
+            _lock.Exit();
 
             try
             {
@@ -199,14 +207,14 @@ public class InstanceManager
                 // empty
             }
 
-            Monitor.Enter(_lock);
+            _lock.Enter();
             if (_runningInstanceCount != runningInstanceCount)
             {
                 Log.Information($"Waiting for {_runningInstanceCount} instances to finish");
             }
         }
 
-        Monitor.Exit(_lock);
+        _lock.Exit();
 
         _publisher.Flush();
         _publisher.Close();

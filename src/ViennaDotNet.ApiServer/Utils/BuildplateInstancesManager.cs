@@ -33,12 +33,12 @@ public sealed class BuildplateInstancesManager
 
     public async Task<string?> RequestBuildplateInstance(string? playerId, string? encounterId, string buildplateId, InstanceType type, long shutdownTime, bool night)
     {
-        if (playerId is null && type != InstanceType.ENCOUNTER)
+        if (playerId is null && type is not InstanceType.ENCOUNTER)
         {
             throw new ArgumentException();
         }
 
-        if (encounterId is not null && type != InstanceType.ENCOUNTER)
+        if (encounterId is not null && type is not InstanceType.ENCOUNTER)
         {
             throw new ArgumentException();
         }
@@ -68,7 +68,7 @@ public sealed class BuildplateInstancesManager
                 foreach (string loopInstanceId in instanceIds)
                 {
                     InstanceInfo? instanceInfo = _instances.GetOrDefault(loopInstanceId);
-                    if (instanceInfo is not null && instanceInfo.ShuttingDown == false)
+                    if (instanceInfo is not null && !instanceInfo.ShuttingDown)
                     {
                         if (instanceInfo.Type == type &&
                             instanceInfo.PlayerId == playerId &&
@@ -95,12 +95,16 @@ public sealed class BuildplateInstancesManager
         lock (_instances)
         {
             if (_instances.ContainsKey(instanceId))
+            {
                 completableFuture.SetResult(true);
+            }
             else
+            {
                 lock (_pendingInstances)
                 {
                     _pendingInstances[instanceId] = completableFuture;
                 }
+            }
         }
 
         if (!await completableFuture.Task)
@@ -141,7 +145,7 @@ public sealed class BuildplateInstancesManager
                     try
                     {
                         startNotification = Json.Deserialize<StartNotification>(@event.Data)!;
-                        if (startNotification.PlayerId is null && startNotification.Type != InstanceType.ENCOUNTER)
+                        if (startNotification.PlayerId is null && startNotification.Type is not InstanceType.ENCOUNTER)
                         {
                             Log.Warning("Bad start notification");
                             return Task.CompletedTask;
@@ -244,6 +248,9 @@ public sealed class BuildplateInstancesManager
                     }
                 }
 
+                break;
+            default:
+                Log.Warning($"Unknown event in BuildplateInstancesManager: '{@event.Type}'");
                 break;
         }
 

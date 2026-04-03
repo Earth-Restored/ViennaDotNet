@@ -15,7 +15,7 @@ namespace ViennaDotNet.Buildplate.Launcher;
 
 public class Instance
 {
-    private const int HOST_PLAYER_CONNECT_TIMEOUT = 120000;
+    private const int HOST_PLAYER_CONNECT_TIMEOUT = 60_000;
 
     public static Instance Run(EventBusClient eventBusClient, string? playerId, string buildplateId, BuildplateSource buildplateSource, string instanceId, bool survival, bool night, bool saveEnabled, InventoryType inventoryType, long? shutdownTime, string publicAddress, int port, int serverInternalPort, string javaCmd, FileInfo fountainBridgeJar, DirectoryInfo serverTemplateDir, string fabricJarName, FileInfo connectorPluginJar, DirectoryInfo baseDir, string eventBusConnectionstring)
     {
@@ -24,12 +24,15 @@ public class Instance
             throw new ArgumentException($"{nameof(playerId)} was not while {nameof(buildplateSource)} was {nameof(BuildplateSource.PLAYER)}.", nameof(playerId));
         }
 
-        Instance instance = new Instance(eventBusClient, playerId, buildplateId, buildplateSource, instanceId, survival, night, saveEnabled, inventoryType, shutdownTime, publicAddress, port, serverInternalPort, javaCmd, fountainBridgeJar, serverTemplateDir, fabricJarName, connectorPluginJar, baseDir, eventBusConnectionstring);
+        var instance = new Instance(eventBusClient, playerId, buildplateId, buildplateSource, instanceId, survival, night, saveEnabled, inventoryType, shutdownTime, publicAddress, port, serverInternalPort, javaCmd, fountainBridgeJar, serverTemplateDir, fabricJarName, connectorPluginJar, baseDir, eventBusConnectionstring);
 
+        instance._threadStartedSemaphore.Wait();
         new Thread(instance.Run)
         {
             Name = $"Instance {instanceId}"
         }.Start();
+        instance._threadStartedSemaphore.Wait();
+        instance._threadStartedSemaphore.Release();
 
         return instance;
     }
@@ -61,6 +64,7 @@ public class Instance
     private readonly string _connectorPluginArgString;
 
     private Thread? _thread;
+    private readonly SemaphoreSlim _threadStartedSemaphore = new SemaphoreSlim(1, 1);
 
     private Publisher? _publisher = null;
     private RequestSender? _requestSender = null;
@@ -73,7 +77,7 @@ public class Instance
     private ConsoleProcess? _serverProcess = null;
     private ConsoleProcess? _bridgeProcess = null;
     private bool _shuttingDown = false;
-    private readonly object _subprocessLock = new();
+    private readonly Lock _subprocessLock = new();
 
     private volatile bool _hostPlayerConnected = false;
 
@@ -109,6 +113,7 @@ public class Instance
     private void Run()
     {
         _thread = Thread.CurrentThread;
+        _threadStartedSemaphore.Release();
 
         try
         {
@@ -200,20 +205,24 @@ public class Instance
                 }
             ));
 
-            Monitor.Enter(_subprocessLock);
+            _subprocessLock.Enter();
             if (!_shuttingDown)
             {
                 StartServerProcess();
                 if (_serverProcess is not null)
                 {
-                    Monitor.Exit(_subprocessLock);
+                    _subprocessLock.Exit();
                     int exitCode = WaitForProcess(_serverProcess.Process);
-                    Monitor.Enter(_subprocessLock);
+                    _subprocessLock.Enter();
                     _serverProcess = null;
                     if (!_shuttingDown)
+                    {
                         Log.Warning($"Server process has unexpectedly terminated with exit code {exitCode}");
+                    }
                     else
+                    {
                         Log.Information($"Server has finished with exit code {exitCode}");
+                    }
 
                     _shuttingDown = true;
 
@@ -221,18 +230,20 @@ public class Instance
                     {
                         Log.Information("Bridge is still running, shutting it down now");
                         _bridgeProcess.StopAndWait();
-                        Monitor.Exit(_subprocessLock);
+                        _subprocessLock.Exit();
                         exitCode = WaitForProcess(_bridgeProcess.Process);
-                        Monitor.Enter(_subprocessLock);
+                        _subprocessLock.Enter();
                         _bridgeProcess = null;
                         Log.Information($"Bridge has finished with exit code {exitCode}");
                     }
                 }
                 else
+                {
                     Log.Information("Server failed to start");
+                }
             }
 
-            Monitor.Exit(_subprocessLock);
+            _subprocessLock.Exit();
         }
         catch (Exception ex)
         {
@@ -293,7 +304,11 @@ public class Instance
 
                             {
                                 Log.Information("Saving snapshot");
-                                _ = SendEventBusRequest<object>("saved", worldSavedMessage, false);
+                                SendEventBusRequest<object>("saved", worldSavedMessage, false)
+                                    .Forget(ex =>
+                                    {
+                                        Log.Error($"Failed to send event bus request 'saved': {ex}");
+                                    });
                             }
                             else
                             {
@@ -558,7 +573,7 @@ public class Instance
 
     private Task<T?> SendEventBusRequest<T>(string type, object obj, bool returnResponse)
     {
-        RequestWithInstanceId request = new RequestWithInstanceId(InstanceId, obj);
+        var request = new RequestWithInstanceId(InstanceId, obj);
 
         return SendEventBusRequestRaw<T>(type, request, returnResponse);
     }
@@ -590,7 +605,7 @@ public class Instance
 
     private DirectoryInfo? SetupServerFiles(byte[] serverData)
     {
-        DirectoryInfo workDir = new DirectoryInfo(Path.Combine(_baseDir.FullName, "server"));
+        var workDir = new DirectoryInfo(Path.Combine(_baseDir.FullName, "server"));
         if (!workDir.TryCreate())
         {
             Log.Error("Could not create server working directory");
@@ -652,21 +667,21 @@ public class Instance
             .ToString();
         File.WriteAllText(Path.Combine(workDir.FullName, "server.properties"), serverProperties);
 
-        DirectoryInfo worldDir = new DirectoryInfo(Path.Combine(workDir.FullName, "world"));
+        var worldDir = new DirectoryInfo(Path.Combine(workDir.FullName, "world"));
         if (!worldDir.TryCreate())
         {
             Log.Error("Could not create server world directory");
             return null;
         }
 
-        DirectoryInfo worldEntitiesDir = new DirectoryInfo(Path.Combine(worldDir.FullName, "entities"));
+        var worldEntitiesDir = new DirectoryInfo(Path.Combine(worldDir.FullName, "entities"));
         if (!worldEntitiesDir.TryCreate())
         {
             Log.Error("Could not create server world entities directory");
             return null;
         }
 
-        DirectoryInfo worldRegionDir = new DirectoryInfo(Path.Combine(worldDir.FullName, "region"));
+        var worldRegionDir = new DirectoryInfo(Path.Combine(worldDir.FullName, "region"));
         if (!worldRegionDir.TryCreate())
         {
             Log.Error("Could not create server world regions directory");
@@ -674,10 +689,10 @@ public class Instance
         }
 
         TagCompound levelDatTag = CreateLevelDat(_survival, _night);
-        using (FileStream fs = new FileStream(Path.Combine(worldDir.FullName, "level.dat"), FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read))
-        using (GZipStream gzs = new GZipStream(fs, CompressionLevel.Optimal))
+        using (var fs = new FileStream(Path.Combine(worldDir.FullName, "level.dat"), FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read))
+        using (var gzs = new GZipStream(fs, CompressionLevel.Optimal))
         {
-            BinaryTagWriter writer = new BinaryTagWriter(gzs);
+            var writer = new BinaryTagWriter(gzs);
             writer.WriteStartDocument();
             writer.WriteStartTag(null, TagType.Compound);
             writer.WriteTag(levelDatTag);
@@ -686,18 +701,23 @@ public class Instance
         }
         //NBTIO.writeFile(levelDatTag, new File(worldDir, "level.dat"));
 
-        using (MemoryStream byteArrayInputStream = new MemoryStream(serverData))
-        using (ZipArchive zipInputStream = new ZipArchive(byteArrayInputStream))
+        using (var byteArrayInputStream = new MemoryStream(serverData))
+        using (var zipInputStream = new ZipArchive(byteArrayInputStream))
         {
             foreach (ZipArchiveEntry entry in zipInputStream.Entries)
             {
-                if (entry.IsDirectory()) continue;
+                if (entry.IsDirectory())
+                {
+                    continue;
+                }
 
                 string path = Path.Combine(worldDir.FullName, entry.FullName);
 
                 using (Stream zipStream = entry.Open())
                 using (FileStream fs = File.OpenWrite(path))
+                {
                     zipStream.CopyTo(fs);
+                }
             }
         }
 
@@ -834,7 +854,7 @@ public class Instance
 
     private DirectoryInfo? SetupBridgeFiles(byte[] serverData)
     {
-        DirectoryInfo workDir = new DirectoryInfo(Path.Combine(_baseDir.FullName, "bridge"));
+        var workDir = new DirectoryInfo(Path.Combine(_baseDir.FullName, "bridge"));
         if (!workDir.TryCreate())
         {
             Log.Error("Could not create bridge working directory");
@@ -889,136 +909,130 @@ public class Instance
 
     private void StartServerProcess()
     {
-        Monitor.Enter(_subprocessLock);
-
-        if (_shuttingDown)
+        lock (_subprocessLock)
         {
-            Log.Debug("Already shutting down, not starting server process");
-            Monitor.Exit(_subprocessLock);
-            return;
-        }
-
-        if (_serverProcess is not null)
-        {
-            Log.Debug("Server process has already been started");
-            Monitor.Exit(_subprocessLock);
-            return;
-        }
-
-        Log.Information("Starting server process");
-
-        try
-        {
-            bool openInNewWindow = true;
-
-            _serverProcess = new ConsoleProcess(_javaCmd, openInNewWindow, !openInNewWindow, openInNewWindow: openInNewWindow);
-
-            if (!openInNewWindow)
+            if (_shuttingDown)
             {
-                _serverProcess.StandartTextReceived += (sender, e) =>
-                {
-                    if (!string.IsNullOrWhiteSpace(e.Data))
-                    {
-                        Log.Debug($"[server] {e.Data}");
-                    }
-                };
-                _serverProcess.ErrorTextReceived += (sender, e) =>
-                {
-                    if (!string.IsNullOrWhiteSpace(e.Data))
-                    {
-                        Log.Error($"[server] {e.Data}");
-                    }
-                };
+                Log.Debug("Already shutting down, not starting server process");
+                return;
             }
 
-            _serverProcess.ExecuteAsync(_serverWorkDir!.FullName, ["-jar", _fabricJarName, "-nogui"]);
+            if (_serverProcess is not null)
+            {
+                Log.Debug("Server process has already been started");
+                return;
+            }
 
-            Log.Information($"Server process started, PID {_serverProcess.Id}");
-        }
-        catch (IOException ex)
-        {
-            Log.Error($"Could not start server process: {ex}");
-        }
+            Log.Information("Starting server process");
 
-        Monitor.Exit(_subprocessLock);
+            try
+            {
+                bool openInNewWindow = true;
+
+                _serverProcess = new ConsoleProcess(_javaCmd, openInNewWindow, !openInNewWindow, openInNewWindow: openInNewWindow);
+
+                if (!openInNewWindow)
+                {
+                    _serverProcess.StandartTextReceived += (sender, e) =>
+                    {
+                        if (!string.IsNullOrWhiteSpace(e.Data))
+                        {
+                            Log.Debug($"[server] {e.Data}");
+                        }
+                    };
+                    _serverProcess.ErrorTextReceived += (sender, e) =>
+                    {
+                        if (!string.IsNullOrWhiteSpace(e.Data))
+                        {
+                            Log.Error($"[server] {e.Data}");
+                        }
+                    };
+                }
+
+                _serverProcess.ExecuteAsync(_serverWorkDir!.FullName, ["-jar", _fabricJarName, "-nogui"]);
+
+                Log.Information($"Server process started, PID {_serverProcess.Id}");
+            }
+            catch (IOException ex)
+            {
+                Log.Error($"Could not start server process: {ex}");
+            }
+        }
     }
 
     private void StartBridgeProcess()
     {
-        Monitor.Enter(_subprocessLock);
-
-        if (_shuttingDown)
+        lock (_subprocessLock)
         {
-            Log.Debug("Already shutting down, not starting bridge process");
-            Monitor.Exit(_subprocessLock);
-            return;
-        }
-
-        if (_bridgeProcess is not null)
-        {
-            Log.Debug("Bridge process has already been started");
-            Monitor.Exit(_subprocessLock);
-            return;
-        }
-
-        Log.Information("Starting bridge process");
-
-        try
-        {
-            bool openInNewWindow = true;
-
-            _bridgeProcess = new ConsoleProcess(_javaCmd, openInNewWindow, !openInNewWindow, openInNewWindow: openInNewWindow);
-            if (!openInNewWindow)
+            if (_shuttingDown)
             {
-                _bridgeProcess.StandartTextReceived += (sender, e) =>
-                {
-                    if (!string.IsNullOrWhiteSpace(e.Data))
-                    {
-                        Log.Debug($"[bridge] {e.Data}");
-                    }
-                };
-                _bridgeProcess.ErrorTextReceived += (sender, e) =>
-                {
-                    if (!string.IsNullOrWhiteSpace(e.Data))
-                    {
-                        Log.Error($"[bridge] {e.Data}");
-                    }
-                };
+                Log.Debug("Already shutting down, not starting bridge process");
+                return;
             }
 
-            _bridgeProcess.ProcessExited += (sender, e) =>
+            if (_bridgeProcess is not null)
             {
-                Monitor.Enter(_subprocessLock);
-                if (!_shuttingDown)
+                Log.Debug("Bridge process has already been started");
+                return;
+            }
+
+            Log.Information("Starting bridge process");
+
+            try
+            {
+                bool openInNewWindow = true;
+
+                _bridgeProcess = new ConsoleProcess(_javaCmd, openInNewWindow, !openInNewWindow, openInNewWindow: openInNewWindow);
+                if (!openInNewWindow)
                 {
-                    Log.Warning($"Bridge process has unexpectedly terminated with exit code {_bridgeProcess.ExitCode}");
-                    _bridgeProcess = null;
-                    BeginShutdown();
+                    _bridgeProcess.StandartTextReceived += (sender, e) =>
+                    {
+                        if (!string.IsNullOrWhiteSpace(e.Data))
+                        {
+                            Log.Debug($"[bridge] {e.Data}");
+                        }
+                    };
+                    _bridgeProcess.ErrorTextReceived += (sender, e) =>
+                    {
+                        if (!string.IsNullOrWhiteSpace(e.Data))
+                        {
+                            Log.Error($"[bridge] {e.Data}");
+                        }
+                    };
                 }
 
-                Monitor.Exit(_subprocessLock);
-            };
+                _bridgeProcess.ProcessExited += (sender, e) =>
+                {
+                    lock (_subprocessLock)
+                    {
+                        if (!_shuttingDown)
+                        {
+                            Log.Warning($"Bridge process has unexpectedly terminated with exit code {_bridgeProcess.ExitCode}");
+                            _bridgeProcess = null;
+                            BeginShutdown();
+                        }
+                    }
+                };
 
-            _bridgeProcess.ExecuteAsync(_bridgeWorkDir!.FullName,
-            [
-                "-jar", _fountainBridgeJar.FullName,
-                "-port", Port.ToString(),
-                "-serverAddress", "127.0.0.1",
-                "-serverPort", _serverInternalPort.ToString(),
-                "-connectorPluginJar", _connectorPluginJar.FullName,
-                "-connectorPluginClass", "micheal65536.vienna.buildplate.connector.plugin.ViennaConnectorPlugin",
-                "-connectorPluginArg", _connectorPluginArgString,
-                "-useUUIDAsUsername",
-            ]);
+                _bridgeProcess.ExecuteAsync(_bridgeWorkDir!.FullName,
+                [
+                    "-jar", _fountainBridgeJar.FullName,
+                    "-port", Port.ToString(),
+                    "-serverAddress", "127.0.0.1",
+                    "-serverPort", _serverInternalPort.ToString(),
+                    "-connectorPluginJar", _connectorPluginJar.FullName,
+                    "-connectorPluginClass", "micheal65536.vienna.buildplate.connector.plugin.ViennaConnectorPlugin",
+                    "-connectorPluginArg", _connectorPluginArgString,
+                    "-useUUIDAsUsername",
+                ]);
 
-            Log.Information($"Bridge process started, PID {_bridgeProcess.Id}");
+                Log.Information($"Bridge process started, PID {_bridgeProcess.Id}");
+            }
+            catch (IOException ex)
+            {
+                Log.Error($"Could not start bridge process: {ex}");
+            }
         }
-        catch (IOException ex)
-        {
-            Log.Error($"Could not start bridge process: {ex}");
-        }
-
-        Monitor.Exit(_subprocessLock);
     }
 
 #pragma warning disable IDE0022
@@ -1038,7 +1052,9 @@ public class Instance
             lock (_subprocessLock)
             {
                 if (_shuttingDown)
+                {
                     return;
+                }
             }
 
             if (!_hostPlayerConnected)
@@ -1048,7 +1064,7 @@ public class Instance
             }
         }).Start();
     }
-	
+
     private void StartShutdownTimer()
     {
         new Thread(() =>
@@ -1090,12 +1106,12 @@ public class Instance
         {
             await Task.Yield();
 
-            Monitor.Enter(_subprocessLock);
+            _subprocessLock.Enter();
 
             if (_shuttingDown)
             {
                 Log.Debug("Already shutting down, not beginning shutdown");
-                Monitor.Exit(_subprocessLock);
+                _subprocessLock.Exit();
                 return;
             }
 
@@ -1108,10 +1124,10 @@ public class Instance
             if (_bridgeProcess is not null)
             {
                 Log.Information("Waiting for bridge to shut down");
-                Monitor.Exit(_subprocessLock);
+                _subprocessLock.Exit();
                 _bridgeProcess.StopAndWait();
                 int exitCode = _bridgeProcess.ExitCode;//waitForProcess(bridgeProcess.Process);
-                Monitor.Enter(_subprocessLock);
+                _subprocessLock.Enter();
                 _bridgeProcess = null;
                 Log.Information($"Bridge has finished with exit code {exitCode}");
             }
@@ -1122,7 +1138,7 @@ public class Instance
                 _serverProcess.StopAndWait();
             }
 
-            Monitor.Exit(_subprocessLock);
+            _subprocessLock.Exit();
         }))().Forget(ex =>
         {
             Log.Error(ex.Message);

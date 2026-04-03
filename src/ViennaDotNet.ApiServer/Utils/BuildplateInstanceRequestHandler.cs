@@ -25,7 +25,7 @@ public sealed class BuildplateInstanceRequestHandler
     private readonly EarthDB _earthDB;
     private readonly ObjectStoreClient _objectStoreClient;
     private readonly Catalog _catalog;
-    private static BuildplateInstancesManager _buildplateInstancesManager => Program.buildplateInstancesManager;
+    private static BuildplateInstancesManager BuildplateInstancesManager => Program.buildplateInstancesManager;
 
     public BuildplateInstanceRequestHandler(EarthDB earthDB, EventBusClient eventBusClient, ObjectStoreClient objectStoreClient, Catalog catalog)
     {
@@ -44,7 +44,9 @@ public sealed class BuildplateInstanceRequestHandler
                             {
                                 BuildplateLoadRequest? buildplateLoadRequest = ReadRawRequest<BuildplateLoadRequest>(request.Data);
                                 if (buildplateLoadRequest is null)
+                                {
                                     return null;
+                                }
 
                                 BuildplateLoadResponse? buildplateLoadResponse = await HandleLoad(buildplateLoadRequest.PlayerId, buildplateLoadRequest.BuildplateId);
                                 return buildplateLoadResponse is not null ? Json.Serialize(buildplateLoadResponse) : null;
@@ -124,7 +126,9 @@ public sealed class BuildplateInstanceRequestHandler
                             {
                                 RequestWithInstanceId<string>? requestWithInstanceId = ReadRequest<string>(request.Data);
                                 if (requestWithInstanceId is null)
+                                {
                                     return null;
+                                }
 
                                 InventoryResponse? inventoryResponse = await HandleGetInventory(requestWithInstanceId.InstanceId, requestWithInstanceId.Request);
                                 return inventoryResponse is not null ? Json.Serialize(inventoryResponse) : null;
@@ -162,6 +166,7 @@ public sealed class BuildplateInstanceRequestHandler
                                     : await HandleInventorySetHotbar(requestWithInstanceId.InstanceId, requestWithInstanceId.Request) ? "" : null;
                             }
                         default:
+                            Log.Warning($"Unknown BuildplateInstanceRequestHandler request type '{request.Type}'");
                             return null;
                     }
                 }
@@ -206,7 +211,9 @@ public sealed class BuildplateInstanceRequestHandler
 
         Buildplates.Buildplate? buildplate = buildplates.GetBuildplate(buildplateId);
         if (buildplate is null)
+        {
             return null;
+        }
 
         byte[]? serverData = (await _objectStoreClient.Get(buildplate.ServerDataObjectId).Task) as byte[];
         if (serverData is null)
@@ -272,7 +279,7 @@ public sealed class BuildplateInstanceRequestHandler
 
     private async Task<bool> HandleSaved(string instanceId, string dataBase64, long timestamp)
     {
-        BuildplateInstancesManager.InstanceInfo? instanceInfo = _buildplateInstancesManager.GetInstanceInfo(instanceId);
+        BuildplateInstancesManager.InstanceInfo? instanceInfo = BuildplateInstancesManager.GetInstanceInfo(instanceId);
         if (instanceInfo is null)
         {
             return false;
@@ -305,7 +312,7 @@ public sealed class BuildplateInstanceRequestHandler
         if (buildplateUnsafeForPreviewGenerator is null)
             return false;
 
-        string? preview = _buildplateInstancesManager.GetBuildplatePreview(serverData, buildplateUnsafeForPreviewGenerator.Night);
+        string? preview = BuildplateInstancesManager.GetBuildplatePreview(serverData, buildplateUnsafeForPreviewGenerator.Night);
         if (preview is null)
             Log.Warning("Could not generate preview for buildplate");
 
@@ -410,7 +417,7 @@ public sealed class BuildplateInstanceRequestHandler
     {
         // TODO: check join code etc.
 
-        BuildplateInstancesManager.InstanceInfo? instanceInfo = _buildplateInstancesManager.GetInstanceInfo(instanceId);
+        BuildplateInstancesManager.InstanceInfo? instanceInfo = BuildplateInstancesManager.GetInstanceInfo(instanceId);
 
         if (instanceInfo is null)
         {
@@ -560,7 +567,7 @@ public sealed class BuildplateInstanceRequestHandler
 
     private async Task<PlayerDisconnectedResponse?> HandlePlayerDisconnected(string instanceId, PlayerDisconnectedRequest playerDisconnectedRequest, long timestamp)
     {
-        BuildplateInstancesManager.InstanceInfo? instanceInfo = _buildplateInstancesManager.GetInstanceInfo(instanceId);
+        BuildplateInstancesManager.InstanceInfo? instanceInfo = BuildplateInstancesManager.GetInstanceInfo(instanceId);
         if (instanceInfo is null)
         {
             return null;
@@ -653,7 +660,7 @@ public sealed class BuildplateInstanceRequestHandler
 
     private static bool? HandlePlayerDead(string instanceId, string playerId, long currentTime)
     {
-        BuildplateInstancesManager.InstanceInfo? instanceInfo = _buildplateInstancesManager.GetInstanceInfo(instanceId);
+        BuildplateInstancesManager.InstanceInfo? instanceInfo = BuildplateInstancesManager.GetInstanceInfo(instanceId);
         return instanceInfo is null
             ? null
             : instanceInfo.Type is BuildplateInstancesManager.InstanceType.BUILD or BuildplateInstancesManager.InstanceType.SHARED_BUILD;
@@ -665,7 +672,7 @@ public sealed class BuildplateInstanceRequestHandler
     );
     private async Task<InitialPlayerStateResponse?> HandleGetInitialPlayerState(string instanceId, string playerId, long currentTime)
     {
-        BuildplateInstancesManager.InstanceInfo? instanceInfo = _buildplateInstancesManager.GetInstanceInfo(instanceId);
+        BuildplateInstancesManager.InstanceInfo? instanceInfo = BuildplateInstancesManager.GetInstanceInfo(instanceId);
 
         if (instanceInfo is null)
         {
@@ -752,9 +759,14 @@ public sealed class BuildplateInstanceRequestHandler
     {
         Catalog.ItemsCatalogR.Item? catalogItem = _catalog.ItemsCatalog.GetItem(inventoryAddItemMessage.ItemId);
         if (catalogItem is null)
+        {
             return false;
+        }
+
         if (!catalogItem.Stackable && inventoryAddItemMessage.InstanceId is null)
+        {
             return false;
+        }
 
         EarthDB.Results results = await new EarthDB.Query(true)
             .Get("inventory", inventoryAddItemMessage.PlayerId, typeof(Inventory))
