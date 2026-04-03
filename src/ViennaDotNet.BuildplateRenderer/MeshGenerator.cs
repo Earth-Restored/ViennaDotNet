@@ -14,12 +14,20 @@ using ViennaDotNet.Common.Utils;
 namespace ViennaDotNet.BuildplateRenderer;
 
 [StructLayout(LayoutKind.Sequential)]
-public struct MeshVertex
+public readonly struct MeshVertex
 {
-    public Vector3 Position;
-    public Vector3 Normal;
-    public Vector2 UV;
-    public int TintIndex;
+    public readonly Vector3 Position;
+    public readonly Vector3 Normal;
+    public readonly Vector2 UV;
+    public readonly int TintIndex;
+
+    public MeshVertex(Vector3 position, Vector3 normal, Vector2 uV, int tintIndex)
+    {
+        Position = position;
+        Normal = normal;
+        UV = uV;
+        TintIndex = tintIndex;
+    }
 }
 
 public sealed class MeshPrimitive
@@ -28,7 +36,7 @@ public sealed class MeshPrimitive
     public List<int> Indices { get; } = [];
 }
 
-public class MeshData
+public sealed class MeshData
 {
     // Grouped by texture
     public Dictionary<string, MeshPrimitive> Primitives { get; } = [];
@@ -282,13 +290,7 @@ internal sealed class MeshGenerator
 
             var norm = Vector3.Normalize(Vector3.TransformNormal(normal, transform));
 
-            primitive.Vertices.Add(new MeshVertex
-            {
-                Position = pos,
-                Normal = norm,
-                UV = uvs[i],
-                TintIndex = face.TintIndex
-            });
+            primitive.Vertices.Add(new MeshVertex(pos, norm, uvs[i], face.TintIndex));
         }
 
         primitive.Indices.Add(startIndex + 0);

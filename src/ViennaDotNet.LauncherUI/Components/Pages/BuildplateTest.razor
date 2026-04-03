@@ -1,6 +1,14 @@
 ﻿@page "/bptest"
+@using HomagGroup.Blazor3D.Enums
 @using HomagGroup.Blazor3D.Extras.Core
-@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@using HomagGroup.Blazor3D.Geometires
+@using HomagGroup.Blazor3D.Lights
+@using HomagGroup.Blazor3D.Maths
+@using HomagGroup.Blazor3D.Objects
+@using HomagGroup.Blazor3D.Scenes
+@using HomagGroup.Blazor3D.Settings
+@using HomagGroup.Blazor3D.Viewers
+@rendermode InteractiveServer
 
 <PageTitle>Counter</PageTitle>
 
@@ -38,6 +46,26 @@
                 X = 1,
                 Y = 3,
                 Z = 0
+            }
+        });
+
+        scene.Add(new Mesh
+        {
+            Geometry = new BoxGeometry
+            {
+                Width = 2,
+                Height = 0.5f
+            },
+            Position = new Vector3
+            {
+                X = -1,
+                Y = 1,
+                Z = -1
+            }
+                       ,
+            Rotation = new Euler
+            {
+                X = Math.PI / 4
             }
         });
         
