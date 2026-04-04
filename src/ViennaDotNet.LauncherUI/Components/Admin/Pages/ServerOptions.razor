@@ -125,6 +125,21 @@
                                        id="skipChecks" />
                         <label class="form-check-label" for="skipChecks">Skip File Validation</label>
                     </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Static Data Path</label>
+                        <InputText @bind-Value="SettingsModel.StaticDataPath" class="form-control" />
+                        <ValidationMessage For="@(() => SettingsModel.StaticDataPath)" />
+                    </div>
+
+                    <hr />
+
+                    <div class="mb-3 form-check form-switch">
+                        <InputCheckbox @bind-Value="SettingsModel.LauncherBuildplatePreview" class="form-check-input"
+                                       id="buildPreview" />
+                        <label class="form-check-label" for="buildPreview">Enable Buildplate Preview in Launcher</label>
+                        <ValidationMessage For="@(() => SettingsModel.LauncherBuildplatePreview)" />
+                    </div>
                 </div>
             </div>
 
@@ -161,6 +176,8 @@
         SettingsModel.TileDatabaseConnectionString = source.TileDatabaseConnectionString;
         SettingsModel.GeneratePreviewOnImport = source.GeneratePreviewOnImport ?? false;
         SettingsModel.SkipFileChecks = source.SkipFileChecks ?? false;
+        SettingsModel.StaticDataPath = source.StaticDataPath;
+        SettingsModel.LauncherBuildplatePreview = source.LauncherBuildplatePreview ?? false;
     }
 
     private void HandleSave()
@@ -179,6 +196,8 @@
             TileDatabaseConnectionString = SettingsModel.TileDatabaseConnectionString,
             GeneratePreviewOnImport = SettingsModel.GeneratePreviewOnImport,
             SkipFileChecks = SettingsModel.SkipFileChecks,
+            StaticDataPath = SettingsModel.StaticDataPath,
+            LauncherBuildplatePreview = SettingsModel.LauncherBuildplatePreview,
         };
 
         Settings.Instance = settings;
@@ -234,6 +253,11 @@
         public bool GeneratePreviewOnImport { get; set; }
         public bool SkipFileChecks { get; set; }
 
+        [Required(AllowEmptyStrings = false)]
+        public string? StaticDataPath { get; set; }
+
+        public bool LauncherBuildplatePreview { get; set; }
+
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
             UriHostNameType nameType = Uri.CheckHostName(IPv4);
@@ -255,6 +279,46 @@ nameof(IPv4) });
                 {
                     yield return new ValidationResult("Tile database connection string is required for PostgreSQL source.", new[]
 {nameof(TileDatabaseConnectionString) });
+                }
+            }
+
+            if (LauncherBuildplatePreview)
+            {
+                string resourcepackDir = Path.GetFullPath(Path.Combine(StaticDataPath ?? "", "resourcepacks", "java", "minecraft"));
+                string ErrorStringTemplate = $"Resource pack folder '{{0}}' does not exist, extract the *1.20.4* vanilla resource pack into '{resourcepackDir}'";
+                if (!Directory.Exists(resourcepackDir))
+                {
+                    yield return new ValidationResult(
+                        string.Format(ErrorStringTemplate, resourcepackDir),
+                        new[] { nameof(LauncherBuildplatePreview) }
+                    );
+                }
+
+                string blockstates = Path.Combine(resourcepackDir, "blockstates");
+                if (!Directory.Exists(blockstates))
+                {
+                    yield return new ValidationResult(
+                        string.Format(ErrorStringTemplate, blockstates),
+                        new[] { nameof(LauncherBuildplatePreview) }
+                    );
+                }
+
+                string models = Path.Combine(resourcepackDir, "models");
+                if (!Directory.Exists(models))
+                {
+                    yield return new ValidationResult(
+                        string.Format(ErrorStringTemplate, models),
+                        new[] { nameof(LauncherBuildplatePreview) }
+                    );
+                }
+
+                string textures = Path.Combine(resourcepackDir, "textures");
+                if (!Directory.Exists(textures))
+                {
+                    yield return new ValidationResult(
+                        string.Format(ErrorStringTemplate, textures),
+                        new[] { nameof(LauncherBuildplatePreview) }
+                    );
                 }
             }
         }

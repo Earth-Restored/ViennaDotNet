@@ -27,6 +27,8 @@ public sealed class Settings
         TileDatabaseConnectionString = "Host=localhost;Username=mylogin;Password=mypass;Database=genoa_tile_data",
         GeneratePreviewOnImport = true,
         SkipFileChecks = false,
+        StaticDataPath = "../staticdata",
+        LauncherBuildplatePreview = false,
     };
 
     public static Settings Instance { get; set; } = Default;
@@ -48,6 +50,10 @@ public sealed class Settings
 
     public bool? GeneratePreviewOnImport { get; set; } // TODO: is this really needed?
     public bool? SkipFileChecks { get; set; }
+
+    public string? StaticDataPath {get;set;}
+
+    public bool? LauncherBuildplatePreview { get; set; }
 
     public enum TileDataSourceEnum
     {
@@ -150,18 +156,21 @@ public sealed class Settings
             anyErrors = true;
         }
 
-        if (settings.TileDataSource is null)
+        if (settings.EnableTileRenderingLabel is true)
         {
-            Log.Warning($"TileDataSource is invalid, using default: '{Default.TileDataSource}'");
-            settings.TileDataSource = Default.TileDataSource;
-            anyErrors = true;
-        }
+            if (settings.TileDataSource is null)
+            {
+                Log.Warning($"TileDataSource is invalid, using default: '{Default.TileDataSource}'");
+                settings.TileDataSource = Default.TileDataSource;
+                anyErrors = true;
+            }
 
-        if (string.IsNullOrWhiteSpace(settings.MapTilerApiKey))
-        {
-            Log.Warning($"MapTilerApiKey is invalid, using default: '{Default.MapTilerApiKey}'");
-            settings.MapTilerApiKey = Default.MapTilerApiKey;
-            anyErrors = true;
+            if (string.IsNullOrWhiteSpace(settings.MapTilerApiKey))
+            {
+                Log.Warning($"MapTilerApiKey is invalid, using default: '{Default.MapTilerApiKey}'");
+                settings.MapTilerApiKey = Default.MapTilerApiKey;
+                anyErrors = true;
+            }
         }
 
         if (settings.TileDatabaseConnectionString is null)
@@ -182,6 +191,13 @@ public sealed class Settings
         {
             Log.Warning($"Skip file checks is invalid, using default: '{Default.SkipFileChecks}'");
             settings.SkipFileChecks = Default.SkipFileChecks;
+            anyErrors = true;
+        }
+
+        if (string.IsNullOrWhiteSpace(settings.StaticDataPath))
+        {
+            Log.Warning($"StaticData path is invalid, using default: '{Default.StaticDataPath}'");
+            settings.StaticDataPath = Default.StaticDataPath;
             anyErrors = true;
         }
 

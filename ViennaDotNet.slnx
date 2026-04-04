@@ -4,7 +4,6 @@
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/ViennaDotNet.BuildplateRenderer/ViennaDotNet.BuildplateRenderer.csproj" />
-    <Project Path="src/ViennaDotNet.Launcher.Client/ViennaDotNet.Launcher.Client.csproj" />
     <Project Path="src/ViennaDotNet.LauncherUI/ViennaDotNet.LauncherUI.csproj" />
   </Folder>
   <Project Path="src/ViennaDotNet.ApiServer/ViennaDotNet.ApiServer.csproj">

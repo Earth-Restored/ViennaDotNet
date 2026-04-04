@@ -6,9 +6,19 @@ public sealed class ResourcePackManager
 {
     private readonly ResourcePack[] _packs;
 
-    public ResourcePackManager(IReadOnlyList<(string Name, DirectoryInfo Directory)> packsToLoad)
+    private ResourcePackManager(ResourcePack[] packs)
     {
-        _packs = new ResourcePack[packsToLoad.Count];
+        _packs = packs;
+    }
+
+    public int LoadedPackCount => _packs.Length;
+
+    public static async Task<ResourcePackManager> LoadAllAsync(DirectoryInfo directory, CancellationToken cancellationToken = default)
+        => await LoadAsync(directory.EnumerateDirectories().Select(directory => (directory.Name, directory)).ToList(), cancellationToken);
+
+    public static async Task<ResourcePackManager> LoadAsync(IReadOnlyList<(string Name, DirectoryInfo Directory)> packsToLoad, CancellationToken cancellationToken = default)
+    {
+        var packs = new ResourcePack[packsToLoad.Count];
 
         // Load in reverse (from base to highest priority custom)
         // This allows custom packs to reference block models from base packs.
@@ -18,9 +28,9 @@ public sealed class ResourcePackManager
 
             BlockModel? FallbackResolver(string modelName)
             {
-                for (int j = i + 1; j < _packs.Length; j++)
+                for (int j = i + 1; j < packs.Length; j++)
                 {
-                    if (_packs[j].TryGetBlockModel(modelName, out var baseModel))
+                    if (packs[j].TryGetBlockModel(modelName, out var baseModel))
                     {
                         return baseModel;
                     }
@@ -29,12 +39,11 @@ public sealed class ResourcePackManager
                 return null;
             }
 
-            _packs[i] = ResourcePack.Load(packDef.Name, packDef.Directory, FallbackResolver);
+            packs[i] = await ResourcePack.LoadAsync(packDef.Name, packDef.Directory, FallbackResolver, cancellationToken);
         }
-    }
 
-    public static ResourcePackManager LoadAll(DirectoryInfo directory)
-        => new ResourcePackManager(directory.EnumerateDirectories().Select(directory => (directory.Name, directory)).ToList());
+        return new ResourcePackManager(packs);
+    }
 
     public int GetModelVariants(BlockState blockState, Random rng, Span<VariantModel> result)
     {

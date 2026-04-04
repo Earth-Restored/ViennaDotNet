@@ -46,7 +46,7 @@ public sealed class ResourcePack
 
     public string Name { get; }
 
-    public static ResourcePack Load(string packName, DirectoryInfo rootDir, Func<string, BlockModel?>? fallbackResolver = null)
+    public static async Task<ResourcePack> LoadAsync(string packName, DirectoryInfo rootDir, Func<string, BlockModel?>? fallbackResolver = null, CancellationToken cancellationToken = default)
     {
         var blockModelsDir = new DirectoryInfo(Path.Combine(rootDir.FullName, "models", "block"));
         var blockModelsJson = new Dictionary<string, BlockModelJson>();
@@ -59,7 +59,7 @@ public sealed class ResourcePack
                 BlockModelJson model;
                 using (var fs = File.OpenRead(file.FullName))
                 {
-                    model = JsonUtils.DeserializeJson<BlockModelJson>(fs) ?? new();
+                    model = await JsonUtils.DeserializeJsonAsync<BlockModelJson>(fs, cancellationToken) ?? new();
                 }
 
                 blockModelsJson.Add($"{packName}:block/{modelName}", model);
@@ -83,7 +83,7 @@ public sealed class ResourcePack
                 BlockStateJson json;
                 using (var fs = File.OpenRead(file.FullName))
                 {
-                    json = JsonUtils.DeserializeJson<BlockStateJson>(fs) ?? new();
+                    json = await JsonUtils.DeserializeJsonAsync<BlockStateJson>(fs, cancellationToken) ?? new();
                 }
 
                 if (json.Variants is not null)

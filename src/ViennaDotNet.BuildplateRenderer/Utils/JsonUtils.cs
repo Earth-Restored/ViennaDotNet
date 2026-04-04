@@ -35,6 +35,9 @@ internal static class JsonUtils
 	public static T? DeserializeJson<T>(Stream stream)
 		=> JsonSerializer.Deserialize<T>(stream, DefaultJsonOptions);
 
+	public static async Task<T?> DeserializeJsonAsync<T>(Stream stream, CancellationToken cancellationToken = default)
+		=> await JsonSerializer.DeserializeAsync<T>(stream, DefaultJsonOptions, cancellationToken);
+
 	public static string SerializeJson<T>(T value)
 		=> JsonSerializer.Serialize(value, DefaultJsonOptions);
 }

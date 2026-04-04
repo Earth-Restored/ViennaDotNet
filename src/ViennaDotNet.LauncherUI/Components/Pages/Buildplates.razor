@@ -1,9 +1,19 @@
 @page "/Buildplates"
+@using HomagGroup.Blazor3D.Enums
+@using HomagGroup.Blazor3D.Geometires
+@using HomagGroup.Blazor3D.Lights
+@using HomagGroup.Blazor3D.Maths
+@using HomagGroup.Blazor3D.Objects
+@using HomagGroup.Blazor3D.Scenes
+@using HomagGroup.Blazor3D.Settings
+@using HomagGroup.Blazor3D.Viewers
 @using Microsoft.AspNetCore.Authorization
 @using System.Security.Claims
 @using System.Diagnostics
 @using Serilog
+@using ViennaDotNet.Buildplate.Model
 @using ViennaDotNet.BuildplateImporter
+@using ViennaDotNet.BuildplateRenderer
 @using ViennaDotNet.DB
 @using ViennaDotNet.EventBus.Client
 @using ViennaDotNet.LauncherUI.Utils
@@ -12,6 +22,7 @@
 @rendermode InteractiveServer
 @inject AuthenticationStateProvider AuthStateProvider
 @inject ServerManager ServerManager
+@implements IAsyncDisposable
 
 <PageTitle>Buildplates - ViennaDotNet</PageTitle>
 
@@ -23,7 +34,7 @@
                 @(_totalBuildplateCount?.ToString() ?? "?")
             </span>
         </div>
-        
+   
         <div class="input-group" style="max-width: 400px;">
             <input type="text" class="form-control" placeholder="Search by name..." @bind="_searchTerm"
                    @bind:event="oninput" @onkeyup="HandleSearchKeyPress" />
@@ -57,16 +68,34 @@
             {
                 float scaleVal = 1f / bp.BlocksPerMeter;
                 string displayScale = scaleVal >= 1
-                    ? $"1:{scaleVal:0.##}"
-                    : $"{(1 / scaleVal):0.##}:1";
+                ? $"1:{scaleVal:0.##}"
+                : $"{(1 / scaleVal):0.##}:1";
 
                 <div class="col-12 col-md-6 col-lg-4 col-xl-3">
                     <div class="card h-100 shadow-sm @(bp.IsBusy ? "opacity-50" : "")">
-                        
+                    
                         <div class="bg-dark text-secondary d-flex align-items-center justify-content-center position-relative"
                              style="height: 220px; overflow: hidden;">
-                            <span>[ TODO: 3D Preview ]</span>
-                            
+                            @if (bp.IsPreviewLoading)
+                            {
+                                <div class="spinner-border text-light" role="status">
+                                    <span class="visually-hidden">Loading 3D preview...</span>
+                                </div>
+                            }
+                            else if (bp.IsPreviewFailed)
+                            {
+                                <div class="text-danger d-flex flex-column align-items-center">
+                                    <i class="bi bi-x-circle fs-3 mb-1"></i>
+                                    <span class="small fw-bold">Preview unavailable</span>
+                                </div>
+                            }
+                            else if (bp.PreviewDataUri != null)
+                            {
+                                <div class="w-100 h-100">
+                                    <Viewer @ref="bp.Viewer3D" ViewerSettings="@bp.Settings" Scene="@bp.Scene" />
+                                </div>
+                            }
+                        
                             <span class="position-absolute top-0 start-0 m-2 badge bg-info text-dark">
                                 @displayScale
                             </span>
@@ -187,7 +216,7 @@
                 </div>
                 <div class="modal-body">
                     <p>Are you sure you want to delete <strong>@_bpToDelete?.Name</strong>?</p>
-                    
+                
                     <div class="form-check form-switch mt-3">
                         <input class="form-check-input" type="checkbox" id="removeTemplateCheckbox"
                                @bind="_removeTemplateFromPlayers">
@@ -249,6 +278,9 @@
     private List<Buildplate> _buildplates = new();
 
     private int? _totalBuildplateCount;
+
+    private static ResourcePackManager? _resourcePackManager;
+    private static readonly SemaphoreSlim _resourcePackLock = new(1, 1);
     
     // Search and Pagination State
     private string _searchTerm = string.Empty;
@@ -269,7 +301,81 @@
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         _user = authState.User;
 
+        await EnsureResourcePackLoadedAsync();
         await LoadBuildplates();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        foreach (var bp in _buildplates)
+        {
+            if (bp.Viewer3D != null && bp.PreviewDataUri != null && !bp.IsModelImported)
+            {
+                try
+                {
+                    @* bp.Scene.Add(new AmbientLight()
+                    {
+                        Intensity = 2,
+                    }); *@
+
+                    await bp.Viewer3D.Import3DModelAsync(new ImportSettings
+                    {
+                        Format = Import3DFormats.Gltf,
+                        FileURL = bp.PreviewDataUri,
+                    });
+
+                    @* await bp.Viewer3D.UpdateScene(); *@
+
+                    bp.IsModelImported = true;
+                }
+                catch (ArgumentNullException ex) when (ex.ParamName == "jsObjectReference")
+                {
+                    Log.Debug("Viewer JS reference not ready for {Id}, retrying next render...", bp.Id);
+                }
+                catch (Exception ex)
+                {
+                    Log.Error("Failed to import GLB model into Blazor3D Viewer for {Id}: {ex}", bp.Id, ex);
+                    bp.IsPreviewFailed = true;
+                    bp.IsModelImported = true; // Mark as done so we don't spam errors
+                    StateHasChanged();
+                }
+            }
+        }
+    }
+
+    private async Task EnsureResourcePackLoadedAsync()
+    {
+        if (_resourcePackManager is not null)
+        {
+            return;
+        }
+    
+        await _resourcePackLock.WaitAsync();
+
+        try
+        {
+            if (_resourcePackManager is null)
+            {
+                var dir = new DirectoryInfo(Path.Combine(Settings.Instance.StaticDataPath ?? "", "resourcepacks", "java"));
+                if (dir.Exists)
+                {
+                    _resourcePackManager = await ResourcePackManager.LoadAllAsync(dir);
+                    if (_resourcePackManager.LoadedPackCount < 2)
+                    {
+                        Log.Warning($"Only loaded {_resourcePackManager.LoadedPackCount} resourcepacks, make sure staticdata/resourcepacks/java contains minecraft/ and fountain/");
+                        _resourcePackManager = null;
+                    }
+                }
+                else
+                {
+                    Log.Warning("Resource pack directory not found. Previews will likely fail.");
+                }
+            }
+        }
+        finally
+        {
+            _resourcePackLock.Release();
+        }
     }
 
     private async Task LoadBuildplates()
@@ -286,19 +392,22 @@
                 .ExecuteAsync(earthDB, default);
 
             var (buildplates, buildplatesCount, totalCount) = results.GetBuildplates(searchArguments);
-            
+        
             Debug.Assert(totalCount is not null);
             _totalItems = totalCount.Value;
             if (string.IsNullOrWhiteSpace(searchFilter))
             {
                 _totalBuildplateCount = totalCount.Value;
             }
+
+            await DisposeViewers(_buildplates);
+
             _buildplates.Clear(); // Clear current page data
 
             foreach (var (buildplateId, dbBuildplate) in buildplates)
             {
                 Debug.Assert(dbBuildplate is not null);
-            
+        
                 var buildplate = new Buildplate()
                 {
                     Id = buildplateId,
@@ -310,14 +419,170 @@
                     ServerDataObjectId = dbBuildplate.ServerDataObjectId,
                     PreviewObjectId = dbBuildplate.PreviewObjectId,
                 };
+
+                buildplate.Settings.ContainerId = $"viewer_{buildplateId}";
+
+                buildplate.Scene.Add(new AmbientLight()
+                {
+                    Intensity = 2,
+                });
+                buildplate.Scene.Add(new Mesh
+                {
+                    Geometry = new BoxGeometry
+                    {
+                        Width = 8,
+                        Height = 10f,
+                        Depth = 5,
+                    },
+                    Position = new Vector3
+                    {
+                        X = 30,
+                        Y = 1,
+                        Z = -1
+                    }
+                      ,
+                    Rotation = new Euler
+                    {
+                        X = Math.PI / 4
+                    }
+                });
+                @* buildplate.Scene.Add(new PointLight()
+                {
+                    Position = new Vector3 { X = 1, Y = 3, Z = 0 },
+                    Intensity = 5,
+                });
+     *@
                 buildplate.AcceptChanges();
 
                 _buildplates.Add(buildplate);
             }
+
+            // Kick off background rendering tasks without blocking the UI
+            _ = Load3DPreviewsAsync(_buildplates.ToList());
         }
         catch (Exception ex)
         {
             Log.Error($"Could not connect to earth db: {ex}");
+        }
+    }
+
+    private async Task Load3DPreviewsAsync(List<Buildplate> plates)
+    {
+        if (Settings.Instance.LauncherBuildplatePreview is not true)
+        {
+            foreach (var bp in plates)
+            {
+                bp.IsPreviewLoading = false;
+            }
+
+            return;
+        }
+
+        if (ServerManager.Status is not ViennaDotNet.LauncherUI.ServerStatus.Online)
+        {
+            foreach (var bp in plates)
+            {
+                bp.IsPreviewLoading = false;
+                bp.IsPreviewFailed = true;
+                bp.ErrorMessage = "The server needs to be running to load preview";
+            }
+
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        if (_resourcePackManager is null)
+        {
+            foreach (var bp in plates)
+            {
+                bp.IsPreviewLoading = false;
+                bp.IsPreviewFailed = true;
+                bp.ErrorMessage = "Could not load resourcepacks";
+            }
+
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        var meshGenerator = new BuildplateMeshGenerator(_resourcePackManager);
+
+        try
+        {
+            using var objectStoreClient = ObjectStoreClient.Create($"localhost:{Settings.Instance.ObjectStorePort}");
+
+            var previewTasks = plates.Select(async bp =>
+            {
+                try
+                {
+                    // Reset loading state
+                    bp.IsPreviewLoading = true;
+                    bp.IsPreviewFailed = false;
+                    await InvokeAsync(StateHasChanged);
+        
+                    var worldDataRaw = (await objectStoreClient.Get(bp.ServerDataObjectId).Task) as byte[];
+
+                    if (worldDataRaw is null)
+                    {
+                        Log.Error("Preview mesh generation failed for Buildplate ID {Id}, could not fetch world data.", bp.Id);
+                        bp.IsPreviewFailed = true;
+                        return;
+                    }
+
+                    WorldData? worldData;
+                    using (var ms = new MemoryStream(worldDataRaw))
+                    {
+                        worldData = await WorldData.LoadFromZipAsync(ms, Log.Logger);
+                    }
+
+                    if (worldData is null)
+                    {
+                        Log.Error("Preview mesh generation failed for Buildplate ID {Id}, could not load world data.", bp.Id);
+                        bp.IsPreviewFailed = true;
+                        return;
+                    }
+
+                    MeshData? meshData = await meshGenerator.GenerateAsync(worldData);
+                    if (meshData != null && _resourcePackManager != null)
+                    {
+                        using var ms = new MemoryStream();
+            
+                        await meshData.ToGlb(_resourcePackManager, ms);
+            
+                        bool getBufferSuccess = ms.TryGetBuffer(out var buffer);
+                        Debug.Assert(getBufferSuccess);
+
+                        bp.PreviewDataUri = DataUtils.DataToUri(buffer.AsSpan());
+                    }
+                    else
+                    {
+                        bp.IsPreviewFailed = true;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "Preview mesh generation failed for Buildplate ID {Id}", bp.Id);
+                    bp.IsPreviewFailed = true;
+                }
+                finally
+                {
+                    bp.IsPreviewLoading = false;
+                    await InvokeAsync(StateHasChanged);
+                }
+            });
+
+            await Task.WhenAll(previewTasks);
+        }
+        catch (ViennaDotNet.ObjectStore.Client.ObjectStoreClient.ConnectException ex)
+        {
+            Log.Error(ex, "Failed to connect to ObjectStoreClient.");
+            foreach (var bp in plates)
+            {
+                bp.IsPreviewLoading = false;
+                bp.IsPreviewFailed = true;
+                bp.ErrorMessage = "Failed to connect to object store.";
+            }
+
+            await InvokeAsync(StateHasChanged);
         }
     }
 
@@ -417,10 +682,10 @@
         try
         {
             var earthDB = EarthDB.Open(Settings.Instance.EarthDatabaseConnectionString ?? "");
-            
+        
             await new EarthDB.ObjectQuery(true)
                 .UpdateBuildplate(bp.Id, new DB.Models.Global.TemplateBuildplate(bp.Name, bp.Size, bp.Offset, bp.BlocksPerMeter,
-bp.IsNight, bp.ServerDataObjectId, bp.PreviewObjectId))
+        bp.IsNight, bp.ServerDataObjectId, bp.PreviewObjectId))
                 .ExecuteAsync(earthDB, default);
 
             await Task.Delay(250);
@@ -464,7 +729,7 @@ bp.IsNight, bp.ServerDataObjectId, bp.PreviewObjectId))
             _deleteErrorMessage = "The server must be running to delete buildplates.";
             return;
         }
-        
+    
         if (_bpToDelete is not null && HasPermission(Permissions.ManageBuildplates))
         {
             try
@@ -479,7 +744,7 @@ bp.IsNight, bp.ServerDataObjectId, bp.PreviewObjectId))
                     _deleteErrorMessage = "Failed to delete buildplate, check Launcher logs for details.";
                     return;
                 }
-                
+        
                 await LoadBuildplates();
                 CancelDelete();
             }
@@ -503,10 +768,40 @@ bp.IsNight, bp.ServerDataObjectId, bp.PreviewObjectId))
     private bool HasPermission(string permission)
         => _user?.HasPermission(permission) ?? false;
 
+    private async Task DisposeViewers(IEnumerable<Buildplate> plates)
+    {
+        foreach (var bp in plates)
+        {
+            if (bp.Viewer3D is not null)
+            {
+                try
+                {
+                    await bp.Viewer3D.DisposeAsync();
+                }
+                catch (Exception ex)
+                {
+                    Log.Debug("Viewer for {Id} already disposed or failed: {Msg}", bp.Id, ex.Message);
+                }
+                finally
+                {
+                    bp.Viewer3D = null;
+                }
+            }
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_buildplates is not null)
+        {
+            await DisposeViewers(_buildplates);
+        }
+    }
+
     public sealed class Buildplate
     {
         public required string Id { get; set; }
-        
+    
         public required string Name { get; set; }
         public int BlocksPerMeter { get; set; }
         public int Size { get; set; }
@@ -525,10 +820,19 @@ bp.IsNight, bp.ServerDataObjectId, bp.PreviewObjectId))
         // UI State
         public bool IsSaving { get; set; }
         public bool IsRegeneratingPreview { get; set; }
-        
+    
         public bool IsBusy => IsSaving || IsRegeneratingPreview;
 
+        // 3D Rendering State
+        public Viewer? Viewer3D { get; set; }
+        public ViewerSettings Settings { get; set; } = new ViewerSettings();
+        public Scene Scene { get; set; } = new Scene();
+    
+        public bool IsPreviewLoading { get; set; } = true;
+        public bool IsPreviewFailed { get; set; } = false;
         public string? ErrorMessage { get; set; }
+        public string? PreviewDataUri { get; set; }
+        public bool IsModelImported { get; set; } = false;
 
         public void AcceptChanges()
         {

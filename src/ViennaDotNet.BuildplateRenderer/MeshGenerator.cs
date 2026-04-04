@@ -42,14 +42,14 @@ public sealed class MeshData
     public Dictionary<string, MeshPrimitive> Primitives { get; } = [];
 }
 
-internal sealed class MeshGenerator
+public sealed class BuildplateMeshGenerator
 {
     private const float BlockModelScale = 1f / 16f;
 
     private readonly ResourcePackManager _resourcePack;
     private readonly Random _rng = new();
 
-    public MeshGenerator(ResourcePackManager resourcePack)
+    public BuildplateMeshGenerator(ResourcePackManager resourcePack)
     {
         _resourcePack = resourcePack;
     }
@@ -69,7 +69,7 @@ internal sealed class MeshGenerator
                     byte[] regionData = GC.AllocateUninitializedArray<byte>(checked((int)entry.Length));
                     await entryStream.ReadExactlyAsync(regionData, cancellationToken);
 
-                    ProcessRegion(regionData, RegionUtils.PathToPos(entry.FullName), mesh);
+                    ProcessRegion(regionData, RegionUtils.PathToPos(entry.FullName), mesh, new int3(0, -worldData.Offset, 0));
                 }
             }
         }
@@ -77,18 +77,18 @@ internal sealed class MeshGenerator
         return mesh;
     }
 
-    private void ProcessRegion(byte[] regionData, int2 regionPosition, MeshData mesh)
+    private void ProcessRegion(byte[] regionData, int2 regionPosition, MeshData mesh, int3 offset)
     {
         foreach (var localPosition in RegionUtils.GetChunkPositions(regionData))
         {
             var chunkNBT = RegionUtils.ReadChunkNTB(regionData, localPosition);
 
-            ProcessChunk(chunkNBT, RegionUtils.LocalToChunk(localPosition, regionPosition), mesh);
+            ProcessChunk(chunkNBT, RegionUtils.LocalToChunk(localPosition, regionPosition), mesh, offset);
         }
     }
 
     // https://minecraft.wiki/w/Chunk_format
-    private void ProcessChunk(CompoundTag nbt, int2 chunkPosition, MeshData mesh)
+    private void ProcessChunk(CompoundTag nbt, int2 chunkPosition, MeshData mesh, int3 offset)
     {
         Debug.Assert(((IntTag)nbt["xPos"]).Value == chunkPosition.X);
         Debug.Assert(((IntTag)nbt["zPos"]).Value == chunkPosition.Y);
@@ -101,11 +101,11 @@ internal sealed class MeshGenerator
                 continue;
             }
 
-            ProcessSubChunk(subChunkNBT, new int3(chunkPosition.X, ((ByteTag)subChunkNBT["Y"]).Value, chunkPosition.Y), mesh);
+            ProcessSubChunk(subChunkNBT, new int3(chunkPosition.X, ((ByteTag)subChunkNBT["Y"]).Value, chunkPosition.Y), mesh, offset);
         }
     }
 
-    private void ProcessSubChunk(CompoundTag nbt, int3 chunkPosition, MeshData mesh)
+    private void ProcessSubChunk(CompoundTag nbt, int3 chunkPosition, MeshData mesh, int3 offset)
     {
         var blockStates = (CompoundTag)nbt["block_states"];
 
@@ -175,7 +175,7 @@ internal sealed class MeshGenerator
                 var modelVariantsLength = _resourcePack.GetModelVariants(blockState, _rng, modelVariants);
                 foreach (var modelVariant in modelVariants.AsSpan(0, modelVariantsLength))
                 {
-                    GenerateBlockMesh(modelVariant, chunkBlockPosition + blockPosition, mesh, blockPosition =>
+                    GenerateBlockMesh(modelVariant, chunkBlockPosition + blockPosition + offset, mesh, blockPosition =>
                     {
                         var localPosition = blockPosition - chunkBlockPosition;
 
