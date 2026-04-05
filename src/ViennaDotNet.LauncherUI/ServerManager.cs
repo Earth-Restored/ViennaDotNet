@@ -67,13 +67,13 @@ public sealed class ServerManager
         RefreshComponentStatuses();
     }
 
-    public void RefreshComponentStatuses()
+    public void RefreshComponentStatuses(bool detectRunning = true)
     {
         bool anyOnline = false;
         bool anyOffline = false;
         foreach (var comp in Components)
         {
-            bool isRunning = ProcessUtils.GetProgramProcesses(comp.ExeName).Any();
+            bool isRunning = detectRunning ? ProcessUtils.GetProgramProcesses(comp.ExeName).Any() : comp.Status is ServerStatus.Online;
             comp.Status = isRunning ? ServerStatus.Online : ServerStatus.Offline;
 
             if (!isRunning && comp.IsEnabled(Settings.Instance))
@@ -96,6 +96,87 @@ public sealed class ServerManager
         {
             OnStatusChanged?.Invoke();
         }
+    }
+
+    public async Task<bool> EnsureComponentsOnline(params IEnumerable<string> exeNames)
+    {
+        List<ServerComponent> targets;
+
+        lock (_statusLock)
+        {
+            // Identify which of our managed components match the requested EXEs
+            targets = [.. Components.Where(c => exeNames.Contains(c.ExeName, StringComparer.OrdinalIgnoreCase))];
+
+            if (targets.Count == 0)
+            {
+                return true;
+            }
+
+            if (Status is ServerStatus.Stopping)
+            {
+                return false;
+            }
+
+            if (targets.All(t => t.Status is ServerStatus.Online))
+            {
+                return true;
+            }
+
+            if (Status is ServerStatus.Offline)
+            {
+                Status = ServerStatus.Starting;
+            }
+        }
+
+        var logger = Log.Logger;
+        var settings = Settings.Instance;
+        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30)); // Safety timeout
+
+        try
+        {
+            foreach (var comp in targets)
+            {
+                if (comp.Status is ServerStatus.Online)
+                {
+                    continue;
+                }
+
+                logger.Information($"Page-level initialization: Starting {comp.Name}");
+
+                comp.Status = ServerStatus.Starting;
+                OnStatusChanged?.Invoke();
+
+                comp.StartAction(settings, logger);
+
+                if (comp.StartupDelayMs > 0)
+                {
+                    await Task.Delay(comp.StartupDelayMs, cts.Token);
+                }
+
+                if (ProcessUtils.GetProgramProcesses(comp.ExeName).Any())
+                {
+                    comp.Status = ServerStatus.Online;
+                }
+                else
+                {
+                    comp.Status = ServerStatus.Offline;
+                    logger.Error($"{comp.Name} failed to start during page-level initialization.");
+                }
+
+                OnStatusChanged?.Invoke();
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.Error(ex, "Error during selective component startup");
+            return false;
+        }
+        finally
+        {
+            RefreshComponentStatuses();
+        }
+
+        return targets.All(t => t.Status is ServerStatus.Online);
     }
 
     public async Task Start(CancellationToken cancellationToken = default)

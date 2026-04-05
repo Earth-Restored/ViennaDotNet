@@ -6,6 +6,7 @@
 @using ViennaDotNet.BuildplateImporter
 @using ViennaDotNet.DB
 @using ViennaDotNet.EventBus.Client
+@using ViennaDotNet.LauncherUI.Programs
 @using ViennaDotNet.LauncherUI.Utils
 @using ViennaDotNet.ObjectStore.Client
 @attribute [Authorize(Policy = Permissions.ManagePlayers)]
@@ -24,7 +25,7 @@
         <div class="d-flex align-items-baseline gap-2">
             <h2 class="mb-0">
                 <i class="bi bi-boxes text-info me-2"></i>Buildplates for Player @(string.IsNullOrEmpty(_username) ?
-                                                                                                                                                                         PlayerId : $"{_username} (ID: {PlayerId})")
+                                                                                                                                                                                         PlayerId : $"{_username} (ID: {PlayerId})")
             </h2>
         </div>
         
@@ -364,9 +365,10 @@
 
         _errorMessage = null;
 
-        if (ServerManager.Status is not ServerStatus.Online)
+        if (!await ServerManager.EnsureComponentsOnline(EventBusServer.ExeName, ObjectStoreServer.ExeName,
+BuildplateLauncher.ExeName))
         {
-            _errorMessage = "The server must be running to add buildplates to the player.";
+            _errorMessage = "The server must be running.";
             CloseAddModal();
             return;
         }
@@ -402,16 +404,16 @@
         }
     }
 
-    private void OpenRemoveBuildplateModal(string id)
+    private async Task OpenRemoveBuildplateModal(string id)
     {
         _errorMessage = null;
 
         var item = _playerBuildplates?.FirstOrDefault(x => x.Id == id);
         if (item is not null)
         {
-            if (ServerManager.Status is not ServerStatus.Online)
+            if (!await ServerManager.EnsureComponentsOnline(ObjectStoreServer.ExeName))
             {
-                _errorMessage = "The server must be running to add buildplates to the player.";
+                _errorMessage = "The server must be running.";
                 return;
             }
 
@@ -523,12 +525,15 @@
 
     private async Task RegeneratePreview(PlayerBuildplate bp)
     {
-        if (!HasPermission(Permissions.ManagePlayers)) return;
+        if (!HasPermission(Permissions.ManagePlayers))
+        {
+            return;
+        }
 
         bp.IsRegeneratingPreview = true;
         bp.ErrorMessage = null;
 
-        if (ServerManager.Status is not ViennaDotNet.LauncherUI.ServerStatus.Online)
+        if (!await ServerManager.EnsureComponentsOnline(EventBusServer.ExeName, ObjectStoreServer.ExeName, BuildplateLauncher.ExeName))
         {
             bp.ErrorMessage = "The server must be running.";
             bp.IsRegeneratingPreview = false;

@@ -5,6 +5,7 @@
 @using ViennaDotNet.BuildplateImporter
 @using ViennaDotNet.DB
 @using ViennaDotNet.EventBus.Client
+@using ViennaDotNet.LauncherUI.Programs
 @using ViennaDotNet.LauncherUI.Utils
 @using ViennaDotNet.ObjectStore.Client
 @attribute [Authorize(Policy = Permissions.ManageBuildplates)]
@@ -228,7 +229,7 @@
         isUploading = true;
         StateHasChanged();
 
-        if (ServerManager.Status is not ServerStatus.Online)
+        if (!await ServerManager.EnsureComponentsOnline(EventBusServer.ExeName, ObjectStoreServer.ExeName, BuildplateLauncher.ExeName))
         {
             ShowDialog(false, "The server must be running to import buildplates.");
             isUploading = false;
