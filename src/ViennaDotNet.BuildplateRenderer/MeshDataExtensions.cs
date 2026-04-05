@@ -24,7 +24,8 @@ public static class MeshDataExtensions
                 var material = new MaterialBuilder(textureId)
                     .WithBaseColor(new SharpGLTF.Memory.MemoryImage(textureBytes))
                     .WithDoubleSide(false)
-                    .WithAlpha(AlphaMode.MASK); // todo: BLEND
+                    .WithAlpha(AlphaMode.MASK) // todo: BLEND
+                    .WithMetallicRoughness(0, 1);
 
                 var textureBuilder = material.GetChannel(KnownChannel.BaseColor).Texture;
                 textureBuilder.MinFilter = SharpGLTF.Schema2.TextureMipMapFilter.NEAREST;

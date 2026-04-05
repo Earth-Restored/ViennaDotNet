@@ -424,34 +424,9 @@
 
                 buildplate.Scene.Add(new AmbientLight()
                 {
-                    Intensity = 2,
+                    Intensity = 1,
                 });
-                buildplate.Scene.Add(new Mesh
-                {
-                    Geometry = new BoxGeometry
-                    {
-                        Width = 8,
-                        Height = 10f,
-                        Depth = 5,
-                    },
-                    Position = new Vector3
-                    {
-                        X = 30,
-                        Y = 1,
-                        Z = -1
-                    }
-                      ,
-                    Rotation = new Euler
-                    {
-                        X = Math.PI / 4
-                    }
-                });
-                @* buildplate.Scene.Add(new PointLight()
-                {
-                    Position = new Vector3 { X = 1, Y = 3, Z = 0 },
-                    Intensity = 5,
-                });
-     *@
+                
                 buildplate.AcceptChanges();
 
                 _buildplates.Add(buildplate);
