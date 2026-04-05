@@ -22,6 +22,7 @@
 @rendermode InteractiveServer
 @inject AuthenticationStateProvider AuthStateProvider
 @inject ServerManager ServerManager
+@inject IJSRuntime JSRuntime
 @implements IAsyncDisposable
 
 <PageTitle>Buildplates - ViennaDotNet</PageTitle>
@@ -71,11 +72,13 @@
                 ? $"1:{scaleVal:0.##}"
                 : $"{(1 / scaleVal):0.##}:1";
 
-                <div class="col-12 col-md-6 col-lg-4 col-xl-3">
+                <div class="col-12 col-md-6 col-lg-4 col-xl-3" @key="bp.Id">
                     <div class="card h-100 shadow-sm @(bp.IsBusy ? "opacity-50" : "")">
-                    
-                        <div class="bg-dark text-secondary d-flex align-items-center justify-content-center position-relative"
+                
+                        <div @ref="bp.PreviewContainer"
+                             class="bg-dark text-secondary d-flex align-items-center justify-content-center position-relative preview-container"
                              style="height: 220px; overflow: hidden;">
+                        
                             @if (bp.IsPreviewLoading)
                             {
                                 <div class="spinner-border text-light" role="status">
@@ -104,6 +107,15 @@
                                 class="position-absolute top-0 end-0 m-2 badge @(bp.IsNight ? "bg-secondary" : "bg-info text-dark")">
                                 @(bp.IsNight ? "Night" : "Day")
                             </span>
+                            
+                            @if (bp.PreviewDataUri != null && !bp.IsPreviewLoading)
+                            {
+                                <button
+                                    class="btn btn-sm btn-light position-absolute bottom-0 end-0 m-2 opacity-75 hover-opacity-100"
+                                    @onclick="() => ToggleFullscreen(bp)" title="Toggle Fullscreen">
+                                    <i class="bi bi-arrows-fullscreen"></i>
+                                </button>
+                            }
                         </div>
 
                         <div class="card-body">
@@ -219,61 +231,62 @@
                 
                     <div class="form-check form-switch mt-3">
                         <input class="form-check-input" type="checkbox" id="removeTemplateCheckbox"
-                               @bind="_removeTemplateFromPlayers">
-                            <label class="form-check-label text-danger" for="removeTemplateToggle">
-                                Also remove this template from all players inventories
-                            </label>
-                        </div>
+                               @bind="_removeTemplateFromPlayers" />
+                        <label class="form-check-label text-danger" for="removeTemplateToggle">
+                            Also remove this template from all players inventories
+                        </label>
                     </div>
-                    <div class="modal-footer bg-light">
-                        <button type="button" class="btn btn-secondary" @onclick="CancelDelete"
-                                disabled="@_isDeleting">Cancel</button>
-                        <button type="button" class="btn btn-danger" @onclick="ConfirmDelete" disabled="@_isDeleting"
-                                style="min-width: 100px;">
-                            @if (_isDeleting)
-                            {
-                                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                <span>Deleting...</span>
-                            }
-                            else
-                            {
-                                <span>Delete</span>
-                            }
-                        </button>
-                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" @onclick="CancelDelete"
+                            disabled="@_isDeleting">Cancel</button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmDelete" disabled="@_isDeleting"
+                            style="min-width: 100px;">
+                        @if (_isDeleting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            <span>Deleting...</span>
+                        }
+                        else
+                        {
+                            <span>Delete</span>
+                        }
+                    </button>
                 </div>
             </div>
         </div>
-    }
+    </div>
+}
 
-    @if (!string.IsNullOrEmpty(_deleteErrorMessage))
-    {
-        <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.6); z-index: 1060;">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content border-danger shadow-lg">
-                    <div class="modal-header bg-danger text-white">
-                        <h5 class="modal-title"><i class="bi bi-exclamation-octagon-fill me-2"></i>Deletion Failed</h5>
-                        <button type="button" class="btn-close btn-close-white" @onclick="CloseErrorModal"></button>
+@if (!string.IsNullOrEmpty(_deleteErrorMessage))
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.6); z-index: 1060;">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-danger shadow-lg">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="bi bi-exclamation-octagon-fill me-2"></i>Deletion Failed</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseErrorModal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>An error occurred while trying to delete <strong>@_bpToDelete?.Name</strong>:</p>
+                    <div class="alert alert-light border small text-break">
+                        @_deleteErrorMessage
                     </div>
-                    <div class="modal-body">
-                        <p>An error occurred while trying to delete <strong>@_bpToDelete?.Name</strong>:</p>
-                        <div class="alert alert-light border small text-break">
-                            @_deleteErrorMessage
-                        </div>
-                        <p class="mb-0">Please try again or report the issue if it persists.</p>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" @onclick="CloseErrorModal">Close</button>
-                        <button type="button" class="btn btn-danger" @onclick="ConfirmDelete">
-                            <i class="bi bi-arrow-clockwise me-1"></i> Retry
-                        </button>
-                    </div>
+                    <p class="mb-0">Please try again or report the issue if it persists.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseErrorModal">Close</button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmDelete">
+                        <i class="bi bi-arrow-clockwise me-1"></i> Retry
+                    </button>
                 </div>
             </div>
         </div>
-    }
+    </div>
+}
 
 @code {
+    private IJSObjectReference? _jsModule;
     private ClaimsPrincipal? _user;
     private List<Buildplate> _buildplates = new();
 
@@ -307,6 +320,11 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (firstRender)
+        {
+            _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./Components/Pages/Buildplates.razor.js");
+        }
+    
         foreach (var buildplate in _buildplates)
         {
             if (buildplate.Viewer3D is not null)
@@ -344,6 +362,14 @@
                     StateHasChanged();
                 }
             }
+        }
+    }
+
+    private async Task ToggleFullscreen(Buildplate bp)
+    {
+        if (_jsModule is not null)
+        {
+            await _jsModule.InvokeVoidAsync("toggleFullscreen", bp.PreviewContainer);
         }
     }
 
@@ -435,6 +461,8 @@
                     Intensity = 2,
                 });
                 
+                buildplate.Scene.BackGroundColor = buildplate.IsNight ? "#070066" : "#3B69F5";
+
                 buildplate.AcceptChanges();
 
                 _buildplates.Add(buildplate);
@@ -529,7 +557,7 @@
                     {
                         using var ms = new MemoryStream();
             
-                        await meshData.ToGlb(_resourcePackManager, ms);
+                        await meshData.ToGlbAsync(_resourcePackManager, ms);
             
                         bool getBufferSuccess = ms.TryGetBuffer(out var buffer);
                         Debug.Assert(getBufferSuccess);
@@ -779,6 +807,11 @@
         {
             await DisposeViewers(_buildplates);
         }
+        
+        if (_jsModule is not null)
+        {
+            await _jsModule.DisposeAsync();
+        }
     }
 
     public sealed class Buildplate
@@ -816,6 +849,8 @@
         public string? ErrorMessage { get; set; }
         public string? PreviewDataUri { get; set; }
         public bool IsModelImported { get; set; } = false;
+
+        public ElementReference PreviewContainer { get; set; }
 
         public void AcceptChanges()
         {

@@ -10,7 +10,7 @@ public static class MeshDataExtensions
 {
     extension(MeshData mesh)
     {
-        public async Task ToGlb(ResourcePackManager resourcePack, Stream outputStream, SharpGLTF.Schema2.WriteSettings? settings = null)
+        public async Task ToGlbAsync(ResourcePackManager resourcePack, Stream outputStream, SharpGLTF.Schema2.WriteSettings? settings = null)
         {
             var meshBuilder = new MeshBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty>("ExportedMesh");
 

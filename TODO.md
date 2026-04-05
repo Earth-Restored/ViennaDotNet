@@ -26,6 +26,7 @@
 - A lot of things are quite slower on windows, investigate and/or add spinners
 - Associate a player profile with a user, permissions that only allow editing the associated player.
 - find out the tokens for the first time tutorial, daily login and possibly more
+- For pages that need certain components running, start and stop them themselves, show the server status as partially online, show status for indivisual components?
 
 ## Refactoring
 
