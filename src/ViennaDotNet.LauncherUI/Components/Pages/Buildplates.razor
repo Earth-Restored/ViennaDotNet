@@ -490,7 +490,7 @@
             return;
         }
 
-        if (ServerManager.Status is not ViennaDotNet.LauncherUI.ServerStatus.Online)
+        if (!await ServerManager.EnsureComponentsOnline(ObjectStoreServer.ExeName))
         {
             foreach (var bp in plates)
             {
