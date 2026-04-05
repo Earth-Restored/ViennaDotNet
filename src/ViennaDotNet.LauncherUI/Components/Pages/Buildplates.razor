@@ -313,18 +313,14 @@
             {
                 try
                 {
-                    @* bp.Scene.Add(new AmbientLight()
-                    {
-                        Intensity = 2,
-                    }); *@
-
                     await bp.Viewer3D.Import3DModelAsync(new ImportSettings
                     {
                         Format = Import3DFormats.Gltf,
                         FileURL = bp.PreviewDataUri,
                     });
 
-                    @* await bp.Viewer3D.UpdateScene(); *@
+                    bp.Viewer3D.OrbitControls.TargetPosition = new Vector3(bp.Size / 2f, 0f, bp.Size / 2f);
+                    await bp.Viewer3D.UpdateOrbitControls(bp.Viewer3D.OrbitControls);
 
                     bp.IsModelImported = true;
                 }
@@ -424,7 +420,11 @@
 
                 buildplate.Scene.Add(new AmbientLight()
                 {
-                    Intensity = 1,
+                    Intensity = 2,
+                });
+                buildplate.Scene.Add(new DirectionalLight()
+                {
+                    Intensity = 2,
                 });
                 
                 buildplate.AcceptChanges();
