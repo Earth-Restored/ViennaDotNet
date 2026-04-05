@@ -69,7 +69,7 @@ public sealed class BuildplateMeshGenerator
                     byte[] regionData = GC.AllocateUninitializedArray<byte>(checked((int)entry.Length));
                     await entryStream.ReadExactlyAsync(regionData, cancellationToken);
 
-                    ProcessRegion(regionData, RegionUtils.PathToPos(entry.FullName), mesh, new int3(0, -worldData.Offset, 0));
+                    ProcessRegion(regionData, RegionUtils.PathToPos(entry.FullName), mesh, new int3(0, -worldData.Offset / 2, 0));
                 }
             }
         }

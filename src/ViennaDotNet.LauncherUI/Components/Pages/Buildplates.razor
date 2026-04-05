@@ -307,32 +307,40 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        foreach (var bp in _buildplates)
+        foreach (var buildplate in _buildplates)
         {
-            if (bp.Viewer3D != null && bp.PreviewDataUri != null && !bp.IsModelImported)
+            if (buildplate.Viewer3D is not null)
+            {
+                var orbitTarget = new Vector3(0, 0f, 0);
+                var cameraDistance = buildplate.Size * 1.25f;
+
+                buildplate.Viewer3D.Camera.Position = new Vector3(-cameraDistance, cameraDistance, -cameraDistance);
+                buildplate.Viewer3D.Camera.LookAt = orbitTarget;
+
+                buildplate.Viewer3D.OrbitControls.TargetPosition = orbitTarget;
+            }
+
+            if (buildplate.Viewer3D != null && buildplate.PreviewDataUri != null && !buildplate.IsModelImported)
             {
                 try
                 {
-                    await bp.Viewer3D.Import3DModelAsync(new ImportSettings
+                    await buildplate.Viewer3D.Import3DModelAsync(new ImportSettings
                     {
                         Format = Import3DFormats.Gltf,
-                        FileURL = bp.PreviewDataUri,
+                        FileURL = buildplate.PreviewDataUri,
                     });
 
-                    bp.Viewer3D.OrbitControls.TargetPosition = new Vector3(bp.Size / 2f, 0f, bp.Size / 2f);
-                    await bp.Viewer3D.UpdateOrbitControls(bp.Viewer3D.OrbitControls);
-
-                    bp.IsModelImported = true;
+                    buildplate.IsModelImported = true;
                 }
                 catch (ArgumentNullException ex) when (ex.ParamName == "jsObjectReference")
                 {
-                    Log.Debug("Viewer JS reference not ready for {Id}, retrying next render...", bp.Id);
+                    Log.Debug("Viewer JS reference not ready for {Id}, retrying next render...", buildplate.Id);
                 }
                 catch (Exception ex)
                 {
-                    Log.Error("Failed to import GLB model into Blazor3D Viewer for {Id}: {ex}", bp.Id, ex);
-                    bp.IsPreviewFailed = true;
-                    bp.IsModelImported = true; // Mark as done so we don't spam errors
+                    Log.Error("Failed to import GLB model into Blazor3D Viewer for {Id}: {ex}", buildplate.Id, ex);
+                    buildplate.IsPreviewFailed = true;
+                    buildplate.IsModelImported = true; // Mark as done so we don't spam errors
                     StateHasChanged();
                 }
             }
