@@ -556,7 +556,12 @@ public sealed class ResourcePack
             name = name[_namePrefix.Length..];
         }
 
-        var file = Path.Combine(_texturesDir.FullName, name) + ".png";
+        var file = Path.Combine(_texturesDir.FullName, name);
+        if (!Path.HasExtension(file))
+        {
+            file += ".png";
+        }
+
         if (!File.Exists(file))
         {
             return null;

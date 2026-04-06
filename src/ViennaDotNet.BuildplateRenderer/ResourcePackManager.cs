@@ -1,3 +1,5 @@
+using SharpGLTF.Schema2;
+using SixLabors.ImageSharp.PixelFormats;
 using ViennaDotNet.BuildplateRenderer.Models.ResourcePacks;
 
 namespace ViennaDotNet.BuildplateRenderer;
@@ -5,6 +7,8 @@ namespace ViennaDotNet.BuildplateRenderer;
 public sealed class ResourcePackManager
 {
     private readonly ResourcePack[] _packs;
+
+    private readonly Dictionary<string, SixLabors.ImageSharp.Image<Rgba32>> _textureCache = [];
 
     private ResourcePackManager(ResourcePack[] packs)
     {
@@ -84,5 +88,29 @@ public sealed class ResourcePackManager
         }
 
         throw new FileNotFoundException($"Texture '{name}' not found in any loaded resource pack.");
+    }
+
+    public async Task<SixLabors.ImageSharp.Image<Rgba32>> GetTextureImageAsync(string name, CancellationToken cancellationToken = default)
+    {
+        if (_textureCache.TryGetValue(name, out var image))
+        {
+            return image;
+        }
+
+        for (int i = 0; i < _packs.Length; i++)
+        {
+            var textureData = await _packs[i].TryGetTextureDataPNGAsync(name, cancellationToken);
+            if (textureData is not null)
+            {
+                using (var ms = new MemoryStream(textureData))
+                {
+                    image = await SixLabors.ImageSharp.Image.LoadAsync<Rgba32>(ms, cancellationToken);
+                    _textureCache.Add(name, image);
+                    return image;
+                }
+            }
+        }
+
+        throw new FileNotFoundException($"Colormap texture '{name}' not found in any loaded resource pack.");
     }
 }
