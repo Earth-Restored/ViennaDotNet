@@ -74,7 +74,7 @@
 
                 <div class="col-12 col-md-6 col-lg-4 col-xl-3" @key="bp.Id">
                     <div class="card h-100 shadow-sm @(bp.IsBusy ? "opacity-50" : "")">
-                        <BuildplatePreview BuildplateId="@bp.Id" ServerDataObjectId="@bp.ServerDataObjectId" Size="@bp.Size"
+                        <BuildplatePreview BuildplateId="@bp.Id" IsTemplate=true Size="@bp.Size"
                                            BlocksPerMeter="@bp.BlocksPerMeter" IsNight="@bp.IsNight"
                                            ResourcePackManager="@_resourcePackManager" />
                         

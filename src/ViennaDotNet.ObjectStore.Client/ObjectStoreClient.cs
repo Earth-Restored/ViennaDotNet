@@ -78,8 +78,8 @@ public class ObjectStoreClient : IDisposable
                     object message = _outgoingMessageQueue.Take();
                     if (message is string command)
                         socket.Send(Encoding.ASCII.GetBytes(command));
-                    else if (message is byte[] data)
-                        socket.Send(data);
+                    else if (message is ReadOnlyMemory<byte> data)
+                        socket.Send(data.Span);
                     else
                         throw new InvalidOperationException();
 
@@ -271,7 +271,7 @@ public class ObjectStoreClient : IDisposable
         _outgoingThread.Interrupt();
     }
 
-    public TaskCompletionSource<object?> Store(byte[] data)
+    public TaskCompletionSource<object?> Store(ReadOnlyMemory<byte> data)
     {
         TaskCompletionSource<object?> completableFuture = new TaskCompletionSource<object?>();
         QueueCommand(new Command(Command.TypeE.STORE, data, completableFuture));
@@ -324,7 +324,7 @@ public class ObjectStoreClient : IDisposable
                 {
                     case Command.TypeE.STORE:
                         {
-                            SendMessage("STORE " + ((byte[])_currentCommand.Data).Length + "\n");
+                            SendMessage("STORE " + ((ReadOnlyMemory<byte>)_currentCommand.Data).Length + "\n");
                             SendMessage(_currentCommand.Data);
                             break;
                         }

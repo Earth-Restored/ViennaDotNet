@@ -72,7 +72,7 @@
 
                 <div class="col-12 col-md-6 col-lg-4 col-xl-3">
                     <div class="card h-100 shadow-sm @(bp.IsBusy ? "opacity-50" : "")">
-                        <BuildplatePreview BuildplateId="@bp.Id" ServerDataObjectId="@bp.ServerDataObjectId" Size="@bp.Size"
+                        <BuildplatePreview BuildplateId="@bp.Id" IsTemplate=false PlayerId="@PlayerId" Size="@bp.Size"
                                            BlocksPerMeter="@bp.BlocksPerMeter" IsNight="@bp.IsNight"
                                            ResourcePackManager="@_resourcePackManager" />
                         
@@ -642,9 +642,9 @@ BuildplateLauncher.ExeName))
             }
 
             var buildplates = (await new EarthDB.Query(true)
-            .Get("buildplates", PlayerId, typeof(DB.Models.Player.Buildplates))
-            .ExecuteAsync(importer.EarthDB))
-            .Get<DB.Models.Player.Buildplates>("buildplates");
+                .Get("buildplates", PlayerId, typeof(DB.Models.Player.Buildplates))
+                .ExecuteAsync(importer.EarthDB))
+                .Get<DB.Models.Player.Buildplates>("buildplates");
 
             var buildplate = buildplates.GetBuildplate(bp.Id)!;
 

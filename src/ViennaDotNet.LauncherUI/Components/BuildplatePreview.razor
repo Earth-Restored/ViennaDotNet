@@ -60,7 +60,8 @@
 
 @code {
     [Parameter, EditorRequired] public required string BuildplateId { get; set; }
-    [Parameter, EditorRequired] public required string ServerDataObjectId { get; set; }
+    [Parameter, EditorRequired] public required bool IsTemplate { get; set; }
+    [Parameter] public string? PlayerId { get; set; }
     [Parameter] public int Size { get; set; }
     [Parameter] public int BlocksPerMeter { get; set; }
     [Parameter] public bool IsNight { get; set; }
@@ -181,50 +182,22 @@
             return;
         }
 
-        var meshGenerator = new BuildplateMeshGenerator(ResourcePackManager);
         try
         {
-            using var objectStoreClient = ObjectStoreClient.Create($"localhost:{Settings.Instance.ObjectStorePort}");
-            var worldDataRaw = (await objectStoreClient.Get(ServerDataObjectId).Task) as byte[];
+            using var importer = await Importer.CreateFromSettings(Settings.Instance, Log.Logger, createEventBus: false);
 
-            if (worldDataRaw is null)
+            Log.Debug(messageTemplate: "Get");
+            var previewData = IsTemplate
+                ? await importer.GetTemplateLauncherPreviewAsync(BuildplateId, ResourcePackManager)
+                : await importer.GetPlayerBuildplateLauncherPreviewAsync(PlayerId, BuildplateId, ResourcePackManager);
+
+            if (previewData is null)
             {
-                Log.Error("Preview mesh generation failed for Buildplate ID {Id}, could not fetch world data.", BuildplateId);
                 _isPreviewFailed = true;
                 return;
             }
 
-            WorldData? worldData;
-            using (var ms = new MemoryStream(worldDataRaw))
-            {
-                worldData = await WorldData.LoadFromZipAsync(ms, Log.Logger);
-            }
-
-            if (worldData is null)
-            {
-                Log.Error("Preview mesh generation failed for Buildplate ID {Id}, could not load world data.", BuildplateId);
-                _isPreviewFailed = true;
-                return;
-            }
-
-            MeshData? meshData = await meshGenerator.GenerateAsync(worldData);
-            if (meshData != null)
-            {
-                using var ms = new MemoryStream();
-                await meshData.ToGlbAsync(ResourcePackManager, ms);
-                bool getBufferSuccess = ms.TryGetBuffer(out var buffer);
-                Debug.Assert(getBufferSuccess);
-                _previewDataUri = DataUtils.DataToUri(buffer.AsSpan());
-            }
-            else
-            {
-                _isPreviewFailed = true;
-            }
-        }
-        catch (ViennaDotNet.ObjectStore.Client.ObjectStoreClient.ConnectException ex)
-        {
-            Log.Error(ex, "Failed to connect to ObjectStoreClient.");
-            _isPreviewFailed = true;
+            _previewDataUri = DataUtils.DataToUri(previewData.Value.AsSpan());
         }
         catch (Exception ex)
         {
@@ -233,6 +206,7 @@
         }
         finally
         {
+            Log.Debug("FinishedLoading");
             _isPreviewLoading = false;
             await InvokeAsync(StateHasChanged);
         }
