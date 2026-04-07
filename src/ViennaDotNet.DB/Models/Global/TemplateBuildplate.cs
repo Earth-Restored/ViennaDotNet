@@ -7,5 +7,6 @@ public sealed record TemplateBuildplate(
     int Scale, // blocks per meter
     bool Night,
     string ServerDataObjectId,
-    string PreviewObjectId
+    string PreviewObjectId,
+    string? LauncherPreviewObjectId
 );

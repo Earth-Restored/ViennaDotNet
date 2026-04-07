@@ -24,7 +24,6 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject ServerManager ServerManager
 @inject IJSRuntime JSRuntime
-@implements IAsyncDisposable
 
 <PageTitle>Buildplates - ViennaDotNet</PageTitle>
 
@@ -75,50 +74,10 @@
 
                 <div class="col-12 col-md-6 col-lg-4 col-xl-3" @key="bp.Id">
                     <div class="card h-100 shadow-sm @(bp.IsBusy ? "opacity-50" : "")">
-                
-                        <div @ref="bp.PreviewContainer"
-                             class="bg-dark text-secondary d-flex align-items-center justify-content-center position-relative preview-container"
-                             style="height: 220px; overflow: hidden;">
+                        <BuildplatePreview BuildplateId="@bp.Id" ServerDataObjectId="@bp.ServerDataObjectId" Size="@bp.Size"
+                                           BlocksPerMeter="@bp.BlocksPerMeter" IsNight="@bp.IsNight"
+                                           ResourcePackManager="@_resourcePackManager" />
                         
-                            @if (bp.IsPreviewLoading)
-                            {
-                                <div class="spinner-border text-light" role="status">
-                                    <span class="visually-hidden">Loading 3D preview...</span>
-                                </div>
-                            }
-                            else if (bp.IsPreviewFailed)
-                            {
-                                <div class="text-danger d-flex flex-column align-items-center">
-                                    <i class="bi bi-x-circle fs-3 mb-1"></i>
-                                    <span class="small fw-bold">Preview unavailable</span>
-                                </div>
-                            }
-                            else if (bp.PreviewDataUri != null)
-                            {
-                                <div class="w-100 h-100">
-                                    <Viewer @ref="bp.Viewer3D" ViewerSettings="@bp.Settings" Scene="@bp.Scene" />
-                                </div>
-                            }
-                        
-                            <span class="position-absolute top-0 start-0 m-2 badge bg-info text-dark">
-                                @displayScale
-                            </span>
-
-                            <span
-                                class="position-absolute top-0 end-0 m-2 badge @(bp.IsNight ? "bg-secondary" : "bg-info text-dark")">
-                                @(bp.IsNight ? "Night" : "Day")
-                            </span>
-                            
-                            @if (bp.PreviewDataUri != null && !bp.IsPreviewLoading)
-                            {
-                                <button
-                                    class="btn btn-sm btn-light position-absolute bottom-0 end-0 m-2 opacity-75 hover-opacity-100"
-                                    @onclick="() => ToggleFullscreen(bp)" title="Toggle Fullscreen">
-                                    <i class="bi bi-arrows-fullscreen"></i>
-                                </button>
-                            }
-                        </div>
-
                         <div class="card-body">
                             @if (!string.IsNullOrEmpty(bp.ErrorMessage))
                             {
@@ -287,7 +246,6 @@
 }
 
 @code {
-    private IJSObjectReference? _jsModule;
     private ClaimsPrincipal? _user;
     private List<Buildplate> _buildplates = new();
 
@@ -317,61 +275,6 @@
 
         await EnsureResourcePackLoadedAsync();
         await LoadBuildplates();
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./Components/Pages/Buildplates.razor.js");
-        }
-    
-        foreach (var buildplate in _buildplates)
-        {
-            if (buildplate.Viewer3D is not null)
-            {
-                var orbitTarget = new Vector3(0, 0f, 0);
-                var cameraDistance = buildplate.Size * 1.25f;
-
-                buildplate.Viewer3D.Camera.Position = new Vector3(-cameraDistance, cameraDistance, -cameraDistance);
-                buildplate.Viewer3D.Camera.LookAt = orbitTarget;
-
-                buildplate.Viewer3D.OrbitControls.TargetPosition = orbitTarget;
-            }
-
-            if (buildplate.Viewer3D != null && buildplate.PreviewDataUri != null && !buildplate.IsModelImported)
-            {
-                try
-                {
-                    await buildplate.Viewer3D.Import3DModelAsync(new ImportSettings
-                    {
-                        Format = Import3DFormats.Gltf,
-                        FileURL = buildplate.PreviewDataUri,
-                    });
-
-                    buildplate.IsModelImported = true;
-                }
-                catch (ArgumentNullException ex) when (ex.ParamName == "jsObjectReference")
-                {
-                    Log.Debug("Viewer JS reference not ready for {Id}, retrying next render...", buildplate.Id);
-                }
-                catch (Exception ex)
-                {
-                    Log.Error("Failed to import GLB model into Blazor3D Viewer for {Id}: {ex}", buildplate.Id, ex);
-                    buildplate.IsPreviewFailed = true;
-                    buildplate.IsModelImported = true; // Mark as done so we don't spam errors
-                    StateHasChanged();
-                }
-            }
-        }
-    }
-
-    private async Task ToggleFullscreen(Buildplate bp)
-    {
-        if (_jsModule is not null)
-        {
-            await _jsModule.InvokeVoidAsync("toggleFullscreen", bp.PreviewContainer);
-        }
     }
 
     private async Task EnsureResourcePackLoadedAsync()
@@ -431,8 +334,6 @@
                 _totalBuildplateCount = totalCount.Value;
             }
 
-            await DisposeViewers(_buildplates);
-
             _buildplates.Clear(); // Clear current page data
 
             foreach (var (buildplateId, dbBuildplate) in buildplates)
@@ -451,150 +352,14 @@
                     PreviewObjectId = dbBuildplate.PreviewObjectId,
                 };
 
-                buildplate.Settings.ContainerId = $"viewer_{buildplateId}";
-
-                buildplate.Scene.Add(new AmbientLight()
-                {
-                    Intensity = 2,
-                });
-                buildplate.Scene.Add(new DirectionalLight()
-                {
-                    Intensity = 2,
-                });
-                
-                buildplate.Scene.BackGroundColor = buildplate.IsNight ? "#070066" : "#3B69F5";
-
                 buildplate.AcceptChanges();
 
                 _buildplates.Add(buildplate);
             }
-
-            // Kick off background rendering tasks without blocking the UI
-            _ = Load3DPreviewsAsync(_buildplates.ToList());
         }
         catch (Exception ex)
         {
             Log.Error($"Could not connect to earth db: {ex}");
-        }
-    }
-
-    private async Task Load3DPreviewsAsync(List<Buildplate> plates)
-    {
-        if (Settings.Instance.LauncherBuildplatePreview is not true)
-        {
-            foreach (var bp in plates)
-            {
-                bp.IsPreviewLoading = false;
-            }
-
-            return;
-        }
-
-        if (!await ServerManager.EnsureComponentsOnline(ObjectStoreServer.ExeName))
-        {
-            foreach (var bp in plates)
-            {
-                bp.IsPreviewLoading = false;
-                bp.IsPreviewFailed = true;
-                bp.ErrorMessage = "The server needs to be running to load preview";
-            }
-
-            await InvokeAsync(StateHasChanged);
-            return;
-        }
-
-        if (_resourcePackManager is null)
-        {
-            foreach (var bp in plates)
-            {
-                bp.IsPreviewLoading = false;
-                bp.IsPreviewFailed = true;
-                bp.ErrorMessage = "Could not load resourcepacks";
-            }
-
-            await InvokeAsync(StateHasChanged);
-            return;
-        }
-
-        var meshGenerator = new BuildplateMeshGenerator(_resourcePackManager);
-
-        try
-        {
-            using var objectStoreClient = ObjectStoreClient.Create($"localhost:{Settings.Instance.ObjectStorePort}");
-
-            var previewTasks = plates.Select(async bp =>
-            {
-                try
-                {
-                    // Reset loading state
-                    bp.IsPreviewLoading = true;
-                    bp.IsPreviewFailed = false;
-                    await InvokeAsync(StateHasChanged);
-        
-                    var worldDataRaw = (await objectStoreClient.Get(bp.ServerDataObjectId).Task) as byte[];
-
-                    if (worldDataRaw is null)
-                    {
-                        Log.Error("Preview mesh generation failed for Buildplate ID {Id}, could not fetch world data.", bp.Id);
-                        bp.IsPreviewFailed = true;
-                        return;
-                    }
-
-                    WorldData? worldData;
-                    using (var ms = new MemoryStream(worldDataRaw))
-                    {
-                        worldData = await WorldData.LoadFromZipAsync(ms, Log.Logger);
-                    }
-
-                    if (worldData is null)
-                    {
-                        Log.Error("Preview mesh generation failed for Buildplate ID {Id}, could not load world data.", bp.Id);
-                        bp.IsPreviewFailed = true;
-                        return;
-                    }
-
-                    MeshData? meshData = await meshGenerator.GenerateAsync(worldData);
-                    if (meshData != null && _resourcePackManager != null)
-                    {
-                        using var ms = new MemoryStream();
-            
-                        await meshData.ToGlbAsync(_resourcePackManager, ms);
-            
-                        bool getBufferSuccess = ms.TryGetBuffer(out var buffer);
-                        Debug.Assert(getBufferSuccess);
-
-                        bp.PreviewDataUri = DataUtils.DataToUri(buffer.AsSpan());
-                    }
-                    else
-                    {
-                        bp.IsPreviewFailed = true;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Log.Error(ex, "Preview mesh generation failed for Buildplate ID {Id}", bp.Id);
-                    bp.IsPreviewFailed = true;
-                }
-                finally
-                {
-                    bp.IsPreviewLoading = false;
-                    await InvokeAsync(StateHasChanged);
-                }
-            });
-
-            await Task.WhenAll(previewTasks);
-        }
-        catch (ViennaDotNet.ObjectStore.Client.ObjectStoreClient.ConnectException ex)
-        {
-            Log.Error(ex, "Failed to connect to ObjectStoreClient.");
-            foreach (var bp in plates)
-            {
-                bp.IsPreviewLoading = false;
-                bp.IsPreviewFailed = true;
-                bp.ErrorMessage = "Failed to connect to object store.";
-            }
-
-            await InvokeAsync(StateHasChanged);
         }
     }
 
@@ -698,7 +463,7 @@ BuildplateLauncher.ExeName))
         
             await new EarthDB.ObjectQuery(true)
                 .UpdateBuildplate(bp.Id, new DB.Models.Global.TemplateBuildplate(bp.Name, bp.Size, bp.Offset, bp.BlocksPerMeter,
-        bp.IsNight, bp.ServerDataObjectId, bp.PreviewObjectId))
+        bp.IsNight, bp.ServerDataObjectId, bp.PreviewObjectId, null))
                 .ExecuteAsync(earthDB, default);
 
             await Task.Delay(250);
@@ -781,41 +546,6 @@ BuildplateLauncher.ExeName))
     private bool HasPermission(string permission)
         => _user?.HasPermission(permission) ?? false;
 
-    private async Task DisposeViewers(IEnumerable<Buildplate> plates)
-    {
-        foreach (var bp in plates)
-        {
-            if (bp.Viewer3D is not null)
-            {
-                try
-                {
-                    await bp.Viewer3D.DisposeAsync();
-                }
-                catch (Exception ex)
-                {
-                    Log.Debug("Viewer for {Id} already disposed or failed: {Msg}", bp.Id, ex.Message);
-                }
-                finally
-                {
-                    bp.Viewer3D = null;
-                }
-            }
-        }
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        if (_buildplates is not null)
-        {
-            await DisposeViewers(_buildplates);
-        }
-        
-        if (_jsModule is not null)
-        {
-            await _jsModule.DisposeAsync();
-        }
-    }
-
     public sealed class Buildplate
     {
         public required string Id { get; set; }
@@ -841,18 +571,7 @@ BuildplateLauncher.ExeName))
     
         public bool IsBusy => IsSaving || IsRegeneratingPreview;
 
-        // 3D Rendering State
-        public Viewer? Viewer3D { get; set; }
-        public ViewerSettings Settings { get; set; } = new ViewerSettings();
-        public Scene Scene { get; set; } = new Scene();
-    
-        public bool IsPreviewLoading { get; set; } = true;
-        public bool IsPreviewFailed { get; set; } = false;
         public string? ErrorMessage { get; set; }
-        public string? PreviewDataUri { get; set; }
-        public bool IsModelImported { get; set; } = false;
-
-        public ElementReference PreviewContainer { get; set; }
 
         public void AcceptChanges()
         {

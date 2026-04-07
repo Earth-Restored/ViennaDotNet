@@ -1,0 +1,252 @@
+@using HomagGroup.Blazor3D.Enums
+@using HomagGroup.Blazor3D.Lights
+@using HomagGroup.Blazor3D.Maths
+@using HomagGroup.Blazor3D.Scenes
+@using HomagGroup.Blazor3D.Settings
+@using HomagGroup.Blazor3D.Viewers
+@using Microsoft.JSInterop
+@using Serilog
+@using System.Diagnostics
+@using System.IO
+@using ViennaDotNet.Buildplate.Model
+@using ViennaDotNet.BuildplateImporter
+@using ViennaDotNet.BuildplateRenderer
+@using ViennaDotNet.LauncherUI.Programs
+@using ViennaDotNet.LauncherUI.Utils
+@using ViennaDotNet.ObjectStore.Client
+
+@inject IJSRuntime JSRuntime
+@inject ServerManager ServerManager
+@implements IAsyncDisposable
+
+<div @ref="_previewContainer"
+     class="bg-dark text-secondary d-flex align-items-center justify-content-center position-relative preview-container"
+     style="height: 220px; overflow: hidden;">
+    @if (_isPreviewLoading)
+    {
+        <div class="spinner-border text-light" role="status">
+            <span class="visually-hidden">Loading 3D preview...</span>
+        </div>
+    }
+    else if (_isPreviewFailed)
+    {
+        <div class="text-danger d-flex flex-column align-items-center">
+            <i class="bi bi-x-circle fs-3 mb-1"></i>
+            <span class="small fw-bold">Preview unavailable</span>
+        </div>
+    }
+    else if (_previewDataUri is not null)
+    {
+        <div class="w-100 h-100">
+            <Viewer @ref="_viewer3D" ViewerSettings="@_settings" Scene="@_scene" />
+        </div>
+    }
+
+    <span class="position-absolute top-0 start-0 m-2 badge bg-info text-dark">
+        @DisplayScale
+    </span>
+    <span class="position-absolute top-0 end-0 m-2 badge @(IsNight ? "bg-secondary" : "bg-info text-dark")">
+        @(IsNight ? "Night" : "Day")
+    </span>
+
+    @if (_previewDataUri is not null && !_isPreviewLoading)
+    {
+        <button class="btn btn-sm btn-light position-absolute bottom-0 end-0 m-2 opacity-75 hover-opacity-100"
+                @onclick="ToggleFullscreen" title="Toggle Fullscreen">
+            <i class="bi bi-arrows-fullscreen"></i>
+        </button>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public required string BuildplateId { get; set; }
+    [Parameter, EditorRequired] public required string ServerDataObjectId { get; set; }
+    [Parameter] public int Size { get; set; }
+    [Parameter] public int BlocksPerMeter { get; set; }
+    [Parameter] public bool IsNight { get; set; }
+    [Parameter] public ResourcePackManager? ResourcePackManager { get; set; }
+
+    private ElementReference _previewContainer;
+    private Viewer? _viewer3D;
+    private ViewerSettings _settings = new();
+    private Scene _scene = new();
+    
+    private bool _isPreviewLoading = true;
+    private bool _isPreviewFailed = false;
+    private string? _previewDataUri;
+    private bool _isModelImported = false;
+    private IJSObjectReference? _jsModule;
+
+    private string DisplayScale
+    {
+        get
+        {
+            float scaleVal = 1f / BlocksPerMeter;
+            return scaleVal >= 1 ? $"1:{scaleVal:0.##}" : $"{(1 / scaleVal):0.##}:1";
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        _settings.ContainerId = $"viewer_{BuildplateId}";
+        _scene.Add(new AmbientLight() { Intensity = 2 });
+        _scene.Add(new DirectionalLight() { Intensity = 2 });
+        _scene.BackGroundColor = IsNight ? "#070066" : "#3B69F5";
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_previewDataUri == null && !_isPreviewFailed && _isPreviewLoading)
+        {
+            await LoadPreviewAsync();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./Components/Pages/Buildplates.razor.js");
+        }
+
+        if (_viewer3D is not null)
+        {
+            var orbitTarget = new Vector3(0, 0f, 0);
+            var cameraDistance = Size * 1.25f;
+            _viewer3D.Camera.Position = new Vector3(-cameraDistance, cameraDistance, -cameraDistance);
+            _viewer3D.Camera.LookAt = orbitTarget;
+            _viewer3D.OrbitControls.TargetPosition = orbitTarget;
+
+            if (_previewDataUri != null && !_isModelImported)
+            {
+                try
+                {
+                    await _viewer3D.Import3DModelAsync(new ImportSettings
+                    {
+                        Format = Import3DFormats.Gltf,
+                        FileURL = _previewDataUri,
+                    });
+                    _isModelImported = true;
+                }
+                catch (ArgumentNullException ex) when (ex.ParamName == "jsObjectReference")
+                {
+                    Log.Debug("Viewer JS reference not ready for {Id}, retrying next render...", BuildplateId);
+                }
+                catch (Exception ex)
+                {
+                    Log.Error("Failed to import GLB model into Blazor3D Viewer for {Id}: {ex}", BuildplateId, ex);
+                    _isPreviewFailed = true;
+                    _isModelImported = true;
+                    StateHasChanged();
+                }
+            }
+        }
+    }
+
+    private async Task LoadPreviewAsync()
+    {
+        if (Settings.Instance.LauncherBuildplatePreview is not true)
+        {
+            _isPreviewLoading = false;
+            return;
+        }
+
+        if (!await ServerManager.EnsureComponentsOnline(ObjectStoreServer.ExeName))
+        {
+            _isPreviewLoading = false;
+            _isPreviewFailed = true;
+            return;
+        }
+
+        if (ResourcePackManager is null)
+        {
+            _isPreviewLoading = false;
+            _isPreviewFailed = true;
+            return;
+        }
+
+        var meshGenerator = new BuildplateMeshGenerator(ResourcePackManager);
+        try
+        {
+            using var objectStoreClient = ObjectStoreClient.Create($"localhost:{Settings.Instance.ObjectStorePort}");
+            var worldDataRaw = (await objectStoreClient.Get(ServerDataObjectId).Task) as byte[];
+
+            if (worldDataRaw is null)
+            {
+                Log.Error("Preview mesh generation failed for Buildplate ID {Id}, could not fetch world data.", BuildplateId);
+                _isPreviewFailed = true;
+                return;
+            }
+
+            WorldData? worldData;
+            using (var ms = new MemoryStream(worldDataRaw))
+            {
+                worldData = await WorldData.LoadFromZipAsync(ms, Log.Logger);
+            }
+
+            if (worldData is null)
+            {
+                Log.Error("Preview mesh generation failed for Buildplate ID {Id}, could not load world data.", BuildplateId);
+                _isPreviewFailed = true;
+                return;
+            }
+
+            MeshData? meshData = await meshGenerator.GenerateAsync(worldData);
+            if (meshData != null)
+            {
+                using var ms = new MemoryStream();
+                await meshData.ToGlbAsync(ResourcePackManager, ms);
+                bool getBufferSuccess = ms.TryGetBuffer(out var buffer);
+                Debug.Assert(getBufferSuccess);
+                _previewDataUri = DataUtils.DataToUri(buffer.AsSpan());
+            }
+            else
+            {
+                _isPreviewFailed = true;
+            }
+        }
+        catch (ViennaDotNet.ObjectStore.Client.ObjectStoreClient.ConnectException ex)
+        {
+            Log.Error(ex, "Failed to connect to ObjectStoreClient.");
+            _isPreviewFailed = true;
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Preview mesh generation failed for Buildplate ID {Id}", BuildplateId);
+            _isPreviewFailed = true;
+        }
+        finally
+        {
+            _isPreviewLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task ToggleFullscreen()
+    {
+        if (_jsModule is not null)
+        {
+            await _jsModule.InvokeVoidAsync("toggleFullscreen", _previewContainer);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_viewer3D is not null)
+        {
+            try
+            {
+                await _viewer3D.DisposeAsync();
+            }
+            catch (Exception ex)
+            {
+                Log.Debug("Viewer for {Id} already disposed or failed: {Msg}", BuildplateId, ex.Message);
+            }
+        }
+
+        if (_jsModule is not null)
+        {
+            await _jsModule.DisposeAsync();
+        }
+    }
+}

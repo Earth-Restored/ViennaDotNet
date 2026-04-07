@@ -125,10 +125,6 @@ public static class MeshDataExtensions
                 byte[] textureBytes = await resourcePack.GetTextureDataPNGAsync(textureId);
 
                 Vector4? colorMultiplier = await TryGetColorMultiplierAsync(textureId, biome, resourcePack);
-                if (colorMultiplier is not null)
-                {
-                    Console.WriteLine($"Color: {colorMultiplier}");
-                }
 
                 var material = new MaterialBuilder(textureId)
                     .WithBaseColor(new SharpGLTF.Memory.MemoryImage(textureBytes), colorMultiplier)
