@@ -51,6 +51,11 @@
 
     @if (_previewDataUri is not null && !_isPreviewLoading)
     {
+        <button class="btn btn-sm btn-light position-absolute bottom-0 start-0 m-2 opacity-75 hover-opacity-100"
+                @onclick="RefreshPreviewAsync" title="Refresh Preview">
+            <i class="bi bi-arrow-clockwise"></i>
+        </button>
+
         <button class="btn btn-sm btn-light position-absolute bottom-0 end-0 m-2 opacity-75 hover-opacity-100"
                 @onclick="ToggleFullscreen" title="Toggle Fullscreen">
             <i class="bi bi-arrows-fullscreen"></i>
@@ -160,7 +165,24 @@
         }
     }
 
-    private async Task LoadPreviewAsync()
+    private async Task RefreshPreviewAsync()
+    {
+        if (_isCurrentlyLoadingTask)
+        {
+            return;
+        }
+
+        _isPreviewLoading = true;
+        _isPreviewFailed = false;
+        _isModelImported = false;
+        _previewDataUri = null;
+        
+        StateHasChanged();
+
+        await LoadPreviewAsync(getFromCache: false);
+    }
+
+    private async Task LoadPreviewAsync(bool getFromCache = true)
     {
         if (Settings.Instance.LauncherBuildplatePreview is not true)
         {
@@ -186,10 +208,10 @@
         {
             await using var importer = await Importer.CreateFromSettings(Settings.Instance, Log.Logger, createEventBus: false);
 
-            Log.Debug(messageTemplate: "Get");
             var previewData = IsTemplate
-                ? await importer.GetTemplateLauncherPreviewAsync(BuildplateId, ResourcePackManager)
-                : await importer.GetPlayerBuildplateLauncherPreviewAsync(PlayerId, BuildplateId, ResourcePackManager);
+                ? await importer.GetTemplateLauncherPreviewAsync(BuildplateId, ResourcePackManager, getFromCache: getFromCache)
+                : await importer.GetPlayerBuildplateLauncherPreviewAsync(PlayerId, BuildplateId, ResourcePackManager, getFromCache:
+getFromCache);
 
             if (previewData is null)
             {
@@ -206,7 +228,6 @@
         }
         finally
         {
-            Log.Debug("FinishedLoading");
             _isPreviewLoading = false;
             await InvokeAsync(StateHasChanged);
         }

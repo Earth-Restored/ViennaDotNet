@@ -50,17 +50,24 @@ public static class ImporterExtensions
                 return null;
             }
 
-            if (getFromCache && !string.IsNullOrEmpty(template.LauncherPreviewObjectId))
+            if (!string.IsNullOrEmpty(template.LauncherPreviewObjectId))
             {
-                var previewData = await importer.ObjectStoreClient.GetAsync(template.LauncherPreviewObjectId);
-
-                if (previewData is null)
+                if (getFromCache)
                 {
-                    importer.Logger.Error($"Could not get launcher preview for template '{templateId}'");
-                    return null;
-                }
+                    var previewData = await importer.ObjectStoreClient.GetAsync(template.LauncherPreviewObjectId);
 
-                return previewData;
+                    if (previewData is null)
+                    {
+                        importer.Logger.Error($"Could not get launcher preview for template '{templateId}'");
+                        return null;
+                    }
+
+                    return previewData;
+                }
+                else
+                {
+                    await importer.ObjectStoreClient.DeleteAsync(template.LauncherPreviewObjectId);
+                }
             }
 
             var worldDataRaw = await importer.ObjectStoreClient.GetAsync(template.ServerDataObjectId);
@@ -137,17 +144,24 @@ public static class ImporterExtensions
                 return null;
             }
 
-            if (getFromCache && !string.IsNullOrEmpty(buildplate.LauncherPreviewObjectId))
+            if (!string.IsNullOrEmpty(buildplate.LauncherPreviewObjectId))
             {
-                var previewData = await importer.ObjectStoreClient.GetAsync(buildplate.LauncherPreviewObjectId);
-
-                if (previewData is null)
+                if (getFromCache)
                 {
-                    importer.Logger.Error($"Could not get launcher preview for buildplate '{buildplate}'");
-                    return null;
-                }
+                    var previewData = await importer.ObjectStoreClient.GetAsync(buildplate.LauncherPreviewObjectId);
 
-                return previewData;
+                    if (previewData is null)
+                    {
+                        importer.Logger.Error($"Could not get launcher preview for buildplate '{buildplate}'");
+                        return null;
+                    }
+
+                    return previewData;
+                }
+                else
+                {
+                    await importer.ObjectStoreClient.DeleteAsync(buildplate.LauncherPreviewObjectId);
+                }
             }
 
             var worldDataRaw = await importer.ObjectStoreClient.GetAsync(buildplate.ServerDataObjectId);
