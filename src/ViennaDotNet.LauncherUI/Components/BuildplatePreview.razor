@@ -75,6 +75,7 @@
     private bool _isPreviewFailed = false;
     private string? _previewDataUri;
     private bool _isModelImported = false;
+    private bool _isCurrentlyLoadingTask = false;
     private IJSObjectReference? _jsModule;
 
     private string DisplayScale
@@ -96,9 +97,22 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        if (_previewDataUri == null && !_isPreviewFailed && _isPreviewLoading)
+        if (_previewDataUri is null && !_isPreviewFailed && _isPreviewLoading && !_isCurrentlyLoadingTask)
         {
-            await LoadPreviewAsync();
+            _isCurrentlyLoadingTask = true;
+        
+            _ = InvokeAsync(async () =>
+            {
+                try
+                {
+                    await Task.Run(async () => await LoadPreviewAsync());
+                }
+                finally
+                {
+                    _isCurrentlyLoadingTask = false;
+                    StateHasChanged();
+                }
+            });
         }
     }
 
@@ -131,6 +145,8 @@
                 catch (ArgumentNullException ex) when (ex.ParamName == "jsObjectReference")
                 {
                     Log.Debug("Viewer JS reference not ready for {Id}, retrying next render...", BuildplateId);
+                    await Task.Delay(200);
+                    StateHasChanged();
                 }
                 catch (Exception ex)
                 {
