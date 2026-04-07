@@ -26,7 +26,7 @@
         <div class="d-flex align-items-baseline gap-2">
             <h2 class="mb-0">
                 <i class="bi bi-boxes text-info me-2"></i>
-                Buildplates for Player @(string.IsNullOrEmpty(_username) ? $"with id {PlayerId}" : $"{_username} (ID:      {PlayerId})")
+                Buildplates for Player @(string.IsNullOrEmpty(_username) ? $"with id {PlayerId}" : $"{_username} (ID:         {PlayerId})")
             </h2>
         </div>
         
@@ -41,6 +41,19 @@
             <i class="bi bi-exclamation-octagon-fill me-2"></i>
             <strong>Error:</strong> @_errorMessage
             <button type="button" class="btn-close" @onclick="() => _errorMessage = null" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (_playerBuildplates is not null && _playerBuildplates.Any())
+    {
+        <div class="row mb-4">
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="input-group shadow-sm">
+                    <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control" placeholder="Search player buildplates..."
+                           value="@_playerSearchTerm" @oninput="HandlePlayerSearch" />
+                </div>
+            </div>
         </div>
     }
 
@@ -61,9 +74,17 @@
                 </div>
             </div>
         }
+        else if (!FilteredPlayerBuildplates.Any())
+        {
+            <div class="col-12">
+                <div class="alert alert-warning shadow-sm border-0">
+                    <i class="bi bi-info-circle me-2"></i> No buildplates match your search criteria.
+                </div>
+            </div>
+        }
         else
         {
-            @foreach (var bp in _playerBuildplates)
+            @foreach (var bp in PaginatedPlayerBuildplates)
             {
                 float scaleVal = 1f / bp.BlocksPerMeter;
                 string displayScale = scaleVal >= 1
@@ -147,121 +168,141 @@
             }
         }
     </div>
-</div>
 
-@if (_showAddModal)
-{
-    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Select Template Buildplate</h5>
-                    <button type="button" class="btn-close" @onclick="CloseAddModal"></button>
-                </div>
-                <div class="modal-body bg-light">
-                    <div class="input-group mb-4 shadow-sm">
-                        <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-                        <input type="text" class="form-control" placeholder="Search templates by name..."
-                               @bind="_searchTerm" @bind:event="oninput" @onkeyup="HandleSearchKeyUp" />
-                        <button class="btn btn-primary" type="button" @onclick="PerformSearch">Search</button>
-                    </div>
+    @if (TotalPlayerPages > 1)
+    {
+        <nav aria-label="Player buildplates pagination" class="mt-4 d-flex justify-content-center">
+            <ul class="pagination mb-0">
+                <li class="page-item @(_playerCurrentPage <= 1 ? "disabled" : "")">
+                    <button class="page-link" @onclick="() => ChangePlayerPage(_playerCurrentPage - 1)">&laquo;
+                        Prev</button>
+                    </li>
+                    <li class="page-item disabled">
+                        <span class="page-link text-dark fw-semibold bg-light">Page @_playerCurrentPage of
+                            @TotalPlayerPages</span>
+                        </li>
+                        <li class="page-item @(_playerCurrentPage >= TotalPlayerPages ? "disabled" : "")">
+                            <button class="page-link" @onclick="() => ChangePlayerPage(_playerCurrentPage + 1)">Next
+                                &raquo;</button>
+                            </li>
+                        </ul>
+                    </nav>
+                }
+            </div>
 
-                    @if (_isLoadingTemplates || _templates is null)
-                    {
-                        <div class="text-center py-5">
-                            <div class="spinner-border text-primary" role="status"></div>
-                            <div class="mt-2 text-muted">Loading templates...</div>
-                        </div>
-                    }
-                    else if (!_templates.Any())
-                    {
-                        <div class="alert alert-warning shadow-sm border-0">
-                            <i class="bi bi-info-circle me-2"></i> No template buildplates found matching your search criteria.
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="row g-3">
-                            @foreach (var template in _templates)
-                            {
-                                <div class="col-12 col-md-6 col-lg-4" @key="template.Id">
-                                    <div class="card h-100 shadow-sm">
-                                        <div class="position-relative rounded-top" style="aspect-ratio: 16 / 9; overflow: visible;">
-                                            <BuildplatePreview BuildplateId="@template.Id" IsTemplate=true Size="@template.Size"
-                                                               BlocksPerMeter="@template.BlocksPerMeter" IsNight="@template.IsNight"
-                                                               ResourcePackManager="@_resourcePackManager" />
-                                        </div>
-                                        <div class="card-body p-3 d-flex flex-column">
-                                            <h6 class="mb-1 fw-bold text-truncate" title="@template.Name">@template.Name</h6>
-                                            <small class="text-muted mb-3 d-block">
-                                                Size: @(template.Size)x@(template.Size) | BPM: @template.BlocksPerMeter |
-                                                @(template.IsNight ? "Night" : "Day")
-                                            </small>
-                                            <button class="btn btn-sm btn-success mt-auto fw-bold"
-                                                    @onclick="async () => await AddBuildplateFromTemplate(template)">
-                                                <i class="bi bi-plus-circle me-1"></i> Add
-                                            </button>
-                                        </div>
-                                    </div>
+            @if (_showAddModal)
+            {
+                <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+                    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Select Template Buildplate</h5>
+                                <button type="button" class="btn-close" @onclick="CloseAddModal"></button>
+                            </div>
+                            <div class="modal-body bg-light">
+                                <div class="input-group mb-4 shadow-sm">
+                                    <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                                    <input type="text" class="form-control" placeholder="Search templates by name..."
+                                           @bind="_searchTerm" @bind:event="oninput" @onkeyup="HandleSearchKeyUp" />
+                                    <button class="btn btn-primary" type="button" @onclick="PerformSearch">Search</button>
                                 </div>
-                            }
-                        </div>
-                    }
-                </div>
-                <div class="modal-footer d-flex justify-content-between align-items-center">
-                    <div>
-                        @if (TotalPages > 1)
-                        {
-                            <nav aria-label="Template search pagination">
-                                <ul class="pagination pagination-sm mb-0">
-                                    <li class="page-item @(_currentPage <= 1 ? "disabled" : "")">
-                                        <button class="page-link" @onclick="() => ChangePage(_currentPage - 1)">&laquo;
-                                            Prev
-                                        </button>
-                                    </li>
-                                    <li class="page-item disabled">
-                                        <span class="page-link text-dark fw-semibold bg-light">Page @_currentPage of
-                                            @TotalPages
-                                        </span>
-                                    </li>
-                                    <li class="page-item @(_currentPage >= TotalPages ? "disabled" : "")">
-                                        <button class="page-link" @onclick="() => ChangePage(_currentPage + 1)">
-                                            Next&raquo;
-                                        </button>
-                                    </li>
-                                </ul>
-                            </nav>
-                        }
-                    </div>
-                    <button type="button" class="btn btn-secondary" @onclick="CloseAddModal">Cancel</button>
-                </div>
-            </div>
-        </div>
-    </div>
-}
 
-@if (_showDeleteModal)
-{
-    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.6);">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-danger shadow-lg">
-                <div class="modal-header bg-danger text-white">
-                    <h5 class="modal-title"><i class="bi bi-exclamation-triangle me-2"></i>Confirm Removal</h5>
-                    <button type="button" class="btn-close btn-close-white" @onclick="CloseDeleteModal"></button>
+                                @if (_isLoadingTemplates || _templates is null)
+                                {
+                                    <div class="text-center py-5">
+                                        <div class="spinner-border text-primary" role="status"></div>
+                                        <div class="mt-2 text-muted">Loading templates...</div>
+                                    </div>
+                                }
+                                else if (!_templates.Any())
+                                {
+                                    <div class="alert alert-warning shadow-sm border-0">
+                                        <i class="bi bi-info-circle me-2"></i> No template buildplates found matching your search criteria.
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="row g-3">
+                                        @foreach (var template in _templates)
+                                        {
+                                            <div class="col-12 col-md-6 col-lg-4" @key="template.Id">
+                                                <div class="card h-100 shadow-sm">
+                                                    <div class="position-relative rounded-top" style="aspect-ratio: 16 / 9; overflow: visible;">
+                                                        <BuildplatePreview BuildplateId="@template.Id" IsTemplate=true Size="@template.Size"
+                                                                           BlocksPerMeter="@template.BlocksPerMeter" IsNight="@template.IsNight"
+                                                                           ResourcePackManager="@_resourcePackManager" />
+                                                    </div>
+                                                    <div class="card-body p-3 d-flex flex-column">
+                                                        <h6 class="mb-1 fw-bold text-truncate" title="@template.Name">@template.Name</h6>
+                                                        <small class="text-muted mb-3 d-block">
+                                                            Size: @(template.Size)x@(template.Size) | BPM: @template.BlocksPerMeter |
+                                                            @(template.IsNight ? "Night" : "Day")
+                                                        </small>
+                                                        <button class="btn btn-sm btn-success mt-auto fw-bold"
+                                                                @onclick="async () => await AddBuildplateFromTemplate(template)">
+                                                            <i class="bi bi-plus-circle me-1"></i> Add
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                            <div class="modal-footer d-flex justify-content-between align-items-center">
+                                <div>
+                                    @if (TotalPages > 1)
+                                    {
+                                        <nav aria-label="Template search pagination">
+                                            <ul class="pagination pagination-sm mb-0">
+                                                <li class="page-item @(_currentPage <= 1 ? "disabled" : "")">
+                                                    <button class="page-link" @onclick="() => ChangePage(_currentPage - 1)">&laquo;
+                                                        Prev
+                                                    </button>
+                                                </li>
+                                                <li class="page-item disabled">
+                                                    <span class="page-link text-dark fw-semibold bg-light">Page @_currentPage of
+                                                        @TotalPages
+                                                    </span>
+                                                </li>
+                                                <li class="page-item @(_currentPage >= TotalPages ? "disabled" : "")">
+                                                    <button class="page-link" @onclick="() => ChangePage(_currentPage + 1)">
+                                                        Next&raquo;
+                                                    </button>
+                                                </li>
+                                            </ul>
+                                        </nav>
+                                    }
+                                </div>
+                                <button type="button" class="btn btn-secondary" @onclick="CloseAddModal">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="modal-body py-4 text-center">
-                    <p class="mb-1">Are you sure you want to remove this buildplate from the player?</p>
-                    <strong class="fs-5">@_nameToDelete</strong>
-                    <div class="text-muted small mt-2">This action cannot be undone.</div>
+            }
+
+            @if (_showDeleteModal)
+            {
+                <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.6);">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content border-danger shadow-lg">
+                            <div class="modal-header bg-danger text-white">
+                                <h5 class="modal-title"><i class="bi bi-exclamation-triangle me-2"></i>Confirm Removal</h5>
+                                <button type="button" class="btn-close btn-close-white" @onclick="CloseDeleteModal"></button>
+                            </div>
+                            <div class="modal-body py-4 text-center">
+                                <p class="mb-1">Are you sure you want to remove this buildplate from the player?</p>
+                                <strong class="fs-5">@_nameToDelete</strong>
+                                <div class="text-muted small mt-2">This action cannot be undone.</div>
+                            </div>
+                            <div class="modal-footer bg-light">
+                                <button type="button" class="btn btn-secondary" @onclick="CloseDeleteModal">Cancel</button>
+                                <button type="button" class="btn btn-danger px-4" @onclick="ConfirmDelete">Remove Buildplate</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="modal-footer bg-light">
-                    <button type="button" class="btn btn-secondary" @onclick="CloseDeleteModal">Cancel</button>
-                    <button type="button" class="btn btn-danger px-4" @onclick="ConfirmDelete">Remove Buildplate</button>
-                </div>
-            </div>
-        </div>
-    </div>
-}
+            }
 
 @code {
     [Parameter]
@@ -277,6 +318,35 @@
     private List<TemplateDto>? _templates;
     private bool _showAddModal = false;
     private string? _errorMessage;
+
+    private string _playerSearchTerm = "";
+    private int _playerCurrentPage = 1;
+    private int _playerPageSize = 8;
+
+    private IEnumerable<PlayerBuildplate> FilteredPlayerBuildplates
+        => _playerBuildplates?.Where(bp => string.IsNullOrWhiteSpace(_playerSearchTerm) || bp.Name.Contains(_playerSearchTerm,
+StringComparison.OrdinalIgnoreCase))
+        ?? Array.Empty<PlayerBuildplate>();
+
+    private int TotalPlayerPages => Math.Max(1, (int)Math.Ceiling((double)FilteredPlayerBuildplates.Count() /
+_playerPageSize));
+
+    private IEnumerable<PlayerBuildplate> PaginatedPlayerBuildplates =>
+        FilteredPlayerBuildplates.Skip((_playerCurrentPage - 1) * _playerPageSize).Take(_playerPageSize);
+
+    private void HandlePlayerSearch(ChangeEventArgs e)
+    {
+        _playerSearchTerm = e.Value?.ToString() ?? "";
+        _playerCurrentPage = 1; // Reset to page 1 on new search
+    }
+
+    private void ChangePlayerPage(int newPage)
+    {
+        if (newPage >= 1 && newPage <= TotalPlayerPages)
+        {
+            _playerCurrentPage = newPage;
+        }
+    }
 
     // Search and Pagination State for Templates
     private string? _searchTerm = "";
@@ -531,6 +601,12 @@ BuildplateLauncher.ExeName))
                     if (await RemoveBuildplate(_idToDelete))
                     {
                         _playerBuildplates.Remove(item);
+                        
+                        // Handle edge case where deleting leaves the current page empty
+                        if (_playerCurrentPage > TotalPlayerPages)
+                        {
+                            _playerCurrentPage = TotalPlayerPages;
+                        }
                     }
                     else
                     {
