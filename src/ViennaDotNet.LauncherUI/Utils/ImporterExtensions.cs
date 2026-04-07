@@ -95,18 +95,18 @@ public static class ImporterExtensions
             bool getBufferSuccess = ms.TryGetBuffer(out var buffer);
             Debug.Assert(getBufferSuccess);
 
-            // var launcherPreviewObjectId = (await importer.ObjectStoreClient.Store(buffer).Task) as string;
-            // if (launcherPreviewObjectId is null)
-            // {
-            //     Log.Warning($"Failed to store launcher preview for template '{templateId}'");
-            //     return buffer;
-            // }
+            var launcherPreviewObjectId = await importer.ObjectStoreClient.StoreAsync(buffer);
+            if (launcherPreviewObjectId is null)
+            {
+                Log.Warning($"Failed to store launcher preview for template '{templateId}'");
+                return buffer;
+            }
 
-            // template = template with { LauncherPreviewObjectId = launcherPreviewObjectId, };
+            template = template with { LauncherPreviewObjectId = launcherPreviewObjectId, };
 
-            // await new EarthDB.ObjectQuery(true)
-            //     .UpdateBuildplate(templateId, template)
-            //     .ExecuteAsync(importer.EarthDB, cancellationToken);
+            await new EarthDB.ObjectQuery(true)
+                .UpdateBuildplate(templateId, template)
+                .ExecuteAsync(importer.EarthDB, cancellationToken);
 
             return buffer;
         }
@@ -182,21 +182,21 @@ public static class ImporterExtensions
             bool getBufferSuccess = ms.TryGetBuffer(out var buffer);
             Debug.Assert(getBufferSuccess);
 
-            // var launcherPreviewObjectId = (await importer.ObjectStoreClient.Store(buffer).Task) as string;
-            // if (launcherPreviewObjectId is null)
-            // {
-            //     Log.Warning($"Failed to store launcher preview for buildplate '{buildplateId}'");
-            //     return buffer;
-            // }
+            var launcherPreviewObjectId = await importer.ObjectStoreClient.StoreAsync(buffer);
+            if (launcherPreviewObjectId is null)
+            {
+                Log.Warning($"Failed to store launcher preview for buildplate '{buildplateId}'");
+                return buffer;
+            }
 
-            // buildplate = buildplate with { LauncherPreviewObjectId = launcherPreviewObjectId, };
+            buildplate = buildplate with { LauncherPreviewObjectId = launcherPreviewObjectId, };
 
-            // playerBuildplates.RemoveBuildplate(buildplateId);
-            // playerBuildplates.AddBuildplate(buildplateId, buildplate);
+            playerBuildplates.RemoveBuildplate(buildplateId);
+            playerBuildplates.AddBuildplate(buildplateId, buildplate);
 
-            // await new EarthDB.Query(true)
-            //     .Update("buildplates", playerId, playerBuildplates)
-            //     .ExecuteAsync(importer.EarthDB, cancellationToken);
+            await new EarthDB.Query(true)
+                .Update("buildplates", playerId, playerBuildplates)
+                .ExecuteAsync(importer.EarthDB, cancellationToken);
 
             return buffer;
         }

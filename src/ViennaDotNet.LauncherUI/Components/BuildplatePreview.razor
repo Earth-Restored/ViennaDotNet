@@ -184,7 +184,7 @@
 
         try
         {
-            using var importer = await Importer.CreateFromSettings(Settings.Instance, Log.Logger, createEventBus: false);
+            await using var importer = await Importer.CreateFromSettings(Settings.Instance, Log.Logger, createEventBus: false);
 
             Log.Debug(messageTemplate: "Get");
             var previewData = IsTemplate
@@ -222,21 +222,24 @@
 
     public async ValueTask DisposeAsync()
     {
-        if (_viewer3D is not null)
+        try
         {
-            try
+            if (_viewer3D is not null)
             {
                 await _viewer3D.DisposeAsync();
             }
-            catch (Exception ex)
+
+            if (_jsModule is not null)
             {
-                Log.Debug("Viewer for {Id} already disposed or failed: {Msg}", BuildplateId, ex.Message);
+                await _jsModule.DisposeAsync();
             }
         }
-
-        if (_jsModule is not null)
+        catch (JSDisconnectedException)
         {
-            await _jsModule.DisposeAsync();
+        }
+        catch (Exception ex)
+        {
+            Log.Debug("Error during disposal of {Id}: {Msg}", BuildplateId, ex.Message);
         }
     }
 }

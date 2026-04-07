@@ -26,7 +26,7 @@
         <div class="d-flex align-items-baseline gap-2">
             <h2 class="mb-0">
                 <i class="bi bi-boxes text-info me-2"></i>
-                Buildplates for Player @(string.IsNullOrEmpty(_username) ? $"with id {PlayerId}" : $"{_username} (ID:     {PlayerId})")
+                Buildplates for Player @(string.IsNullOrEmpty(_username) ? $"with id {PlayerId}" : $"{_username} (ID:      {PlayerId})")
             </h2>
         </div>
         
@@ -187,8 +187,7 @@
                                 <div class="col-12 col-md-6 col-lg-4" @key="template.Id">
                                     <div class="card h-100 shadow-sm">
                                         <div class="position-relative rounded-top" style="aspect-ratio: 16 / 9; overflow: visible;">
-                                            <BuildplatePreview BuildplateId="@template.Id"
-                                                               ServerDataObjectId="@template.ServerDataObjectId" Size="@template.Size"
+                                            <BuildplatePreview BuildplateId="@template.Id" IsTemplate=true Size="@template.Size"
                                                                BlocksPerMeter="@template.BlocksPerMeter" IsNight="@template.IsNight"
                                                                ResourcePackManager="@_resourcePackManager" />
                                         </div>
@@ -217,49 +216,52 @@
                                 <ul class="pagination pagination-sm mb-0">
                                     <li class="page-item @(_currentPage <= 1 ? "disabled" : "")">
                                         <button class="page-link" @onclick="() => ChangePage(_currentPage - 1)">&laquo;
-                                            Prev</button>
-                                        </li>
-                                        <li class="page-item disabled">
-                                            <span class="page-link text-dark fw-semibold bg-light">Page @_currentPage of
-                                                @TotalPages</span>
-                                            </li>
-                                            <li class="page-item @(_currentPage >= TotalPages ? "disabled" : "")">
-                                                <button class="page-link" @onclick="() => ChangePage(_currentPage + 1)">Next
-                                                    &raquo;</button>
-                                                </li>
-                                            </ul>
-                                        </nav>
-                                    }
-                                </div>
-                                <button type="button" class="btn btn-secondary" @onclick="CloseAddModal">Cancel</button>
-                            </div>
-                        </div>
+                                            Prev
+                                        </button>
+                                    </li>
+                                    <li class="page-item disabled">
+                                        <span class="page-link text-dark fw-semibold bg-light">Page @_currentPage of
+                                            @TotalPages
+                                        </span>
+                                    </li>
+                                    <li class="page-item @(_currentPage >= TotalPages ? "disabled" : "")">
+                                        <button class="page-link" @onclick="() => ChangePage(_currentPage + 1)">
+                                            Next&raquo;
+                                        </button>
+                                    </li>
+                                </ul>
+                            </nav>
+                        }
                     </div>
+                    <button type="button" class="btn btn-secondary" @onclick="CloseAddModal">Cancel</button>
                 </div>
-            }
+            </div>
+        </div>
+    </div>
+}
 
-            @if (_showDeleteModal)
-            {
-                <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.6);">
-                    <div class="modal-dialog modal-dialog-centered">
-                        <div class="modal-content border-danger shadow-lg">
-                            <div class="modal-header bg-danger text-white">
-                                <h5 class="modal-title"><i class="bi bi-exclamation-triangle me-2"></i>Confirm Removal</h5>
-                                <button type="button" class="btn-close btn-close-white" @onclick="CloseDeleteModal"></button>
-                            </div>
-                            <div class="modal-body py-4 text-center">
-                                <p class="mb-1">Are you sure you want to remove this buildplate from the player?</p>
-                                <strong class="fs-5">@_nameToDelete</strong>
-                                <div class="text-muted small mt-2">This action cannot be undone.</div>
-                            </div>
-                            <div class="modal-footer bg-light">
-                                <button type="button" class="btn btn-secondary" @onclick="CloseDeleteModal">Cancel</button>
-                                <button type="button" class="btn btn-danger px-4" @onclick="ConfirmDelete">Remove Buildplate</button>
-                            </div>
-                        </div>
-                    </div>
+@if (_showDeleteModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.6);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-danger shadow-lg">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="bi bi-exclamation-triangle me-2"></i>Confirm Removal</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseDeleteModal"></button>
                 </div>
-            }
+                <div class="modal-body py-4 text-center">
+                    <p class="mb-1">Are you sure you want to remove this buildplate from the player?</p>
+                    <strong class="fs-5">@_nameToDelete</strong>
+                    <div class="text-muted small mt-2">This action cannot be undone.</div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseDeleteModal">Cancel</button>
+                    <button type="button" class="btn btn-danger px-4" @onclick="ConfirmDelete">Remove Buildplate</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 @code {
     [Parameter]
@@ -471,18 +473,22 @@ BuildplateLauncher.ExeName))
                 .ExecuteAsync(importer.EarthDB))
                 .Get<DB.Models.Player.Buildplates>("buildplates");
 
-            var buildplate = buildplates.GetBuildplate(buildplateId)!;
+            var dbBuildplate = buildplates.GetBuildplate(buildplateId)!;
 
-            _playerBuildplates.Add(new PlayerBuildplate
+            var buildplate = new PlayerBuildplate
             {
                 Id = buildplateId,
                 Name = template.Name,
                 Size = template.Size,
                 BlocksPerMeter = template.BlocksPerMeter,
                 IsNight = template.IsNight,
-                ServerDataObjectId = buildplate.ServerDataObjectId,
-                PreviewObjectId = buildplate.PreviewObjectId,
-            });
+                ServerDataObjectId = dbBuildplate.ServerDataObjectId,
+                PreviewObjectId = dbBuildplate.PreviewObjectId,
+            };
+
+            buildplate.AcceptChanges();
+
+            _playerBuildplates.Add(buildplate);
 
             CloseAddModal();
         }
