@@ -150,7 +150,7 @@ internal static class Program
         EventBusClient eventBusClient;
         try
         {
-            eventBusClient = EventBusClient.Create(options.EventBusConnectionString ?? "");
+            eventBusClient = await EventBusClient.ConnectAsync(options.EventBusConnectionString ?? "");
         }
         catch (EventBusClientException ex)
         {
@@ -180,7 +180,7 @@ internal static class Program
 
         Log.Information("Loaded static data");
 
-        using (EventBusTileRenderer renderer = new EventBusTileRenderer(tileDataSource, eventBusClient, staticData))
+        await using (var renderer = new EventBusTileRenderer(tileDataSource, eventBusClient, staticData))
         {
             renderer.Run();
         }

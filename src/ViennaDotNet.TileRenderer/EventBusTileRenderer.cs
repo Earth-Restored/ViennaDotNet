@@ -5,7 +5,7 @@ using ViennaDotNet.EventBus.Client;
 
 namespace ViennaDotNet.TileRenderer;
 
-internal sealed class EventBusTileRenderer : IDisposable
+internal sealed class EventBusTileRenderer : IAsyncDisposable
 {
     private readonly ITileDataSource _dataSource;
     private readonly EventBusClient _eventBus;
@@ -57,10 +57,10 @@ internal sealed class EventBusTileRenderer : IDisposable
             {
                 return null;
             }
-        }, () =>
+        }, async () =>
         {
             Log.Error("Event bus subscriber error");
-            Dispose();
+            await DisposeAsync();
             Log.CloseAndFlush();
             Environment.Exit(1);
         }));
@@ -73,6 +73,6 @@ internal sealed class EventBusTileRenderer : IDisposable
         }
     }
 
-    public void Dispose()
-        => _eventBus.Close();
+    public async ValueTask DisposeAsync()
+        => await _eventBus.DisposeAsync();
 }

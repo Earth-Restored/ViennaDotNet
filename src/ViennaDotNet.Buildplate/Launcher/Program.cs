@@ -34,7 +34,7 @@ internal static class Program
     }
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
-    private static int Main(string[] args)
+    private static async Task<int> Main(string[] args)
     {
         if (!Debugger.IsAttached)
         {
@@ -84,7 +84,7 @@ internal static class Program
         EventBusClient eventBusClient;
         try
         {
-            eventBusClient = EventBusClient.Create(options.EventBusConnectionString);
+            eventBusClient = await EventBusClient.ConnectAsync(options.EventBusConnectionString);
         }
         catch (EventBusClientException ex)
         {

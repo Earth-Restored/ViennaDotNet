@@ -85,7 +85,7 @@ internal static class Program
         EventBusClient eventBusClient;
         try
         {
-            eventBusClient = EventBusClient.Create(options.EventBusConnectionString);
+            eventBusClient = await EventBusClient.ConnectAsync(options.EventBusConnectionString);
         }
         catch (EventBusClientException ex)
         {

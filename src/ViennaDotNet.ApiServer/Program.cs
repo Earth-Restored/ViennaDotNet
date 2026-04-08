@@ -167,7 +167,7 @@ public static class Program
         Log.Information("Connecting to event bus");
         try
         {
-            eventBus = EventBusClient.Create(options.EventBusConnectionString);
+            eventBus = await EventBusClient.ConnectAsync(options.EventBusConnectionString);
         }
         catch (EventBusClientException ex)
         {
