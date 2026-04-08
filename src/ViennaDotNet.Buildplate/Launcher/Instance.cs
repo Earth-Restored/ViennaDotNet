@@ -706,7 +706,7 @@ public class Instance
         {
             foreach (ZipArchiveEntry entry in zipInputStream.Entries)
             {
-                if (entry.IsDirectory())
+                if (entry.IsDirectory)
                 {
                     continue;
                 }
@@ -714,7 +714,7 @@ public class Instance
                 string path = Path.Combine(worldDir.FullName, entry.FullName);
 
                 using (Stream zipStream = entry.Open())
-                using (FileStream fs = File.OpenWrite(path))
+                using (FileStream fs = File.OpenWriteNew(path))
                 {
                     zipStream.CopyTo(fs);
                 }

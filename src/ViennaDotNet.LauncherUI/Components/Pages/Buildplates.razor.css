@@ -1,0 +1,9 @@
+.preview-container:fullscreen {
+    width: 100vw !important;
+    height: 100vh !important;
+    background-color: #000 !important;
+}
+
+.hover-opacity-100:hover {
+    opacity: 1 !important;
+}

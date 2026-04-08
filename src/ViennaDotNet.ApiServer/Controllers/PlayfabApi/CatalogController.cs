@@ -22,7 +22,7 @@ public class CatalogController : ViennaControllerBase
         Converters = { new UtcDateTimeConverter() },
     };
 
-    private static StaticData.StaticData staticData => Program.staticData;
+    private static StaticData.StaticData StaticData => Program.staticData;
 
     private static readonly Item[] itemData;
 
@@ -77,7 +77,7 @@ public class CatalogController : ViennaControllerBase
                     "persona_feet"
                 )
             ),
-            .. staticData.Playfab.Items.Select(item => CIItemToItem(item.Value)),
+            .. StaticData.Playfab.Items.Select(item => CIItemToItem(item.Value)),
         ];
     }
 
@@ -214,7 +214,7 @@ public class CatalogController : ViennaControllerBase
             ));
         }
 
-        if (!staticData.Playfab.Items.TryGetValue(itemId, out var cItem))
+        if (!StaticData.Playfab.Items.TryGetValue(itemId, out var cItem))
         {
             // TODO: fake not found
             return NotFound();
@@ -333,9 +333,9 @@ public class CatalogController : ViennaControllerBase
                     data.Tabs.Select(tab => new Item.DisplayPropertiesR.Tab(
                         tab.ScreenLayoutQueries.Select(layoutQuery => new Item.DisplayPropertiesR.Tab.ScreenLayoutQuery(
                             // TODO: haven't seen it yet, but it's possible these can have properties
-                            layoutQuery.ColumnType is StaticData.Playfab.Tab.ColumnType.Rectangle ? new object() : null,
-                            layoutQuery.ColumnType is StaticData.Playfab.Tab.ColumnType.Square ? new object() : null,
-                            layoutQuery.ColumnType is StaticData.Playfab.Tab.ColumnType.Grid ? new object() : null,
+                            layoutQuery.ColumnType is ViennaDotNet.StaticData.Playfab.Tab.ColumnType.Rectangle ? new object() : null,
+                            layoutQuery.ColumnType is ViennaDotNet.StaticData.Playfab.Tab.ColumnType.Square ? new object() : null,
+                            layoutQuery.ColumnType is ViennaDotNet.StaticData.Playfab.Tab.ColumnType.Grid ? new object() : null,
                             layoutQuery.Queries.Select(query => new Item.DisplayPropertiesR.Tab.ScreenLayoutQuery.Query(
                                 query.ProductIds,
                                 query.QueryContentTypes.Select(type => type.ToString()),

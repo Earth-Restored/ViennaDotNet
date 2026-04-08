@@ -1,8 +1,9 @@
 ﻿using Serilog;
 using System.IO.Compression;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
-using ViennaDotNet.BuildplateImporter.Models;
+using ViennaDotNet.Buildplate.Model;
 using ViennaDotNet.Common;
 using ViennaDotNet.Common.Utils;
 using ViennaDotNet.DB;
@@ -15,22 +16,22 @@ namespace ViennaDotNet.BuildplateImporter;
 
 public sealed class Importer : IAsyncDisposable
 {
-    private readonly EarthDB _earthDB;
-    private readonly EventBusClient? _eventBusClient;
-    private readonly ObjectStoreClient _objectStoreClient;
-    private readonly ILogger _logger;
+    public readonly EarthDB EarthDB;
+    public readonly EventBusClient? EventBusClient;
+    public readonly ObjectStoreClient ObjectStoreClient;
+    public readonly ILogger Logger;
 
     public Importer(EarthDB earthDB, EventBusClient? eventBusClient, ObjectStoreClient objectStoreClient, ILogger logger)
     {
-        _earthDB = earthDB;
-        _eventBusClient = eventBusClient;
-        _objectStoreClient = objectStoreClient;
-        _logger = logger;
+        EarthDB = earthDB;
+        EventBusClient = eventBusClient;
+        ObjectStoreClient = objectStoreClient;
+        Logger = logger;
     }
 
     public async Task<bool> ImportTemplateAsync(string templateId, string name, Stream stream, CancellationToken cancellationToken = default)
     {
-        var worldData = await ReadWorldFile(stream, cancellationToken);
+        var worldData = await WorldData.LoadFromZipAsync(stream, Logger, cancellationToken);
 
         if (worldData is null)
         {
@@ -49,33 +50,33 @@ public sealed class Importer : IAsyncDisposable
         {
             var results = await new EarthDB.ObjectQuery(false)
                .GetBuildplate(templateId)
-               .ExecuteAsync(_earthDB, cancellationToken);
+               .ExecuteAsync(EarthDB, cancellationToken);
 
             template = results.GetBuildplate(templateId);
         }
         catch (EarthDB.DatabaseException ex)
         {
-            _logger.Error($"Failed to fetch template {templateId}: {ex}");
+            Logger.Error($"Failed to fetch template {templateId}: {ex}");
             return false;
         }
 
         if (template is null)
         {
-            _logger.Warning($"Template {templateId} does not exist");
+            Logger.Warning($"Template {templateId} does not exist");
             return false;
         }
 
         if (string.IsNullOrEmpty(template.ServerDataObjectId))
         {
-            _logger.Error($"Template '{templateId}' has no associated world data");
+            Logger.Error($"Template '{templateId}' has no associated world data");
             return false;
         }
 
-        var serverData = await _objectStoreClient.GetAsync(template.ServerDataObjectId);
+        var serverData = await ObjectStoreClient.GetAsync(template.ServerDataObjectId);
 
         if (serverData is null)
         {
-            _logger.Error($"Could not get world data for template '{templateId}'");
+            Logger.Error($"Could not get world data for template '{templateId}'");
             return false;
         }
 
@@ -92,10 +93,10 @@ public sealed class Importer : IAsyncDisposable
 
         byte[] preview = await GeneratePreview(worldData);
 
-        string? newPreviewObjectId = await _objectStoreClient.StoreAsync(preview);
+        string? newPreviewObjectId = await ObjectStoreClient.StoreAsync(preview);
         if (newPreviewObjectId is null)
         {
-            _logger.Error($"Could not store template's preview object in object store '{templateId}'");
+            Logger.Error($"Could not store template's preview object in object store '{templateId}'");
             return false;
         }
 
@@ -107,46 +108,46 @@ public sealed class Importer : IAsyncDisposable
         {
             var results = await new EarthDB.ObjectQuery(true)
                .UpdateBuildplate(templateId, template)
-               .ExecuteAsync(_earthDB, cancellationToken);
+               .ExecuteAsync(EarthDB, cancellationToken);
 
             if (!string.IsNullOrEmpty(oldPreviewObjectId))
             {
-                await _objectStoreClient.DeleteAsync(oldPreviewObjectId);
-                _logger.Debug($"Deleted old preview for template '{templateId}'");
+                await ObjectStoreClient.DeleteAsync(oldPreviewObjectId);
+                Logger.Debug($"Deleted old preview for template '{templateId}'");
             }
 
             return true;
         }
         catch (EarthDB.DatabaseException ex)
         {
-            _logger.Error($"Failed to update template buidplate in database: {ex}");
-            await _objectStoreClient.DeleteAsync(newPreviewObjectId);
+            Logger.Error($"Failed to update template buidplate in database: {ex}");
+            await ObjectStoreClient.DeleteAsync(newPreviewObjectId);
             return false;
         }
     }
 
     public async Task<bool> RemoveTemplateAsync(string templateId, bool removeFromPlayers, CancellationToken cancellationToken = default)
     {
-        _logger.Information($"Starting removal of template {templateId}");
+        Logger.Information($"Starting removal of template {templateId}");
 
         TemplateBuildplate? template;
         try
         {
             var results = await new EarthDB.ObjectQuery(false)
                .GetBuildplate(templateId)
-               .ExecuteAsync(_earthDB, cancellationToken);
+               .ExecuteAsync(EarthDB, cancellationToken);
 
             template = results.GetBuildplate(templateId);
         }
         catch (EarthDB.DatabaseException ex)
         {
-            _logger.Error($"Failed to fetch template {templateId}: {ex}");
+            Logger.Error($"Failed to fetch template {templateId}: {ex}");
             return false;
         }
 
         if (template is null)
         {
-            _logger.Warning($"Template {templateId} does not exist. Skipping.");
+            Logger.Warning($"Template {templateId} does not exist. Skipping.");
             return true;
         }
 
@@ -156,7 +157,7 @@ public sealed class Importer : IAsyncDisposable
 
             try
             {
-                using var connection = _earthDB.OpenConnection(false);
+                using var connection = EarthDB.OpenConnection(false);
                 using var command = connection.CreateCommand();
 
                 command.CommandText = """
@@ -179,11 +180,11 @@ public sealed class Importer : IAsyncDisposable
             }
             catch (Exception ex)
             {
-                _logger.Error($"Error scanning players for template {templateId}: {ex}");
+                Logger.Error($"Error scanning players for template {templateId}: {ex}");
                 return false;
             }
 
-            _logger.Information($"Found {instances.Count} player buildplates to remove.");
+            Logger.Information($"Found {instances.Count} player buildplates to remove.");
 
             foreach (var (playerId, buildplateId) in instances)
             {
@@ -195,25 +196,25 @@ public sealed class Importer : IAsyncDisposable
         {
             await new EarthDB.ObjectQuery(true)
                 .UpdateBuildplate(templateId, null)
-                .ExecuteAsync(_earthDB, cancellationToken);
+                .ExecuteAsync(EarthDB, cancellationToken);
         }
         catch (EarthDB.DatabaseException ex)
         {
-            _logger.Error($"Failed to remove template {templateId} from DB: {ex}");
+            Logger.Error($"Failed to remove template {templateId} from DB: {ex}");
             return false;
         }
 
         if (!string.IsNullOrEmpty(template.ServerDataObjectId))
         {
-            await _objectStoreClient.DeleteAsync(template.ServerDataObjectId);
+            await ObjectStoreClient.DeleteAsync(template.ServerDataObjectId);
         }
 
         if (!string.IsNullOrEmpty(template.PreviewObjectId))
         {
-            await _objectStoreClient.DeleteAsync(template.PreviewObjectId);
+            await ObjectStoreClient.DeleteAsync(template.PreviewObjectId);
         }
 
-        _logger.Information($"Successfully purged template {templateId} and all associated player buildplates.");
+        Logger.Information($"Successfully purged template {templateId} and all associated player buildplates.");
         return true;
     }
 
@@ -224,35 +225,35 @@ public sealed class Importer : IAsyncDisposable
         {
             var results = await new EarthDB.ObjectQuery(false)
                .GetBuildplate(templateId)
-               .ExecuteAsync(_earthDB, cancellationToken);
+               .ExecuteAsync(EarthDB, cancellationToken);
 
             template = results.GetBuildplate(templateId);
         }
         catch (EarthDB.DatabaseException ex)
         {
-            _logger.Error($"Failed to get template buildplate '{templateId}': {ex}");
+            Logger.Error($"Failed to get template buildplate '{templateId}': {ex}");
             return null;
         }
 
         if (template is null)
         {
-            _logger.Error($"Template buildplate {templateId} not found");
+            Logger.Error($"Template buildplate {templateId} not found");
             return null;
         }
 
-        byte[]? serverData = await _objectStoreClient.GetAsync(template.ServerDataObjectId);
+        byte[]? serverData = await ObjectStoreClient.GetAsync(template.ServerDataObjectId);
 
         if (serverData is null)
         {
-            _logger.Error($"Could not get server data for template buildplate '{templateId}'");
+            Logger.Error($"Could not get server data for template buildplate '{templateId}'");
             return null;
         }
 
-        byte[]? preview = await _objectStoreClient.GetAsync(template.PreviewObjectId);
+        byte[]? preview = await ObjectStoreClient.GetAsync(template.PreviewObjectId);
 
         if (preview is null)
         {
-            _logger.Warning($"Could not get preview for template buildplate {templateId}");
+            Logger.Warning($"Could not get preview for template buildplate {templateId}");
             preview = await GeneratePreview(new WorldData(serverData, template.Size, template.Offset, template.Night));
         }
 
@@ -274,13 +275,13 @@ public sealed class Importer : IAsyncDisposable
         {
             playerBuildplates = (await new EarthDB.Query(true)
                 .Get("buildplates", playerId, typeof(Buildplates))
-                .ExecuteAsync(_earthDB, cancellationToken))
+                .ExecuteAsync(EarthDB, cancellationToken))
                 .Get<Buildplates>("buildplates");
-                
+
         }
         catch (EarthDB.DatabaseException ex)
         {
-            _logger.Error($"Failed to remove buildplate '{buildplateId}' from database for player '{playerId}': {ex}");
+            Logger.Error($"Failed to remove buildplate '{buildplateId}' from database for player '{playerId}': {ex}");
             return false;
         }
 
@@ -288,21 +289,21 @@ public sealed class Importer : IAsyncDisposable
 
         if (buildplate is null)
         {
-            _logger.Warning($"Player buildplate {buildplateId} does not exist");
+            Logger.Warning($"Player buildplate {buildplateId} does not exist");
             return false;
         }
 
         if (string.IsNullOrEmpty(buildplate.ServerDataObjectId))
         {
-            _logger.Error($"Player buildplate '{buildplateId}' has no associated world data");
+            Logger.Error($"Player buildplate '{buildplateId}' has no associated world data");
             return false;
         }
 
-        var serverData = await _objectStoreClient.GetAsync(buildplate.ServerDataObjectId);
+        var serverData = await ObjectStoreClient.GetAsync(buildplate.ServerDataObjectId);
 
         if (serverData is null)
         {
-            _logger.Error($"Could not get world data for player buildplate '{buildplateId}'");
+            Logger.Error($"Could not get world data for player buildplate '{buildplateId}'");
             return false;
         }
 
@@ -319,10 +320,10 @@ public sealed class Importer : IAsyncDisposable
 
         byte[] preview = await GeneratePreview(worldData);
 
-        string? newPreviewObjectId = await _objectStoreClient.StoreAsync(preview);
+        string? newPreviewObjectId = await ObjectStoreClient.StoreAsync(preview);
         if (newPreviewObjectId is null)
         {
-            _logger.Error($"Could not store player buildplate's preview object in object store '{buildplateId}'");
+            Logger.Error($"Could not store player buildplate's preview object in object store '{buildplateId}'");
             return false;
         }
 
@@ -336,27 +337,27 @@ public sealed class Importer : IAsyncDisposable
         {
             await new EarthDB.Query(true)
                 .Update("buildplates", playerId, playerBuildplates)
-                .ExecuteAsync(_earthDB);
+                .ExecuteAsync(EarthDB);
 
             if (!string.IsNullOrEmpty(oldPreviewObjectId))
             {
-                await _objectStoreClient.DeleteAsync(oldPreviewObjectId);
-                _logger.Debug($"Deleted old preview for player buildplate '{buildplateId}'");
+                await ObjectStoreClient.DeleteAsync(oldPreviewObjectId);
+                Logger.Debug($"Deleted old preview for player buildplate '{buildplateId}'");
             }
 
             return true;
         }
         catch (EarthDB.DatabaseException ex)
         {
-            _logger.Error($"Failed to update player buildplates in database: {ex}");
-            await _objectStoreClient.DeleteAsync(newPreviewObjectId);
+            Logger.Error($"Failed to update player buildplates in database: {ex}");
+            await ObjectStoreClient.DeleteAsync(newPreviewObjectId);
             return false;
         }
     }
 
     public async Task<bool> RemoveBuildplateFromPlayer(string buildplateId, string playerId, CancellationToken cancellationToken = default)
     {
-        _logger.Information($"Removing buildplate {buildplateId} from player {playerId}");
+        Logger.Information($"Removing buildplate {buildplateId} from player {playerId}");
 
         string? serverDataObjectId = null;
         string? previewObjectId = null;
@@ -372,7 +373,7 @@ public sealed class Importer : IAsyncDisposable
                     var buildplate = buildplates.GetBuildplate(buildplateId);
                     if (buildplate == null)
                     {
-                        _logger.Warning($"Buildplate {buildplateId} not found for player {playerId}. Nothing to remove.");
+                        Logger.Warning($"Buildplate {buildplateId} not found for player {playerId}. Nothing to remove.");
                         return null;
                     }
 
@@ -384,46 +385,46 @@ public sealed class Importer : IAsyncDisposable
                     return new EarthDB.Query(true)
                         .Update("buildplates", playerId, buildplates);
                 })
-                .ExecuteAsync(_earthDB, cancellationToken);
+                .ExecuteAsync(EarthDB, cancellationToken);
 
             if (!string.IsNullOrEmpty(serverDataObjectId))
             {
-                _logger.Information($"Deleting server data object {serverDataObjectId}");
-                await _objectStoreClient.DeleteAsync(serverDataObjectId);
+                Logger.Information($"Deleting server data object {serverDataObjectId}");
+                await ObjectStoreClient.DeleteAsync(serverDataObjectId);
             }
 
             if (!string.IsNullOrEmpty(previewObjectId))
             {
-                _logger.Information($"Deleting preview object {previewObjectId}");
-                await _objectStoreClient.DeleteAsync(previewObjectId);
+                Logger.Information($"Deleting preview object {previewObjectId}");
+                await ObjectStoreClient.DeleteAsync(previewObjectId);
             }
 
             return true;
         }
         catch (EarthDB.DatabaseException ex)
         {
-            _logger.Error($"Failed to remove buildplate '{buildplateId}' from database for player '{playerId}': {ex}");
+            Logger.Error($"Failed to remove buildplate '{buildplateId}' from database for player '{playerId}': {ex}");
             return false;
         }
         catch (Exception ex)
         {
-            _logger.Error($"An unexpected error occurred while removing buildplate '{buildplateId}': {ex}");
+            Logger.Error($"An unexpected error occurred while removing buildplate '{buildplateId}': {ex}");
             return false;
         }
     }
 
     public async ValueTask DisposeAsync()
     {
-        _earthDB.Dispose();
-        if (_eventBusClient is not null)
+        EarthDB.Dispose();
+        if (EventBusClient is not null)
         {
-            await _eventBusClient.DisposeAsync();
+            await EventBusClient.DisposeAsync();
         }
         
-        await _objectStoreClient.DisposeAsync();
+        await ObjectStoreClient.DisposeAsync();
     }
 
-    private async Task<WorldData?> ReadWorldFile(Stream stream, CancellationToken cancellationToken)
+    public async Task<WorldData?> ReadWorldFile(Stream stream, CancellationToken cancellationToken)
     {
         Dictionary<string, byte[]> worldFileContents = [];
 
@@ -433,7 +434,7 @@ public sealed class Importer : IAsyncDisposable
             {
                 foreach (var entry in zip.Entries)
                 {
-                    if (entry.IsDirectory())
+                    if (entry.IsDirectory)
                     {
                         continue;
                     }
@@ -476,7 +477,7 @@ public sealed class Importer : IAsyncDisposable
         }
         catch (IOException ex)
         {
-            _logger.Error($"Could not read world file: {ex}");
+            Logger.Error($"Could not read world file: {ex}");
             return null;
         }
 
@@ -495,7 +496,7 @@ public sealed class Importer : IAsyncDisposable
 
                             if (!worldFileContents.TryGetValue(filePath, out byte[]? data))
                             {
-                                _logger.Error($"World file is missing {filePath}");
+                                Logger.Error($"World file is missing {filePath}");
                                 return null;
                             }
 
@@ -513,7 +514,7 @@ public sealed class Importer : IAsyncDisposable
         }
         catch (IOException ex)
         {
-            _logger.Error($"Could not prepare server data: {ex}");
+            Logger.Error($"Could not prepare server data: {ex}");
             return null;
         }
 
@@ -530,7 +531,7 @@ public sealed class Importer : IAsyncDisposable
 
             if (buildplateMetadataString is null)
             {
-                _logger.Warning("World file does not contain buildplate_metadata.json, using default values");
+                Logger.Warning("World file does not contain buildplate_metadata.json, using default values");
                 size = 16;
                 offset = 63;
                 night = false;
@@ -541,7 +542,7 @@ public sealed class Importer : IAsyncDisposable
 
                 if (buildplateMetadataVersion is null)
                 {
-                    _logger.Error("Invalid buildplate metadata");
+                    Logger.Error("Invalid buildplate metadata");
                     return null;
                 }
 
@@ -553,7 +554,7 @@ public sealed class Importer : IAsyncDisposable
 
                             if (buildplateMetadata is null)
                             {
-                                _logger.Error("Invalid buildplate metadata");
+                                Logger.Error("Invalid buildplate metadata");
                                 return null;
                             }
 
@@ -565,7 +566,7 @@ public sealed class Importer : IAsyncDisposable
                         break;
                     default:
                         {
-                            _logger.Error($"Unsupported buildplate metadata version {buildplateMetadataVersion.Version}");
+                            Logger.Error($"Unsupported buildplate metadata version {buildplateMetadataVersion.Version}");
                             return null;
                         }
                 }
@@ -573,13 +574,13 @@ public sealed class Importer : IAsyncDisposable
         }
         catch (Exception ex)
         {
-            _logger.Error($"Could not read buildplate metadata file: {ex}");
+            Logger.Error($"Could not read buildplate metadata file: {ex}");
             return null;
         }
 
         if (size != 8 && size != 16 && size != 32)
         {
-            _logger.Error($"Invalid buildplate size {size}, must be on of: 8, 16, 32");
+            Logger.Error($"Invalid buildplate size {size}, must be on of: 8, 16, 32");
             return null;
         }
 
@@ -589,21 +590,21 @@ public sealed class Importer : IAsyncDisposable
     private async Task<byte[]> GeneratePreview(WorldData worldData)
     {
         string? preview;
-        if (_eventBusClient is not null)
+        if (EventBusClient is not null)
         {
-            _logger.Information("Generating preview");
-            RequestSender requestSender = _eventBusClient.AddRequestSender();
+            Logger.Information("Generating preview");
+            RequestSender requestSender = EventBusClient.AddRequestSender();
             preview = await requestSender.Request("buildplates", "preview", JsonSerializer.Serialize(new PreviewRequest(Convert.ToBase64String(worldData.ServerData), worldData.Night))).Task;
             requestSender.Close();
 
             if (preview is null)
             {
-                _logger.Warning("Could not get preview for buildplate (preview generator did not respond to event bus request)");
+                Logger.Warning("Could not get preview for buildplate (preview generator did not respond to event bus request)");
             }
         }
         else
         {
-            _logger.Information("Preview was not generated because event bus is not connected");
+            Logger.Information("Preview was not generated because event bus is not connected");
             preview = null;
         }
 
@@ -617,19 +618,19 @@ public sealed class Importer : IAsyncDisposable
         {
             var results = await new EarthDB.ObjectQuery(false)
                .GetBuildplate(templateId)
-               .ExecuteAsync(_earthDB, cancellationToken);
+               .ExecuteAsync(EarthDB, cancellationToken);
 
             template = results.GetBuildplate(templateId);
         }
         catch (EarthDB.DatabaseException ex)
         {
-            _logger.Error($"Failed to get template buildplate: {ex}");
+            Logger.Error($"Failed to get template buildplate: {ex}");
             return false;
         }
 
         if (template is not null)
         {
-            _logger.Error("Template buidplate already exists");
+            Logger.Error("Template buidplate already exists");
             return false;
             /*_logger.Information("Template buildplate found, updating");
 
@@ -678,21 +679,21 @@ public sealed class Importer : IAsyncDisposable
         else
         {
 
-            _logger.Information("Template buildplate not found");
+            Logger.Information("Template buildplate not found");
 
-            _logger.Information("Storing template world");
-            string? serverDataObjectId = await _objectStoreClient.StoreAsync(worldData.ServerData);
+            Logger.Information("Storing template world");
+            string? serverDataObjectId = await ObjectStoreClient.StoreAsync(worldData.ServerData);
             if (serverDataObjectId is null)
             {
-                _logger.Error("Could not store template data object in object store");
+                Logger.Error("Could not store template data object in object store");
                 return false;
             }
 
-            _logger.Information("Storing template preview");
-            string? previewObjectId = await _objectStoreClient.StoreAsync(preview);
+            Logger.Information("Storing template preview");
+            string? previewObjectId = await ObjectStoreClient.StoreAsync(preview);
             if (previewObjectId is null)
             {
-                _logger.Error("Could not store template preview object in object store");
+                Logger.Error("Could not store template preview object in object store");
                 return false;
             }
 
@@ -704,19 +705,19 @@ public sealed class Importer : IAsyncDisposable
                 _ => 33,
             };
 
-            template = new TemplateBuildplate(name, worldData.Size, worldData.Offset, scale, worldData.Night, serverDataObjectId, previewObjectId);
+            template = new TemplateBuildplate(name, worldData.Size, worldData.Offset, scale, worldData.Night, serverDataObjectId, previewObjectId, null);
 
             try
             {
                 var results = await new EarthDB.ObjectQuery(true)
                    .UpdateBuildplate(templateId, template)
-                   .ExecuteAsync(_earthDB, cancellationToken);
+                   .ExecuteAsync(EarthDB, cancellationToken);
             }
             catch (EarthDB.DatabaseException ex)
             {
-                _logger.Error($"Failed to store template buidplate in database: {ex}");
-                await _objectStoreClient.DeleteAsync(serverDataObjectId);
-                await _objectStoreClient.DeleteAsync(previewObjectId);
+                Logger.Error($"Failed to store template buidplate in database: {ex}");
+                await ObjectStoreClient.DeleteAsync(serverDataObjectId);
+                await ObjectStoreClient.DeleteAsync(previewObjectId);
                 return false;
             }
         }
@@ -726,20 +727,20 @@ public sealed class Importer : IAsyncDisposable
 
     private async Task<bool> StoreBuildplate(string templateId, string playerId, string buildplateId, TemplateBuildplate template, byte[] serverData, byte[] preview, CancellationToken cancellationToken)
     {
-        _logger.Information("Storing world");
-        string? serverDataObjectId = await _objectStoreClient.StoreAsync(serverData);
+        Logger.Information("Storing world");
+        string? serverDataObjectId = await ObjectStoreClient.StoreAsync(serverData);
         if (serverDataObjectId is null)
         {
-            _logger.Error("Could not store data object in object store");
+            Logger.Error("Could not store data object in object store");
             return false;
         }
 
-        _logger.Information("Storing preview");
-        string? previewObjectId = await _objectStoreClient.StoreAsync(preview);
+        Logger.Information("Storing preview");
+        string? previewObjectId = await ObjectStoreClient.StoreAsync(preview);
         if (previewObjectId is null)
         {
-            _logger.Error("Could not store preview object in object store");
-            await _objectStoreClient.DeleteAsync(serverDataObjectId);
+            Logger.Error("Could not store preview object in object store");
+            await ObjectStoreClient.DeleteAsync(serverDataObjectId);
             return false;
         }
 
@@ -753,22 +754,22 @@ public sealed class Importer : IAsyncDisposable
 
                     long lastModified = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-                    var buildplate = new Buildplates.Buildplate(templateId, template.Name, template.Size, template.Offset, template.Scale, template.Night, lastModified, serverDataObjectId, previewObjectId);
+                    var buildplate = new Buildplates.Buildplate(templateId, template.Name, template.Size, template.Offset, template.Scale, template.Night, lastModified, serverDataObjectId, previewObjectId, null);
 
                     buildplates.AddBuildplate(buildplateId, buildplate);
 
                     return new EarthDB.Query(true)
                         .Update("buildplates", playerId, buildplates);
                 })
-                .ExecuteAsync(_earthDB, cancellationToken);
+                .ExecuteAsync(EarthDB, cancellationToken);
 
             return true;
         }
         catch (EarthDB.DatabaseException ex)
         {
-            _logger.Error($"Failed to store buildplate in database: {ex}");
-            await _objectStoreClient.DeleteAsync(serverDataObjectId);
-            await _objectStoreClient.DeleteAsync(previewObjectId);
+            Logger.Error($"Failed to store buildplate in database: {ex}");
+            await ObjectStoreClient.DeleteAsync(serverDataObjectId);
+            await ObjectStoreClient.DeleteAsync(previewObjectId);
             return false;
         }
     }

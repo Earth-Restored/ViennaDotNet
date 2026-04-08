@@ -1,9 +1,7 @@
 # TODO
 
 - Buildplate importing - Project Earth format - MCEToJava
-- Buildplate preview in admin panel - SkiaSharp render lib + SkiaSharp.Views.Blazor
 - Shop management
-- Player buildplate management
 - Player items management
 - Encounter generation and AR
 - Use tiles when spawning tappables - don't spawn on water/forbidden areas, spawn more trees in forest?
@@ -17,8 +15,6 @@
 - Show roles on profile page
 - Export buildplates in both formats
 - Launch/connect to remote components - e.g. run buildplate launcher on another PC
-- Detect if the server is already running - require: EventBus, ObjetcStore, ApiServer and BuildplateLauncher
-- Edit player buildplate name and scale
 - View the player buildplate's template (if exists) - open page, search id?
 - Add the level reward buildplates and add them to level ups
 - NFC mini figures

@@ -234,9 +234,19 @@ public static class Program
                 {
                     Log.Information($"Importing shop buildplate {buidplate.Id}");
 
+                    string name = buidplate.Id;
+                    if (Guid.TryParse(buidplate.Id, out var buidplateGuid))
+                    {
+                        var bpPlayfabItem = staticData.Playfab.Items.Values.FirstOrDefault(item => item.Data is Playfab.Item.BuildplateData bpData && bpData.Id == buidplateGuid);
+                        if (bpPlayfabItem is not null)
+                        {
+                            name = bpPlayfabItem.Title;
+                        }
+                    }
+
                     using (var buidplateData = buidplate.OpenRead())
                     {
-                        await importer.ImportTemplateAsync(buidplate.Id, $"[SHOP] {buidplate.Id}", buidplateData);
+                        await importer.ImportTemplateAsync(buidplate.Id, $"[SHOP] {name}", buidplateData);
                     }
                 }
                 catch (Exception ex)
