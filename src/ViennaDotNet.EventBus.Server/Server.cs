@@ -16,13 +16,15 @@ public partial class Server
     public Subscriber? AddSubscriber(string queueName, Action<Subscriber.Message> consumer)
     {
         if (!ValidateQueueName(queueName))
+        {
             return null;
+        }
 
         Log.Debug($"Adding subscriber for {queueName}");
 
         _subscribersLock.EnterWriteLock();
 
-        Subscriber subscriber = new Subscriber(this, queueName, consumer);
+        var subscriber = new Subscriber(this, queueName, consumer);
         _subscribers.ComputeIfAbsent(queueName, name => [])!.Add(subscriber);
 
         _subscribersLock.ExitWriteLock();
@@ -50,22 +52,31 @@ public partial class Server
         {
             _ended = true;
 
-            new Thread(() =>
+            Task.Run(() =>
             {
                 Log.Debug("Removing subscriber");
                 _server._subscribersLock.EnterWriteLock();
-                HashSet<Subscriber>? subscribers = _server._subscribers.GetOrDefault(_queueName, null);
-                subscribers?.Remove(this);
-
-                _server._subscribersLock.ExitWriteLock();
-            }).Start();
+                try
+                {
+                    if (_server._subscribers.TryGetValue(_queueName, out var subs))
+                    {
+                        subs.Remove(this);
+                    }
+                }
+                finally
+                {
+                    _server._subscribersLock.ExitWriteLock();
+                }
+            });
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
         internal void Push(EntryMessage entryMessage)
         {
             if (!_ended)
+            {
                 _consumer.Invoke(entryMessage);
+            }
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
@@ -142,20 +153,28 @@ public partial class Server
         public bool Publish(string queueName, long timestamp, string type, string data)
         {
             if (_closed)
+            {
                 throw new Exception();
+            }
 
             if (!ValidateQueueName(queueName))
+            {
                 return false;
+            }
 
             if (!ValidateType(type))
+            {
                 return false;
+            }
 
             if (!ValidateData(data))
+            {
                 return false;
+            }
 
             _server._subscribersLock.EnterReadLock();
 
-            Subscriber.EntryMessage message = new Subscriber.EntryMessage(timestamp, type, data);
+            var message = new Subscriber.EntryMessage(timestamp, type, data);
             foreach (var subscriber in _server.GetSubscribers(queueName))
             {
                 subscriber.Push(message);
@@ -170,13 +189,15 @@ public partial class Server
     public Server.RequestHandler? AddRequestHandler(string queueName, Func<RequestHandler.RequestR, TaskCompletionSource<string?>> requestHandler, Action<RequestHandler.ErrorMessage> errorConsumer)
     {
         if (!ValidateQueueName(queueName))
+        {
             return null;
+        }
 
         Log.Debug($"Adding request handler for {queueName}");
 
         _requestHandlersLock.EnterWriteLock();
 
-        RequestHandler handler = new RequestHandler(this, queueName, requestHandler, errorConsumer);
+        var handler = new RequestHandler(this, queueName, requestHandler, errorConsumer);
         _requestHandlers.ComputeIfAbsent(queueName, name => [])!.Add(handler);
 
         _requestHandlersLock.ExitWriteLock();
@@ -206,25 +227,34 @@ public partial class Server
         {
             _ended = true;
 
-            new Thread(() =>
+            Task.Run(() =>
             {
                 Log.Debug("Removing handler");
                 _server._requestHandlersLock.EnterWriteLock();
-                HashSet<RequestHandler>? requestHandlers = _server._requestHandlers.GetOrDefault(_queueName, null);
-                requestHandlers?.Remove(this);
-
-                _server._requestHandlersLock.ExitWriteLock();
-            }).Start();
+                try
+                {
+                    if (_server._requestHandlers.TryGetValue(_queueName, out var handlers))
+                    {
+                        handlers.Remove(this);
+                    }
+                }
+                finally
+                {
+                    _server._requestHandlersLock.ExitWriteLock();
+                }
+            });
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
         internal TaskCompletionSource<string?> Request(RequestR request)
         {
             if (!_ended)
+            {
                 return _requestHandler.Invoke(request);
+            }
             else
             {
-                var source = new TaskCompletionSource<string?>();
+                var source = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
                 source.SetResult(null);
                 return source;
             }
@@ -294,44 +324,53 @@ public partial class Server
             _closed = true;
         }
 
-        public TaskCompletionSource<string?>? Request(string queueName, long timestamp, string type, string data)
+        public async Task<string?>? RequestAsync(string queueName, long timestamp, string type, string data)
         {
             if (_closed)
+            {
                 throw new InvalidOperationException();
+            }
 
             if (!ValidateQueueName(queueName))
+            {
                 return null;
+            }
 
             if (!ValidateType(type))
+            {
                 return null;
+            }
 
             if (!ValidateData(data))
-                return null;
-
-            _server._requestHandlersLock.EnterReadLock();
-            LinkedList<RequestHandler> requestHandlers = _server.GetHandlers(queueName).Collect(() => new LinkedList<RequestHandler>(), (list, item) => list.AddLast(item), (l1, l2) => l1.AddRange(l2));
-            _server._requestHandlersLock.ExitReadLock();
-
-            RequestHandler.RequestR request = new RequestHandler.RequestR(timestamp, type, data);
-            TaskCompletionSource<string?> responseCompletableFuture = new();
-
-            new Thread(() =>
             {
-                foreach (RequestHandler requestHandler in requestHandlers)
+                return null;
+            }
+
+            HashSet<RequestHandler> requestHandlers;
+            _server._requestHandlersLock.EnterReadLock();
+            try
+            {
+                requestHandlers = _server.GetHandlers(queueName);
+            }
+            finally
+            {
+                _server._requestHandlersLock.ExitReadLock();
+            }
+
+            var request = new RequestHandler.RequestR(timestamp, type, data);
+
+            foreach (RequestHandler requestHandler in requestHandlers)
+            {
+                TaskCompletionSource<string?> tcs = requestHandler.Request(request);
+                string? response = await tcs.Task.ConfigureAwait(false);
+
+                if (response is not null)
                 {
-                    TaskCompletionSource<string?> completableFuture = requestHandler.Request(request);
-                    string? response = completableFuture.Task.Result;
-                    if (response is not null)
-                    {
-                        responseCompletableFuture.SetResult(response);
-                        break;
-                    }
+                    return response;
                 }
+            }
 
-                responseCompletableFuture./*SetResult*/TrySetResult(null);
-            }).Start();
-
-            return responseCompletableFuture;
+            return null;
         }
     }
 
