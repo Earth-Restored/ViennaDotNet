@@ -52,6 +52,15 @@ http://YOURPCIPADDRESS:8080
 - Now go back and start patching;
 - Once that's done, congratulations! You can now open the newly installed app and play Minecraft Earth!
 
+#### Launcher Buildplate Preview
+1. To enable the buildplate preview, you must first obtain the Minecraft 1.20.4 resource pack.
+2. The simplest method is to extract the files directly from the game's JAR:
+   - Locate and open '1.20.4.jar' in your Minecraft installation folder using an archive viewer (like 7-Zip).
+   - Navigate to the 'assets/minecraft/' directory.
+3. Copy all folders from 'assets/minecraft/' and paste them into:
+   - 'staticdata/resourcepacks/java/minecraft/'
+4. Finally, toggle 'Enable Buildplate Preview in Launcher' within ServerOptions/Data Handling.
+
 ## Common Errors & Troubleshooting
 
 ### I cannot see the "Start Server" button when logged in
