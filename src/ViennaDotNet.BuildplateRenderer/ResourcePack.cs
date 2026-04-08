@@ -14,6 +14,9 @@ using System.Runtime.InteropServices;
 using BitcoderCZ.Utils;
 using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 
 namespace ViennaDotNet.BuildplateRenderer;
 
@@ -567,13 +570,83 @@ public sealed class ResourcePack
             return null;
         }
 
-        try
+        var infoFile = file + ".mcmeta";
+        if (!File.Exists(infoFile))
         {
-            return await File.ReadAllBytesAsync(file, cancellationToken);
+            try
+            {
+                return await File.ReadAllBytesAsync(file, cancellationToken);
+            }
+            catch
+            {
+                return null;
+            }
         }
-        catch
+
+        // we only support non animated textures, so crop to the first frame
+        TextureInfoJson? textureInfoJson;
+        using (var fs = File.OpenRead(infoFile))
         {
-            return null;
+            textureInfoJson = await JsonUtils.DeserializeJsonAsync<TextureInfoJson>(fs, cancellationToken) ?? new TextureInfoJson() { Animation = new TextureAnimationJson(), };
+        }
+
+        Image textureImage;
+        using (var fs = File.OpenRead(file))
+        {
+            textureImage = await Image.LoadAsync(fs, cancellationToken);
+        }
+
+        if (textureInfoJson.Animation.Width is not { } width)
+        {
+            if (textureInfoJson.Animation.Height is not null)
+            {
+                width = textureImage.Width;
+            }
+            else
+            {
+                width = int.Min(textureImage.Width, textureImage.Height);
+            }
+        }
+
+        if (textureInfoJson.Animation.Height is not { } height)
+        {
+            if (textureInfoJson.Animation.Width is not null)
+            {
+                height = textureImage.Height;
+            }
+            else
+            {
+                height = int.Min(textureImage.Width, textureImage.Height);
+            }
+        }
+
+        int frameCount = textureImage.Height / height;
+
+        var textureInfo = new TextureInfo()
+        {
+            Animation = new TextureAnimation()
+            {
+                Interpolate = textureInfoJson.Animation.Interpolate,
+                Width = width,
+                Height = height,
+                FrameTime = textureInfoJson.Animation.FrameTime,
+                Frames = textureInfoJson.Animation.Frames is { } frames ? ImmutableCollectionsMarshal.AsImmutableArray(frames) : [.. Enumerable.Range(0, frameCount)],
+            },
+        };
+
+        var firstFrameIndex = textureInfo.Animation.Frames.IsDefaultOrEmpty ? 0 : textureInfo.Animation.Frames[0];
+
+        textureImage.Mutate(ctx =>
+        {
+            ctx.Crop(new Rectangle(0, firstFrameIndex * height, width, height));
+        });
+
+        using (var ms = new MemoryStream())
+        {
+            await textureImage.SaveAsPngAsync(ms, cancellationToken);
+            textureImage.Dispose();
+
+            return ms.ToArray();
         }
     }
 

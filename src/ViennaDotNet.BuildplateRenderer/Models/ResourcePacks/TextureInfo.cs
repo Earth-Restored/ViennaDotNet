@@ -11,7 +11,7 @@ public sealed class TextureInfoJson
 
 public sealed class TextureAnimationJson
 {
-    public bool Interpolate { get; init; }
+    public bool Interpolate { get; init; } = false;
 
     public int? Width { get; init; }
 
@@ -30,13 +30,13 @@ public sealed class TextureInfo
 
 public sealed class TextureAnimation
 {
-    public bool Interpolate { get; init; }
+    public required bool Interpolate { get; init; }
 
-    public int Width { get; init; }
+    public required int Width { get; init; }
 
-    public int Height { get; init; }
+    public required int Height { get; init; }
 
-    public int FrameTime { get; init; } = 1;
+    public required int FrameTime { get; init; }
 
-    public ImmutableArray<int> Frames { get; init; }
+    public required ImmutableArray<int> Frames { get; init; }
 }
