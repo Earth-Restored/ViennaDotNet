@@ -113,7 +113,7 @@ public sealed class EventBusClient : IAsyncDisposable
 
                 while (TryReadLine(ref buffer, out ReadOnlySequence<byte> line))
                 {
-                    string message = Encoding.ASCII.GetString(line);
+                    var message = Encoding.ASCII.GetString(line).TrimEnd('\r');
 
                     if (!await DispatchReceivedMessage(message))
                     {
@@ -158,6 +158,7 @@ public sealed class EventBusClient : IAsyncDisposable
 
         line = buffer.Slice(0, position.Value);
         buffer = buffer.Slice(buffer.GetPosition(1, position.Value));
+
         return true;
     }
 
