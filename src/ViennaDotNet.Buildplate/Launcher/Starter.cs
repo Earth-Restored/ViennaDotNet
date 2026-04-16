@@ -5,7 +5,7 @@ using ViennaDotNet.EventBus.Client;
 
 namespace ViennaDotNet.Buildplate.Launcher;
 
-public class Starter
+public sealed class Starter
 {
     private readonly EventBusClient _eventBusClient;
 
@@ -34,8 +34,8 @@ public class Starter
         _tmpDir = new DirectoryInfo(Path.GetTempPath());
         _eventBusConnectionString = eventBusConnectionString;
 
-        _fountainBridgeJar = new FileInfo(bridgeJar);
-        _serverTemplateDir = new DirectoryInfo(serverTemplateDir);
+        _fountainBridgeJar = new FileInfo(Path.GetFullPath(bridgeJar));
+        _serverTemplateDir = new DirectoryInfo(Path.GetFullPath(serverTemplateDir));
         _fabricJarName = fabricJarName;
         _connectorPluginJar = new FileInfo(connectorPluginJar);
     }
@@ -53,12 +53,14 @@ public class Starter
         int port = FindPort(portsInUse, BASE_PORT);
         int serverInternalPort = FindPort(serverInternalPortsInUse, SERVER_INTERNAL_BASE_PORT);
         var instance = Instance.Run(_eventBusClient, playerId, buildplateId, buildplateSource, instanceId, survival, night, saveEnabled, inventoryType, shutdownTime, _publicAddress, port, serverInternalPort, _javaCmd, _fountainBridgeJar, _serverTemplateDir, _fabricJarName, _connectorPluginJar, baseDir, _eventBusConnectionString);
-        new Thread(() =>
+
+        Task.Run(async () =>
         {
-            instance.WaitForShutdown();
+            await instance.WaitForShutdownAsync();
             ReleasePort(portsInUse, port);
-            ReleasePort(serverInternalPortsInUse, serverInternalPort);
-        }).Start();
+            ReleasePort(serverInternalPortsInUse, serverInternalPort); 
+        }).Forget();
+        
         return instance;
     }
 

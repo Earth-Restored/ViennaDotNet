@@ -47,16 +47,28 @@
         @foreach (var comp in ServerManager.Components)
         {
             <div class="col-12 col-sm-6 col-lg-4">
-                <div class="card border border-light-subtle shadow-sm h-100">
-                    <div class="card-body d-flex align-items-center">
+            <div class="card border border-light-subtle shadow-sm h-100">
+                <div class="card-body d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center">
                         <div class="status-indicator @GetStatusClass(comp.Status) me-3"></div>
                         <div>
                             <h6 class="mb-0 fw-bold">@comp.Name</h6>
                             <small class="text-muted">@comp.Status.ToString()</small>
                         </div>
                     </div>
+
+                    @if (comp.Status is LauncherUI.ServerStatus.Offline)
+                    {
+                        <button class="btn btn-sm btn-outline-success border-0" 
+                                title="Start Component"
+                                disabled="@(IsButtonDisabled(Permissions.StartServer) || _currentStatus is LauncherUI.ServerStatus.Starting or LauncherUI.ServerStatus.Stopping)"
+                                @onclick="() => StartComponent(comp.ExeName)">
+                            <i class="bi bi-play-fill fs-5"></i>
+                        </button>
+                    }
                 </div>
             </div>
+        </div>
         }
     </div>
 
@@ -183,23 +195,28 @@
 
     private async Task StartServer()
         => await ServerManager.Start();
+
     private async Task StopServer()
         => await ServerManager.Stop();
+
     private async Task RestartServer()
         => await ServerManager.Restart();
 
     private async Task KillAll()
     {
         bool confirmed = await JS.InvokeAsync<bool>("confirm", "Are you sure you want to force kill all server processes?");
-        
+
         if (confirmed)
         {
             await ServerManager.KillAll();
         }
     }
 
+    private async Task StartComponent(string exeName)
+        => await ServerManager.EnsureComponentsOnline(exeName);
+
     private bool HasPermission(string permission)
-        => _user?.HasPermission(permission) ?? false;
+    => _user?.HasPermission(permission) ?? false;
     private bool IsButtonDisabled(string permission)
         => !HasPermission(permission);
 

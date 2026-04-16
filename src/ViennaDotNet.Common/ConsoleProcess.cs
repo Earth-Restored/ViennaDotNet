@@ -145,6 +145,9 @@ public sealed class ConsoleProcess
     public void StopAndWait(int timeout = 15 * 1000)
         => Process.StopGracefullyOrKill(timeout);
 
+    public async Task StopAndWaitAsync(int timeout = 15 * 1000, CancellationToken cancellationToken = default)
+        => await Process.StopGracefullyOrKillAsync(timeout, false, cancellationToken);
+
     private void ApplyTerminalWrapper(IEnumerable<string> args)
     {
         Process.StartInfo.UseShellExecute = true;

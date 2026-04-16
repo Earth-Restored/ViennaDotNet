@@ -86,8 +86,7 @@ public class InstanceManager
 
                     var (survival, saveEnabled, inventoryType, buildplateSource, shutdownTime) = startRequest.Type switch
                     {
-                        // InstanceType.BUILD => (false, true, InventoryType.SYNCED, Instance.BuildplateSource.PLAYER, (long?)null),
-                        InstanceType.BUILD => (true, false, InventoryType.SYNCED, Instance.BuildplateSource.PLAYER, (long?)null),
+                        InstanceType.BUILD => (false, true, InventoryType.SYNCED, Instance.BuildplateSource.PLAYER, (long?)null),
                         InstanceType.PLAY => (true, false, InventoryType.DISCARD, Instance.BuildplateSource.PLAYER, null),
                         InstanceType.SHARED_BUILD => (false, false, InventoryType.DISCARD, Instance.BuildplateSource.SHARED, null),
                         InstanceType.SHARED_PLAY => (true, false, InventoryType.DISCARD, Instance.BuildplateSource.SHARED, null),
@@ -122,16 +121,16 @@ public class InstanceManager
                         startRequest.Type
                     )));
 
-                    new Thread(() =>
+                    Task.Run(async () =>
                     {
-                        instance.WaitForShutdown();
+                         await instance.WaitForShutdownAsync();
 
                         SendEventBusMessage("stopped", instance.InstanceId);
 
                         _lock.Enter();
                         _runningInstanceCount -= 1;
                         _lock.Exit();
-                    }).Start();
+                    }).Forget();
 
                     return instanceId;
                 }
@@ -188,6 +187,7 @@ public class InstanceManager
         _lock.Enter();
         if (_shuttingDown)
         {
+            _lock.Exit();
             return;
         }
 

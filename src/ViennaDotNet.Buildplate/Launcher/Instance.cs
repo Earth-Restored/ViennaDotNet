@@ -15,11 +15,11 @@ namespace ViennaDotNet.Buildplate.Launcher;
 
 public class Instance
 {
-    private const int HOST_PLAYER_CONNECT_TIMEOUT = 60_000;
+    private const int HOST_PLAYER_CONNECT_TIMEOUT = 20_000;
 
     public static Instance Run(EventBusClient eventBusClient, string? playerId, string buildplateId, BuildplateSource buildplateSource, string instanceId, bool survival, bool night, bool saveEnabled, InventoryType inventoryType, long? shutdownTime, string publicAddress, int port, int serverInternalPort, string javaCmd, FileInfo fountainBridgeJar, DirectoryInfo serverTemplateDir, string fabricJarName, FileInfo connectorPluginJar, DirectoryInfo baseDir, string eventBusConnectionstring)
     {
-        if (playerId is null && buildplateSource == BuildplateSource.PLAYER)
+        if (playerId is null && buildplateSource is BuildplateSource.PLAYER)
         {
             throw new ArgumentException($"{nameof(playerId)} was not while {nameof(buildplateSource)} was {nameof(BuildplateSource.PLAYER)}.", nameof(playerId));
         }
@@ -27,10 +27,7 @@ public class Instance
         var instance = new Instance(eventBusClient, playerId, buildplateId, buildplateSource, instanceId, survival, night, saveEnabled, inventoryType, shutdownTime, publicAddress, port, serverInternalPort, javaCmd, fountainBridgeJar, serverTemplateDir, fabricJarName, connectorPluginJar, baseDir, eventBusConnectionstring);
 
         instance._threadStartedSemaphore.Wait();
-        new Thread(instance.Run)
-        {
-            Name = $"Instance {instanceId}"
-        }.Start();
+        instance._thread = instance.RunAsync(instance._threadCancellationToken.Token);
         instance._threadStartedSemaphore.Wait();
         instance._threadStartedSemaphore.Release();
 
@@ -63,7 +60,8 @@ public class Instance
     private readonly string _eventBusQueueName;
     private readonly string _connectorPluginArgString;
 
-    private Thread? _thread;
+    private Task? _thread;
+    private readonly CancellationTokenSource _threadCancellationToken = new();
     private readonly SemaphoreSlim _threadStartedSemaphore = new SemaphoreSlim(1, 1);
 
     private Publisher? _publisher = null;
@@ -110,9 +108,10 @@ public class Instance
         _connectorPluginArgString = Json.Serialize(new ConnectorPluginArg(_eventBusAddress, _eventBusQueueName, _inventoryType));
     }
 
-    private void Run()
+    private async Task RunAsync(CancellationToken cancellationToken)
     {
-        _thread = Thread.CurrentThread;
+        await Task.Yield();
+
         _threadStartedSemaphore.Release();
 
         try
@@ -129,17 +128,21 @@ public class Instance
             _publisher = _eventBusClient.AddPublisher();
             _requestSender = _eventBusClient.AddRequestSender();
 
+            cancellationToken.ThrowIfCancellationRequested();
+
             Log.Information("Setting up server");
 
             BuildplateLoadResponse? buildplateLoadResponse = _buildplateSource switch
             {
-                BuildplateSource.PLAYER => SendEventBusRequestRaw<BuildplateLoadResponse>("load", new BuildplateLoadRequest(_playerId!, _buildplateId), true).Result,
-                BuildplateSource.SHARED => SendEventBusRequestRaw<BuildplateLoadResponse>("loadShared", new SharedBuildplateLoadRequest(_buildplateId), true).Result,
-                BuildplateSource.ENCOUNTER => SendEventBusRequestRaw<BuildplateLoadResponse>("loadEncounter", new EncounterBuildplateLoadRequest(_buildplateId), true).Result,
+                BuildplateSource.PLAYER => await SendEventBusRequestRaw<BuildplateLoadResponse>("load", new BuildplateLoadRequest(_playerId!, _buildplateId), true),
+                BuildplateSource.SHARED => await SendEventBusRequestRaw<BuildplateLoadResponse>("loadShared", new SharedBuildplateLoadRequest(_buildplateId), true),
+                BuildplateSource.ENCOUNTER => await SendEventBusRequestRaw<BuildplateLoadResponse>("loadEncounter", new EncounterBuildplateLoadRequest(_buildplateId), true),
                 _ => throw new UnreachableException(),
             };
 
             Debug.Assert(buildplateLoadResponse is not null);
+
+            cancellationToken.ThrowIfCancellationRequested();
 
             byte[] serverData;
             try
@@ -151,6 +154,8 @@ public class Instance
                 Log.Error("Buildplate load response contained invalid base64 data");
                 return;
             }
+
+            cancellationToken.ThrowIfCancellationRequested();
 
             try
             {
@@ -167,6 +172,8 @@ public class Instance
                 return;
             }
 
+            cancellationToken.ThrowIfCancellationRequested();
+
             try
             {
                 _bridgeWorkDir = SetupBridgeFiles(serverData);
@@ -181,6 +188,8 @@ public class Instance
                 Log.Error("Could not set up files for bridge", ex);
                 return;
             }
+
+            cancellationToken.ThrowIfCancellationRequested();
 
             Log.Information("Running server");
 
@@ -205,6 +214,8 @@ public class Instance
                 }
             ));
 
+            cancellationToken.ThrowIfCancellationRequested();
+
             _subprocessLock.Enter();
             if (!_shuttingDown)
             {
@@ -212,7 +223,7 @@ public class Instance
                 if (_serverProcess is not null)
                 {
                     _subprocessLock.Exit();
-                    int exitCode = WaitForProcess(_serverProcess.Process);
+                    int exitCode = await WaitForProcessAsync(_serverProcess.Process);
                     _subprocessLock.Enter();
                     _serverProcess = null;
                     if (!_shuttingDown)
@@ -231,7 +242,7 @@ public class Instance
                         Log.Information("Bridge is still running, shutting it down now");
                         _bridgeProcess.StopAndWait();
                         _subprocessLock.Exit();
-                        exitCode = WaitForProcess(_bridgeProcess.Process);
+                        exitCode = await WaitForProcessAsync(_bridgeProcess.Process);
                         _subprocessLock.Enter();
                         _bridgeProcess = null;
                         Log.Information($"Bridge has finished with exit code {exitCode}");
@@ -350,8 +361,11 @@ public class Instance
                     InventorySetHotbarMessage? inventorySetHotbarMessage = ReadJson<InventorySetHotbarMessage>(@event.Data);
                     if (inventorySetHotbarMessage is not null)
                     {
-                        Log.Information("**************SetHotbar null response**************");
                         await SendEventBusRequest<object>("inventorySetHotbar", inventorySetHotbarMessage, false);
+                    }
+                    else
+                    {
+                        Log.Information("**************SetHotbar null response**************");
                     }
                 }
 
@@ -389,6 +403,14 @@ public class Instance
 
                             return playerConnectedResponse;
                         }
+                        else
+                        {
+                            Log.Warning("*******HandleConnectorRequest playerConnected response null*******");
+                        }
+                    }
+                    else
+                    {
+                        Log.Warning("*******HandleConnectorRequest playerConnected request null*******");
                     }
                 }
 
@@ -513,6 +535,10 @@ public class Instance
                         // TODO
                         return findPlayerIdRequest.MinecraftName;
                     }
+                    else
+                    {
+                        Log.Warning("*******HandleConnectorRequest findPlayer request null*******");
+                    }
                 }
 
                 break;
@@ -526,6 +552,14 @@ public class Instance
                         {
                             return initialPlayerStateResponse;
                         }
+                        else
+                        {
+                            Log.Warning("*******HandleConnectorRequest getInitialPlayerState response null*******");
+                        }
+                    }
+                    else
+                    {
+                        Log.Warning("*******HandleConnectorRequest getInitialPlayerState request null*******");
                     }
                 }
 
@@ -870,9 +904,6 @@ public class Instance
     {
         Log.Information("Cleaning up runtime directory");
 
-        Log.Information("Skipped");
-        return;
-
         try
         {
             Files.WalkFileTree(_baseDir.FullName, new FileVisitor(
@@ -1101,8 +1132,7 @@ public class Instance
 
     private void BeginShutdown()
     {
-        // a "bit" ugly
-        ((Func<Task>)(async () =>
+        Task.Run(async () =>
         {
             await Task.Yield();
 
@@ -1125,7 +1155,7 @@ public class Instance
             {
                 Log.Information("Waiting for bridge to shut down");
                 _subprocessLock.Exit();
-                _bridgeProcess.StopAndWait();
+                await _bridgeProcess.StopAndWaitAsync();
                 int exitCode = _bridgeProcess.ExitCode;//waitForProcess(bridgeProcess.Process);
                 _subprocessLock.Enter();
                 _bridgeProcess = null;
@@ -1135,25 +1165,25 @@ public class Instance
             if (_serverProcess is not null)
             {
                 Log.Information("Asking the server to shut down");
-                _serverProcess.StopAndWait();
+                await _serverProcess.StopAndWaitAsync();
             }
 
             _subprocessLock.Exit();
-        }))().Forget(ex =>
+        }).Forget(ex =>
         {
             Log.Error(ex.Message);
         });
     }
 #pragma warning restore IDE0022
 
-    private static int WaitForProcess(Process process)
+    private static async Task<int> WaitForProcessAsync(Process process, CancellationToken cancellationToken = default)
     {
         int exitCode;
-        for (; ; )
+        while (true)
         {
             try
             {
-                process.WaitForExit();
+                await process.WaitForExitAsync(cancellationToken);
                 exitCode = process.ExitCode;
                 break;
             }
@@ -1166,24 +1196,27 @@ public class Instance
         return exitCode;
     }
 
-    public void WaitForShutdown()
+    public async Task WaitForShutdownAsync()
     {
         while (true)
         {
-            try
+            if (_thread is not null)
             {
-                if (_thread is null)
-                {
-                    Log.Debug("thread is null in waitForShutdown");
-                    continue;
-                }
-
-                _thread.Join();
                 break;
             }
-            catch (ThreadInterruptedException)
+
+            await Task.Delay(25);
+        }
+
+        try
+        {
+            await _thread;
+        }
+        catch (Exception ex)
+        {
+            if (ex is not OperationCanceledException)
             {
-                continue;
+                Log.Error(ex, "Error when running instance");
             }
         }
     }

@@ -89,6 +89,7 @@ public sealed class NetworkServer
                     while (TryReadLine(ref buffer, out ReadOnlySequence<byte> line))
                     {
                         string command = Encoding.ASCII.GetString(line);
+                        Log.Debug($"Receive: {command}");
                         if (!HandleCommand(command))
                         {
                             return; // graceful exit
