@@ -10,18 +10,21 @@
 @using Microsoft.AspNetCore.Authorization
 @using System.Security.Claims
 @using System.Diagnostics
+@using Microsoft.EntityFrameworkCore
 @using Serilog
 @using ViennaDotNet.Buildplate.Model
 @using ViennaDotNet.BuildplateImporter
 @using ViennaDotNet.BuildplateRenderer
 @using ViennaDotNet.DB
 @using ViennaDotNet.EventBus.Client
+@using ViennaDotNet.LauncherUI.Data
 @using ViennaDotNet.LauncherUI.Programs
 @using ViennaDotNet.LauncherUI.Utils
 @using ViennaDotNet.ObjectStore.Client
 @attribute [Authorize(Policy = Permissions.ViewBuildplates)]
 @rendermode InteractiveServer
 @inject AuthenticationStateProvider AuthStateProvider
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject ServerManager ServerManager
 @inject IJSRuntime JSRuntime
 
@@ -428,7 +431,7 @@ BuildplateLauncher.ExeName))
         
             await new EarthDB.ObjectQuery(true)
                 .UpdateBuildplate(bp.Id, new DB.Models.Global.TemplateBuildplate(bp.Name, bp.Size, bp.Offset, bp.BlocksPerMeter,
-        bp.IsNight, bp.ServerDataObjectId, bp.PreviewObjectId, null))
+        bp.IsNight, bp.ServerDataObjectId, bp.PreviewObjectId))
                 .ExecuteAsync(earthDB, default);
 
             await Task.Delay(250);

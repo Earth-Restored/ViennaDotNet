@@ -705,7 +705,7 @@ public sealed class Importer : IAsyncDisposable
                 _ => 33,
             };
 
-            template = new TemplateBuildplate(name, worldData.Size, worldData.Offset, scale, worldData.Night, serverDataObjectId, previewObjectId, null);
+            template = new TemplateBuildplate(name, worldData.Size, worldData.Offset, scale, worldData.Night, serverDataObjectId, previewObjectId);
 
             try
             {
@@ -754,7 +754,7 @@ public sealed class Importer : IAsyncDisposable
 
                     long lastModified = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-                    var buildplate = new Buildplates.Buildplate(templateId, template.Name, template.Size, template.Offset, template.Scale, template.Night, lastModified, serverDataObjectId, previewObjectId, null);
+                    var buildplate = new Buildplates.Buildplate(templateId, template.Name, template.Size, template.Offset, template.Scale, template.Night, lastModified, serverDataObjectId, previewObjectId);
 
                     buildplates.AddBuildplate(buildplateId, buildplate);
 
