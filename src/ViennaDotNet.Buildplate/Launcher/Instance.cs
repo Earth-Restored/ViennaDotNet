@@ -15,7 +15,7 @@ namespace ViennaDotNet.Buildplate.Launcher;
 
 public sealed class Instance
 {
-    private const long HOST_PLAYER_CONNECT_TIMEOUT = 20000;
+    private const long HOST_PLAYER_CONNECT_TIMEOUT = 30_000;
 
     public static Instance Run(EventBusClient eventBusClient, string? playerId, string buildplateId, BuildplateSource buildplateSource, string instanceId, bool survival, bool night, bool saveEnabled, InventoryType inventoryType, long? shutdownTime, string publicAddress, int port, int serverInternalPort, string javaCmd, FileInfo fountainBridgeJar, DirectoryInfo serverTemplateDir, string fabricJarName, FileInfo connectorPluginJar, DirectoryInfo baseDir, string eventBusConnectionString)
     {
@@ -170,7 +170,7 @@ public sealed class Instance
             }
             catch (IOException exception)
             {
-                _logger.Error("Could not set up files for server", exception);
+                _logger.Error(exception, "Could not set up files for server");
                 return;
             }
 
@@ -185,7 +185,7 @@ public sealed class Instance
             }
             catch (IOException exception)
             {
-                _logger.Error("Could not set up files for bridge", exception);
+                _logger.Error(exception, "Could not set up files for bridge");
                 return;
             }
 
@@ -213,14 +213,12 @@ public sealed class Instance
                 }
             ));
 
-            _logger.Debug("Wait");
             var @lock = await _subprocessLock.LockAsync(CancellationToken.None);
-            _logger.Debug("Done");
+            
             if (!_shuttingDown)
             {
-                _logger.Debug("Starting");
                 await StartServerProcessAsync();
-                _logger.Debug("Done");
+                
                 if (_serverProcess is not null)
                 {
                     await @lock.DisposeAsync();
@@ -768,10 +766,10 @@ public sealed class Instance
             .Add("DataVersion", 3700)
             .Add("version", 19133)
             .Add("Version", new NbtBuilder.Compound()
-                    .Add("Id", 3700)
-                    .Add("Name", "1.20.4")
-                    .Add("Series", "main")
-                    .Add("Snapshot", (byte)0)
+                .Add("Id", 3700)
+                .Add("Name", "1.20.4")
+                .Add("Series", "main")
+                .Add("Snapshot", (byte)0)
             )
             .Add("initialized", (byte)1)
             .Build("Data");
@@ -856,7 +854,7 @@ public sealed class Instance
             }
             catch (IOException exception)
             {
-                _logger.Error("Could not start server process", exception);
+                _logger.Error(exception, "Could not start server process");
             }
         }
     }
@@ -922,14 +920,14 @@ public sealed class Instance
                 _bridgeProcess.ExecuteAsync(_bridgeWorkDir!.FullName,
                 [
                     "-jar", _fountainBridgeJar.FullName,
-                "-port", Port.ToString(),
-                "-serverAddress", "127.0.0.1",
-                "-serverPort", _serverInternalPort.ToString(),
-                "-connectorPluginJar", _connectorPluginJar.FullName,
-                "-connectorPluginClass", "micheal65536.vienna.buildplate.connector.plugin.ViennaConnectorPlugin",
-                "-connectorPluginArg", _connectorPluginArgString,
-                "-useUUIDAsUsername",
-            ]);
+                    "-port", Port.ToString(),
+                    "-serverAddress", "127.0.0.1",
+                    "-serverPort", _serverInternalPort.ToString(),
+                    "-connectorPluginJar", _connectorPluginJar.FullName,
+                    "-connectorPluginClass", "micheal65536.vienna.buildplate.connector.plugin.ViennaConnectorPlugin",
+                    "-connectorPluginArg", _connectorPluginArgString,
+                    "-useUUIDAsUsername",
+                ]);
 
                 _logger.Information($"Bridge process started, PID {_bridgeProcess.Id}");
             }
@@ -963,6 +961,8 @@ public sealed class Instance
     private void StartShutdownTimer()
         => Task.Run(async () =>
         {
+            await Task.Yield();
+
             if (_shutdownTime is { } shutdownTime)
             {
                 long currentTime = U.CurrentTimeMillis();
@@ -986,6 +986,8 @@ public sealed class Instance
     private void BeginShutdown()
         => Task.Run(async () =>
         {
+            await Task.Yield();
+
             var @lock = await _subprocessLock.LockAsync(CancellationToken.None);
 
             if (_shuttingDown)
