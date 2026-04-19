@@ -73,7 +73,7 @@ public sealed class Instance
     private ConsoleProcess? _serverProcess = null;
     private ConsoleProcess? _bridgeProcess = null;
     private bool _shuttingDown = false;
-    private readonly SemaphoreSlim _subprocessLock = new SemaphoreSlim(1, 1);
+    private readonly ReentrantAsyncLock.ReentrantAsyncLock _subprocessLock = new ReentrantAsyncLock.ReentrantAsyncLock(); // java uses ReentrantLock, Lock cannot be used, because it does not support locking and unlocking on different threads, which happens due to async, SemaphoreSlim does not support multiple locks from the same async context
 
     private volatile bool _hostPlayerConnected = false;
 
@@ -214,7 +214,7 @@ public sealed class Instance
             ));
 
             _logger.Debug("Wait");
-            await _subprocessLock.WaitAsync();
+            var @lock = await _subprocessLock.LockAsync(CancellationToken.None);
             _logger.Debug("Done");
             if (!_shuttingDown)
             {
@@ -223,9 +223,9 @@ public sealed class Instance
                 _logger.Debug("Done");
                 if (_serverProcess is not null)
                 {
-                    _subprocessLock.Release();
+                    await @lock.DisposeAsync();
                     int exitCode = await WaitForProcessAsync(_serverProcess.Process);
-                    await _subprocessLock.WaitAsync();
+                    @lock = await _subprocessLock.LockAsync(CancellationToken.None);
                     _serverProcess = null;
                     if (!_shuttingDown)
                     {
@@ -242,9 +242,9 @@ public sealed class Instance
                     {
                         _logger.Information("Bridge is still running, shutting it down now");
                         await _bridgeProcess.StopAndWaitAsync();
-                        _subprocessLock.Release();
+                        await @lock.DisposeAsync();
                         exitCode = await WaitForProcessAsync(_bridgeProcess.Process);
-                        await _subprocessLock.WaitAsync();
+                        @lock = await _subprocessLock.LockAsync(CancellationToken.None);
                         _bridgeProcess = null;
                         _logger.Information($"Bridge has finished with exit code {exitCode}");
                     }
@@ -255,7 +255,7 @@ public sealed class Instance
                 }
             }
 
-            _subprocessLock.Release();
+            await @lock.DisposeAsync();
         }
         catch (Exception exception)
         {
@@ -645,6 +645,7 @@ public sealed class Instance
             _logger.Error("Could not create server world directory");
             return null;
         }
+
         var worldEntitiesDir = new DirectoryInfo(Path.Combine(worldDir.FullName, "entities"));
         if (!worldEntitiesDir.TryCreate())
         {
@@ -808,122 +809,119 @@ public sealed class Instance
 
     private async Task StartServerProcessAsync()
     {
-        await _subprocessLock.WaitAsync();
-
-        if (_shuttingDown)
+        await using (await _subprocessLock.LockAsync(CancellationToken.None))
         {
-            _logger.Debug("Already shutting down, not starting server process");
-            _subprocessLock.Release();
-            return;
-        }
-
-        if (_serverProcess is not null)
-        {
-            _logger.Debug("Server process has already been started");
-            _subprocessLock.Release();
-            return;
-        }
-
-        _logger.Information("Starting server process");
-
-        try
-        {
-            bool useShellExecute = true;
-            bool redirect = false;
-
-            _serverProcess = new ConsoleProcess(_javaCmd, useShellExecute: useShellExecute, redirect: redirect, openInNewWindow: true);
-
-            if (redirect && !useShellExecute)
+            if (_shuttingDown)
             {
-                _serverProcess.StandartTextReceived += (sender, e) =>
-                {
-                    if (!string.IsNullOrWhiteSpace(e.Data))
-                    {
-                        Log.Debug($"[server] {e.Data}");
-                    }
-                };
-                _serverProcess.ErrorTextReceived += (sender, e) =>
-                {
-                    if (!string.IsNullOrWhiteSpace(e.Data))
-                    {
-                        Log.Error($"[server] {e.Data}");
-                    }
-                };
+                _logger.Debug("Already shutting down, not starting server process");
+                return;
             }
 
-            _serverProcess.ExecuteAsync(_serverWorkDir.FullName, ["-jar", _fabricJarName, "-nogui"]);
+            if (_serverProcess is not null)
+            {
+                _logger.Debug("Server process has already been started");
+                return;
+            }
 
-            _logger.Information($"Server process started, PID {_serverProcess.Id}");
-        }
-        catch (IOException exception)
-        {
-            _logger.Error("Could not start server process", exception);
-        }
+            _logger.Information("Starting server process");
 
-        _subprocessLock.Release();
+            try
+            {
+                bool useShellExecute = true;
+                bool redirect = false;
+
+                _serverProcess = new ConsoleProcess(_javaCmd, useShellExecute: useShellExecute, redirect: redirect, openInNewWindow: true);
+
+                if (redirect && !useShellExecute)
+                {
+                    _serverProcess.StandartTextReceived += (sender, e) =>
+                    {
+                        if (!string.IsNullOrWhiteSpace(e.Data))
+                        {
+                            Log.Debug($"[server] {e.Data}");
+                        }
+                    };
+                    _serverProcess.ErrorTextReceived += (sender, e) =>
+                    {
+                        if (!string.IsNullOrWhiteSpace(e.Data))
+                        {
+                            Log.Error($"[server] {e.Data}");
+                        }
+                    };
+                }
+
+                _serverProcess.ExecuteAsync(_serverWorkDir.FullName, ["-jar", _fabricJarName, "-nogui"]);
+
+                _logger.Information($"Server process started, PID {_serverProcess.Id}");
+            }
+            catch (IOException exception)
+            {
+                _logger.Error("Could not start server process", exception);
+            }
+        }
     }
 
     private async Task StartBridgeProcessAsync()
     {
-        await _subprocessLock.WaitAsync();
-
-        if (_shuttingDown)
+        await using (await _subprocessLock.LockAsync(CancellationToken.None))
         {
-            _logger.Debug("Already shutting down, not starting bridge process");
-            _subprocessLock.Release();
-            return;
-        }
-
-        if (_bridgeProcess is not null)
-        {
-            _logger.Debug("Bridge process has already been started");
-            _subprocessLock.Release();
-            return;
-        }
-
-        _logger.Information("Starting bridge process");
-
-        try
-        {
-            bool useShellExecute = true;
-            bool redirect = false;
-
-            _bridgeProcess = new ConsoleProcess(_javaCmd, useShellExecute: useShellExecute, redirect: redirect, openInNewWindow: true);
-            if (redirect && !useShellExecute)
+            if (_shuttingDown)
             {
-                _bridgeProcess.StandartTextReceived += (sender, e) =>
-                {
-                    if (!string.IsNullOrWhiteSpace(e.Data))
-                    {
-                        Log.Debug($"[bridge] {e.Data}");
-                    }
-                };
-                _bridgeProcess.ErrorTextReceived += (sender, e) =>
-                {
-                    if (!string.IsNullOrWhiteSpace(e.Data))
-                    {
-                        Log.Error($"[bridge] {e.Data}");
-                    }
-                };
+                _logger.Debug("Already shutting down, not starting bridge process");
+                return;
             }
 
-            _bridgeProcess.ProcessExited += (sender, e) =>
+            if (_bridgeProcess is not null)
             {
-                _subprocessLock.Wait();
+                _logger.Debug("Bridge process has already been started");
+                return;
+            }
 
-                if (!_shuttingDown)
+            _logger.Information("Starting bridge process");
+
+            try
+            {
+                bool useShellExecute = true;
+                bool redirect = false;
+
+                _bridgeProcess = new ConsoleProcess(_javaCmd, useShellExecute: useShellExecute, redirect: redirect, openInNewWindow: true);
+                if (redirect && !useShellExecute)
                 {
-                    Log.Warning($"Bridge process has unexpectedly terminated with exit code {_bridgeProcess.ExitCode}");
-                    _bridgeProcess = null;
-                    BeginShutdown();
+                    _bridgeProcess.StandartTextReceived += (sender, e) =>
+                    {
+                        if (!string.IsNullOrWhiteSpace(e.Data))
+                        {
+                            Log.Debug($"[bridge] {e.Data}");
+                        }
+                    };
+                    _bridgeProcess.ErrorTextReceived += (sender, e) =>
+                    {
+                        if (!string.IsNullOrWhiteSpace(e.Data))
+                        {
+                            Log.Error($"[bridge] {e.Data}");
+                        }
+                    };
                 }
 
-                _subprocessLock.Release();
-            };
+                _bridgeProcess.ProcessExited += (sender, e) =>
+                {
+                    Task.Run(async () =>
+                    {
+                        await using (await _subprocessLock.LockAsync(CancellationToken.None))
+                        {
+                            if (!_shuttingDown)
+                            {
+                                Log.Warning($"Bridge process has unexpectedly terminated with exit code {_bridgeProcess.ExitCode}");
+                                _bridgeProcess = null;
+                                BeginShutdown();
+                            }
+                        }
+                    }).Forget();
+                };
 
-            _bridgeProcess.ExecuteAsync(_bridgeWorkDir!.FullName,
-            [
-                "-jar", _fountainBridgeJar.FullName,
+                _bridgeProcess.ExecuteAsync(_bridgeWorkDir!.FullName,
+                [
+                    "-jar", _fountainBridgeJar.FullName,
                 "-port", Port.ToString(),
                 "-serverAddress", "127.0.0.1",
                 "-serverPort", _serverInternalPort.ToString(),
@@ -933,14 +931,13 @@ public sealed class Instance
                 "-useUUIDAsUsername",
             ]);
 
-            _logger.Information($"Bridge process started, PID {_bridgeProcess.Id}");
+                _logger.Information($"Bridge process started, PID {_bridgeProcess.Id}");
+            }
+            catch (IOException exception)
+            {
+                _logger.Error(exception, "Could not start bridge process");
+            }
         }
-        catch (IOException exception)
-        {
-            _logger.Error(exception, "Could not start bridge process");
-        }
-
-        _subprocessLock.Release();
     }
 
     private void StartHostPlayerConnectTimeout()
@@ -948,14 +945,13 @@ public sealed class Instance
         {
             await Task.Delay(checked((int)HOST_PLAYER_CONNECT_TIMEOUT));
 
-            await _subprocessLock.WaitAsync();
-            if (_shuttingDown)
+            await using (await _subprocessLock.LockAsync(CancellationToken.None))
             {
-                _subprocessLock.Release();
-                return;
+                if (_shuttingDown)
+                {
+                    return;
+                }
             }
-
-            _subprocessLock.Release();
 
             if (!_hostPlayerConnected)
             {
@@ -990,12 +986,12 @@ public sealed class Instance
     private void BeginShutdown()
         => Task.Run(async () =>
         {
-            await _subprocessLock.WaitAsync();
+            var @lock = await _subprocessLock.LockAsync(CancellationToken.None);
 
             if (_shuttingDown)
             {
                 _logger.Debug("Already shutting down, not beginning shutdown");
-                _subprocessLock.Release();
+                await @lock.DisposeAsync();
                 return;
             }
 
@@ -1009,9 +1005,9 @@ public sealed class Instance
             {
                 _logger.Information("Waiting for bridge to shut down");
                 await _bridgeProcess.StopNoWaitAsync();
-                _subprocessLock.Release();
+                await @lock.DisposeAsync();
                 int exitCode = await WaitForProcessAsync(_bridgeProcess.Process);
-                await _subprocessLock.WaitAsync();
+                @lock = await _subprocessLock.LockAsync(CancellationToken.None);
                 _bridgeProcess = null;
                 _logger.Information($"Bridge has finished with exit code {exitCode}");
             }
@@ -1022,7 +1018,7 @@ public sealed class Instance
                 await _serverProcess.StopNoWaitAsync();
             }
 
-            _subprocessLock.Release();
+            await @lock.DisposeAsync();
         }).Forget();
 
     private static async Task<int> WaitForProcessAsync(Process process)

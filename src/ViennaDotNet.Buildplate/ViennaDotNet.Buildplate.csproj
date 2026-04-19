@@ -17,6 +17,7 @@
     <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageReference Include="Serilog.Sinks.Http" Version="9.2.1" />
+    <PackageReference Include="ReentrantAsyncLock" Version="0.3.2" />
   </ItemGroup>
 
   <ItemGroup>
