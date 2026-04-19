@@ -403,8 +403,8 @@ public class BuildplatesController : ViennaControllerBase
     private async Task<IActionResult> GetNewBuildplateInstanceResponse(string playerId, string buildplateId, BuildplateInstancesManager.InstanceType type, CancellationToken cancellationToken)
     {
         Buildplates.Buildplate? buildplate;
+        
         try
-
         {
             EarthDB.Results results = await new EarthDB.Query(false)
                 .Get("buildplates", playerId, typeof(Buildplates))

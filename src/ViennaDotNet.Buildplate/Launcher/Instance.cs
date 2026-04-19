@@ -239,9 +239,9 @@ public sealed class Instance
                     if (_bridgeProcess is not null)
                     {
                         _logger.Information("Bridge is still running, shutting it down now");
-                        await _bridgeProcess.StopNoWaitAsync();
                         await @lock.DisposeAsync();
-                        exitCode = await WaitForProcessAsync(_bridgeProcess.Process);
+                        await _bridgeProcess.StopAndWaitAsync();
+                        exitCode = _bridgeProcess.ExitCode;
                         @lock = await _subprocessLock.LockAsync(CancellationToken.None);
                         _bridgeProcess = null;
                         _logger.Information($"Bridge has finished with exit code {exitCode}");
@@ -1006,9 +1006,9 @@ public sealed class Instance
             if (_bridgeProcess is not null)
             {
                 _logger.Information("Waiting for bridge to shut down");
-                await _bridgeProcess.StopNoWaitAsync();
                 await @lock.DisposeAsync();
-                int exitCode = await WaitForProcessAsync(_bridgeProcess.Process);
+                await _bridgeProcess.StopAndWaitAsync();
+                int exitCode = _bridgeProcess.ExitCode;
                 @lock = await _subprocessLock.LockAsync(CancellationToken.None);
                 _bridgeProcess = null;
                 _logger.Information($"Bridge has finished with exit code {exitCode}");
