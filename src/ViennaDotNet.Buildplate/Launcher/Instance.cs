@@ -239,7 +239,7 @@ public sealed class Instance
                     if (_bridgeProcess is not null)
                     {
                         _logger.Information("Bridge is still running, shutting it down now");
-                        await _bridgeProcess.StopAndWaitAsync();
+                        await _bridgeProcess.StopNoWaitAsync();
                         await @lock.DisposeAsync();
                         exitCode = await WaitForProcessAsync(_bridgeProcess.Process);
                         @lock = await _subprocessLock.LockAsync(CancellationToken.None);
