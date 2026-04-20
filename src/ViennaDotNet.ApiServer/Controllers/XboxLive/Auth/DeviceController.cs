@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using ViennaDotNet.ApiServer.Models;
 using ViennaDotNet.ApiServer.Utils;
 
@@ -31,7 +32,7 @@ public class DeviceController : ViennaControllerBase
     );
 
     [HttpPost]
-    public IActionResult Authenticate([FromBody] AuthenticateRequest request)
+    public ContentHttpResult Authenticate([FromBody] AuthenticateRequest request)
     {
         var tokenValidity = ValidityDatePair.Create(config.XboxLive.TokenValidityMinutes);
         var token = new Tokens.Xbox.DeviceToken()

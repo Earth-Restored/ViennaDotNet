@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 
 namespace ViennaDotNet.ApiServer.Controllers.XboxAb;
 
@@ -7,7 +8,7 @@ namespace ViennaDotNet.ApiServer.Controllers.XboxAb;
 public class AbController : ViennaControllerBase
 {
     [HttpGet]
-    public IActionResult Get()
+    public ContentHttpResult Get()
     {
         // TODO: try to set sunsetting to 0/false, see what it does
         return JsonPascalCase(new Dictionary<string, object>()

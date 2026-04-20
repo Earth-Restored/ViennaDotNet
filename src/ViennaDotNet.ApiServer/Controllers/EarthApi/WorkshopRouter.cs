@@ -1,5 +1,6 @@
 ﻿using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Primitives;
 using System.Diagnostics;
@@ -45,11 +46,13 @@ public class WorkshopRouter : ViennaControllerBase
     private static StaticData.StaticData staticData => Program.staticData;
 
     [HttpGet("player/utilityBlocks")]
-    public async Task<IActionResult> GetUtilityBlocks(CancellationToken cancellationToken)
+    public async Task<Results<ContentHttpResult, BadRequest>> GetUtilityBlocks(CancellationToken cancellationToken)
     {
         string? playerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(playerId))
-            return BadRequest();
+        {
+            return TypedResults.BadRequest();
+        }
 
         // request.timestamp
         long requestStartedOn = HttpContext.GetTimestamp();
@@ -90,11 +93,13 @@ public class WorkshopRouter : ViennaControllerBase
     }
 
     [HttpGet("crafting/{slotIndex}")]
-    public async Task<IActionResult> GetCraftingStatus(int slotIndex, CancellationToken cancellationToken)
+    public async Task<Results<ContentHttpResult, BadRequest>> GetCraftingStatus(int slotIndex, CancellationToken cancellationToken)
     {
         string? playerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(playerId) || slotIndex < 1 || slotIndex > 3)
-            return BadRequest();
+        {
+            return TypedResults.BadRequest();
+        }
 
         // request.timestamp
         long requestStartedOn = HttpContext.GetTimestamp();
@@ -115,11 +120,13 @@ public class WorkshopRouter : ViennaControllerBase
     }
 
     [HttpGet("smelting/{slotIndex}")]
-    public async Task<IActionResult> GetSmeltingStatus(int slotIndex, CancellationToken cancellationToken)
+    public async Task<Results<ContentHttpResult, BadRequest>> GetSmeltingStatus(int slotIndex, CancellationToken cancellationToken)
     {
         string? playerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(playerId) || slotIndex < 1 || slotIndex > 3)
-            return BadRequest();
+        {
+            return TypedResults.BadRequest();
+        }
 
         // request.timestamp
         long requestStartedOn = HttpContext.GetTimestamp();
@@ -140,12 +147,12 @@ public class WorkshopRouter : ViennaControllerBase
     }
 
     [HttpPost("crafting/{slotIndex}/start")]
-    public async Task<IActionResult> StartCrafting(int slotIndex, CancellationToken cancellationToken)
+    public async Task<Results<ContentHttpResult, BadRequest>> StartCrafting(int slotIndex, CancellationToken cancellationToken)
     {
         string? playerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(playerId) || slotIndex < 1 || slotIndex > 3)
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         // request.timestamp
@@ -154,19 +161,19 @@ public class WorkshopRouter : ViennaControllerBase
         StartRequestCrafting? startRequest = await Request.Body.AsJsonAsync<StartRequestCrafting>(cancellationToken);
         if (startRequest is null || startRequest.Multiplier < 1)
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         if (startRequest.Ingredients.Any(item => item is null || item.Quantity < 1 || item.ItemInstanceIds is not null && item.ItemInstanceIds.Length > 0 && item.ItemInstanceIds.Length != item.Quantity))
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         Catalog.RecipesCatalogR.CraftingRecipe? recipe = staticData.Catalog.RecipesCatalog.GetCraftingRecipe(startRequest.RecipeId);
 
         if (recipe is null)
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         if (recipe.ReturnItems.Length > 0)
@@ -311,12 +318,12 @@ public class WorkshopRouter : ViennaControllerBase
     }
 
     [HttpPost("smelting/{slotIndex}/start")]
-    public async Task<IActionResult> StartSmelting(int slotIndex, CancellationToken cancellationToken)
+    public async Task<Results<ContentHttpResult, BadRequest>> StartSmelting(int slotIndex, CancellationToken cancellationToken)
     {
         string? playerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(playerId) || slotIndex < 1 || slotIndex > 3)
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         // request.timestamp
@@ -325,29 +332,29 @@ public class WorkshopRouter : ViennaControllerBase
         StartRequestSmelting? startRequest = await Request.Body.AsJsonAsync<StartRequestSmelting>(cancellationToken);
         if (startRequest is null || startRequest.Multiplier < 1)
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         if (startRequest.Input.Quantity < 1 || startRequest.Input.ItemInstanceIds is not null && startRequest.Input.ItemInstanceIds.Length > 0 && startRequest.Input.ItemInstanceIds.Length != startRequest.Input.Quantity)
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         if (startRequest.Fuel is not null && startRequest.Fuel.Quantity > 0 && startRequest.Fuel.ItemInstanceIds is not null && startRequest.Fuel.ItemInstanceIds.Length > 0 && startRequest.Fuel.ItemInstanceIds.Length != startRequest.Fuel.Quantity)
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         Catalog.RecipesCatalogR.SmeltingRecipe? recipe = staticData.Catalog.RecipesCatalog.GetSmeltingRecipe(startRequest.RecipeId);
         Catalog.ItemsCatalogR.Item? fuelCatalogItem = startRequest.Fuel is not null ? staticData.Catalog.ItemsCatalog.GetItem(startRequest.Fuel.ItemId) : null;
         if (recipe is null)
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         if (startRequest.Fuel is not null && (fuelCatalogItem is null || fuelCatalogItem.FuelInfo is null))
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         if (recipe.ReturnItemId is not null)
@@ -365,7 +372,7 @@ public class WorkshopRouter : ViennaControllerBase
 
         if (startRequest.Input.ItemId != recipe.Input || startRequest.Input.Quantity != startRequest.Multiplier)
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         try
@@ -480,11 +487,13 @@ public class WorkshopRouter : ViennaControllerBase
     }
 
     [HttpPost("crafting/{slotIndex}/collectItems")]
-    public async Task<IActionResult> CollectCraftingItems(int slotIndex, CancellationToken cancellationToken)
+    public async Task<Results<ContentHttpResult, BadRequest>> CollectCraftingItems(int slotIndex, CancellationToken cancellationToken)
     {
         string? playerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(playerId) || slotIndex < 1 || slotIndex > 3)
-            return BadRequest();
+        {
+            return TypedResults.BadRequest();
+        }
 
         // request.timestamp
         long requestStartedOn = HttpContext.GetTimestamp();
@@ -535,11 +544,13 @@ public class WorkshopRouter : ViennaControllerBase
     }
 
     [HttpPost("smelting/{slotIndex}/collectItems")]
-    public async Task<IActionResult> CollectSmeltingItems(int slotIndex, CancellationToken cancellationToken)
+    public async Task<Results<ContentHttpResult, BadRequest>> CollectSmeltingItems(int slotIndex, CancellationToken cancellationToken)
     {
         string? playerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(playerId) || slotIndex < 1 || slotIndex > 3)
-            return BadRequest();
+        {
+            return TypedResults.BadRequest();
+        }
 
         // request.timestamp
         long requestStartedOn = HttpContext.GetTimestamp();
@@ -599,11 +610,13 @@ public class WorkshopRouter : ViennaControllerBase
     }
 
     [HttpPost("crafting/{slotIndex}/stop")]
-    public async Task<IActionResult> StopCraftingJob(int slotIndex, CancellationToken cancellationToken)
+    public async Task<Results<ContentHttpResult, BadRequest>> StopCraftingJob(int slotIndex, CancellationToken cancellationToken)
     {
         string? playerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(playerId) || slotIndex < 1 || slotIndex > 3)
-            return BadRequest();
+        {
+            return TypedResults.BadRequest();
+        }
 
         // request.timestamp
         long requestStartedOn = HttpContext.GetTimestamp();
@@ -667,11 +680,13 @@ public class WorkshopRouter : ViennaControllerBase
     }
 
     [HttpPost("smelting/{slotIndex}/stop")]
-    public async Task<IActionResult> StopSmeltingJob(int slotIndex, CancellationToken cancellationToken)
+    public async Task<Results<ContentHttpResult, BadRequest>> StopSmeltingJob(int slotIndex, CancellationToken cancellationToken)
     {
         string? playerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(playerId) || slotIndex < 1 || slotIndex > 3)
-            return BadRequest();
+        {
+            return TypedResults.BadRequest();
+        }
 
         // request.timestamp
         long requestStartedOn = HttpContext.GetTimestamp();
@@ -746,18 +761,22 @@ public class WorkshopRouter : ViennaControllerBase
     }
 
     [HttpPost("crafting/{slotIndex}/finish")]
-    public async Task<IActionResult> FinishCrafting(int slotIndex, CancellationToken cancellationToken)
+    public async Task<Results<ContentHttpResult, BadRequest>> FinishCrafting(int slotIndex, CancellationToken cancellationToken)
     {
         string? playerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(playerId) || slotIndex < 1 || slotIndex > 3)
-            return BadRequest();
+        {
+            return TypedResults.BadRequest();
+        }
 
         // request.timestamp
         long requestStartedOn = HttpContext.GetTimestamp();
 
         ExpectedPurchasePriceR? expectedPurchasePrice = await Request.Body.AsJsonAsync<ExpectedPurchasePriceR>(cancellationToken);
         if (expectedPurchasePrice is null || expectedPurchasePrice.ExpectedPurchasePrice < 0)
-            return BadRequest();
+        {
+            return TypedResults.BadRequest();
+        }
 
         try
         {
@@ -811,18 +830,22 @@ public class WorkshopRouter : ViennaControllerBase
     }
 
     [HttpPost("smelting/{slotIndex}/finish")]
-    public async Task<IActionResult> FinishSmelting(int slotIndex, CancellationToken cancellationToken)
+    public async Task<Results<ContentHttpResult, BadRequest>> FinishSmelting(int slotIndex, CancellationToken cancellationToken)
     {
         string? playerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(playerId) || slotIndex < 1 || slotIndex > 3)
-            return BadRequest();
+        {
+            return TypedResults.BadRequest();
+        }
 
         // request.timestamp
         long requestStartedOn = HttpContext.GetTimestamp();
 
         ExpectedPurchasePriceR? expectedPurchasePrice = await Request.Body.AsJsonAsync<ExpectedPurchasePriceR>(cancellationToken);
         if (expectedPurchasePrice is null || expectedPurchasePrice.ExpectedPurchasePrice < 0)
-            return BadRequest();
+        {
+            return TypedResults.BadRequest();
+        }
 
         try
         {
@@ -877,23 +900,25 @@ public class WorkshopRouter : ViennaControllerBase
     }
 
     [HttpGet("crafting/finish/price")]
-    public IActionResult GetCraftingPrice()
+    public Results<ContentHttpResult, BadRequest> GetCraftingPrice()
     {
-        //TimeSpan remainingTime = TimeSpan.Parse(Request.Query["remainingTime"]);
-
         if (!Request.Query.TryGetValue("remainingTime", out StringValues _remainingTime))
-            return BadRequest();
+        {
+            return TypedResults.BadRequest();
+        }
 
         int remainingTime;
         try
         {
             remainingTime = (int)TimeFormatter.ParseDuration(_remainingTime.ToString());
             if (remainingTime < 0)
-                return BadRequest();
+            {
+                return TypedResults.BadRequest();
+            }
         }
         catch
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         CraftingCalculator.FinishPrice finishPrice = CraftingCalculator.CalculateFinishPrice(remainingTime);
@@ -902,23 +927,25 @@ public class WorkshopRouter : ViennaControllerBase
     }
 
     [HttpGet("smelting/finish/price")]
-    public IActionResult GetSmeltingPrice()
+    public Results<ContentHttpResult, BadRequest> GetSmeltingPrice()
     {
-        //TimeSpan remainingTime = TimeSpan.Parse(Request.Query["remainingTime"]);
-
         if (!Request.Query.TryGetValue("remainingTime", out StringValues _remainingTime))
-            return BadRequest();
+        {
+            return TypedResults.BadRequest();
+        }
 
         int remainingTime;
         try
         {
             remainingTime = (int)TimeFormatter.ParseDuration(_remainingTime.ToString());
             if (remainingTime < 0)
-                return BadRequest();
+            {
+                return TypedResults.BadRequest();
+            }
         }
         catch
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         SmeltingCalculator.FinishPrice finishPrice = SmeltingCalculator.CalculateFinishPrice(remainingTime);
@@ -927,15 +954,19 @@ public class WorkshopRouter : ViennaControllerBase
     }
 
     [HttpPost("crafting/{slotIndex}/unlock")]
-    public async Task<IActionResult> UnlockCraftingSlot(int slotIndex, CancellationToken cancellationToken)
+    public async Task<Results<ContentHttpResult, BadRequest>> UnlockCraftingSlot(int slotIndex, CancellationToken cancellationToken)
     {
         string? playerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(playerId) || slotIndex < 1 || slotIndex > 3)
-            return BadRequest();
+        {
+            return TypedResults.BadRequest();
+        }
 
         ExpectedPurchasePriceR? expectedPurchasePrice = await Request.Body.AsJsonAsync<ExpectedPurchasePriceR>(cancellationToken);
         if (expectedPurchasePrice is null || expectedPurchasePrice.ExpectedPurchasePrice < 0)
-            return BadRequest();
+        {
+            return TypedResults.BadRequest();
+        }
 
         try
         {
@@ -953,7 +984,7 @@ public class WorkshopRouter : ViennaControllerBase
                     if (!craftingSlot.Locked)
                         return query;
 
-                    int unlockPrice = CraftingCalculator.calculateUnlockPrice(slotIndex);
+                    int unlockPrice = CraftingCalculator.CalculateUnlockPrice(slotIndex);
 
                     if (expectedPurchasePrice.ExpectedPurchasePrice != unlockPrice)
                         return query;
@@ -978,15 +1009,19 @@ public class WorkshopRouter : ViennaControllerBase
     }
 
     [HttpPost("smelting/{slotIndex}/unlock")]
-    public async Task<IActionResult> UnlockSmeltingSlot(int slotIndex, CancellationToken cancellationToken)
+    public async Task<Results<ContentHttpResult, BadRequest>> UnlockSmeltingSlot(int slotIndex, CancellationToken cancellationToken)
     {
         string? playerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(playerId) || slotIndex < 1 || slotIndex > 3)
-            return BadRequest();
+        {
+            return TypedResults.BadRequest();
+        }
 
         ExpectedPurchasePriceR? expectedPurchasePrice = await Request.Body.AsJsonAsync<ExpectedPurchasePriceR>(cancellationToken);
         if (expectedPurchasePrice is null || expectedPurchasePrice.ExpectedPurchasePrice < 0)
-            return BadRequest();
+        {
+            return TypedResults.BadRequest();
+        }
 
         try
         {
@@ -1028,12 +1063,16 @@ public class WorkshopRouter : ViennaControllerBase
         }
     }
 
-    private Types.Workshop.CraftingSlot CraftingSlotModelToResponseIncludingLocked(CraftingSlot craftingSlotModel, long currentTime, int streamVersion, int slotIndex)
+    private static Types.Workshop.CraftingSlot CraftingSlotModelToResponseIncludingLocked(CraftingSlot craftingSlotModel, long currentTime, int streamVersion, int slotIndex)
     {
         if (craftingSlotModel.Locked)
-            return new Types.Workshop.CraftingSlot(null, null, null, null, 0, 0, 0, null, null, State.LOCKED, null, new UnlockPrice(CraftingCalculator.calculateUnlockPrice(slotIndex), 0), streamVersion);
+        {
+            return new Types.Workshop.CraftingSlot(null, null, null, null, 0, 0, 0, null, null, State.LOCKED, null, new UnlockPrice(CraftingCalculator.CalculateUnlockPrice(slotIndex), 0), streamVersion);
+        }
         else
+        {
             return CraftingSlotModelToResponse(craftingSlotModel, currentTime, streamVersion);
+        }
     }
 
     private static Types.Workshop.CraftingSlot CraftingSlotModelToResponse(CraftingSlot craftingSlotModel, long currentTime, int streamVersion)
@@ -1072,9 +1111,13 @@ public class WorkshopRouter : ViennaControllerBase
     private static Types.Workshop.SmeltingSlot SmeltingSlotModelToResponseIncludingLocked(SmeltingSlot smeltingSlotModel, long currentTime, int streamVersion, int slotIndex)
     {
         if (smeltingSlotModel.Locked)
+        {
             return new Types.Workshop.SmeltingSlot(null, null, null, null, null, null, 0, 0, 0, null, null, State.LOCKED, null, new UnlockPrice(SmeltingCalculator.CalculateUnlockPrice(slotIndex), 0), streamVersion);
+        }
         else
+        {
             return SmeltingSlotModelToResponse(smeltingSlotModel, currentTime, streamVersion);
+        }
     }
 
     private static Types.Workshop.SmeltingSlot SmeltingSlotModelToResponse(SmeltingSlot smeltingSlotModel, long currentTime, int streamVersion)

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.OData.Edm;
 using Microsoft.OData.ModelBuilder;
 using OData2Linq;
@@ -92,7 +93,7 @@ public class CatalogController : ViennaControllerBase
     );
 
     [HttpPost("Search")]
-    public async Task<IActionResult> SearchAsync()
+    public async Task<Results<ContentHttpResult, BadRequest>> SearchAsync()
     {
         var cancellationToken = Request.HttpContext.RequestAborted;
 
@@ -100,7 +101,7 @@ public class CatalogController : ViennaControllerBase
 
         if (request is null)
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         IEnumerable<Item> items;
@@ -157,7 +158,7 @@ public class CatalogController : ViennaControllerBase
         Response.Headers.Append("access-control-allow-methods", "GET, POST");
         Response.Headers.Append("access-control-allow-origin", "*");
 
-        return Content(JsonSerializer.Serialize(new PlayfabOkResponse(
+        return TypedResults.Content(JsonSerializer.Serialize(new PlayfabOkResponse(
             200,
             "OK",
             response
@@ -165,7 +166,7 @@ public class CatalogController : ViennaControllerBase
     }
 
     [HttpPost("SearchStores")]
-    public IActionResult SearchStores()
+    public ContentHttpResult SearchStores()
     {
         return JsonPascalCase(new PlayfabOkResponse(
             200,
@@ -188,7 +189,7 @@ public class CatalogController : ViennaControllerBase
     );
 
     [HttpPost("GetPublishedItem")]
-    public async Task<IActionResult> GetPublishedItem()
+    public async Task<Results<ContentHttpResult, NotFound, BadRequest>> GetPublishedItem()
     {
         var cancellationToken = Request.HttpContext.RequestAborted;
 
@@ -196,7 +197,7 @@ public class CatalogController : ViennaControllerBase
 
         if (request is null)
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         if (!Guid.TryParse(request.ItemId, out var itemId))
@@ -217,12 +218,12 @@ public class CatalogController : ViennaControllerBase
         if (!StaticData.Playfab.Items.TryGetValue(itemId, out var cItem))
         {
             // TODO: fake not found
-            return NotFound();
+            return TypedResults.NotFound();
         }
 
         var item = CIItemToItem(cItem);
 
-        return Content(JsonSerializer.Serialize(new PlayfabOkResponse(
+        return TypedResults.Content(JsonSerializer.Serialize(new PlayfabOkResponse(
             200,
             "OK",
             new GetPublishedItemResponse(

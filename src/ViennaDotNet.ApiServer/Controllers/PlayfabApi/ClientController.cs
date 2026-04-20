@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using System.Text.RegularExpressions;
 using ViennaDotNet.ApiServer.Models;
 using ViennaDotNet.ApiServer.Models.Playfab;
@@ -25,7 +26,7 @@ public partial class ClientController : ViennaControllerBase
     }
 
     [HttpPost("GetUserPublisherData")]
-    public async Task<IActionResult> GetUserPublisherData()
+    public async Task<Results<ContentHttpResult, ForbidHttpResult, BadRequest>> GetUserPublisherData()
     {
         var cancellationToken = Request.HttpContext.RequestAborted;
 
@@ -33,12 +34,12 @@ public partial class ClientController : ViennaControllerBase
 
         if (request is null)
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         if (!Request.Headers.TryGetValue("X-Authorization", out var tokenHeader) || tokenHeader.Count < 1)
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         Match tokenMatch = GetAuthRegex().Match(tokenHeader[0] ?? "");
@@ -47,13 +48,13 @@ public partial class ClientController : ViennaControllerBase
 
         if (tokenString is null)
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         var token = JwtUtils.Verify<Tokens.Shared.PlayfabSessionTicket>(tokenString, config.PlayfabApi.SessionTicketSecretBytes);
         if (token is null)
         {
-            return Forbid();
+            return TypedResults.Forbid();
         }
 
         switch (request.Entity.Type)
@@ -85,7 +86,7 @@ public partial class ClientController : ViennaControllerBase
                 }
 
             default:
-                return BadRequest();
+                return TypedResults.BadRequest();
         }
     }
 
@@ -94,7 +95,7 @@ public partial class ClientController : ViennaControllerBase
     );
 
     [HttpPost("GetPlayerStatistics")]
-    public async Task<IActionResult> GetPlayerStatistics()
+    public async Task<Results<ContentHttpResult, ForbidHttpResult, BadRequest>> GetPlayerStatistics()
     {
         var cancellationToken = Request.HttpContext.RequestAborted;
 
@@ -102,12 +103,12 @@ public partial class ClientController : ViennaControllerBase
 
         if (request is null)
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         if (!Request.Headers.TryGetValue("X-Authorization", out var tokenHeader) || tokenHeader.Count < 1)
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         Match tokenMatch = GetAuthRegex().Match(tokenHeader[0] ?? "");
@@ -116,13 +117,13 @@ public partial class ClientController : ViennaControllerBase
 
         if (tokenString is null)
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         var token = JwtUtils.Verify<Tokens.Shared.PlayfabSessionTicket>(tokenString, config.PlayfabApi.SessionTicketSecretBytes);
         if (token is null)
         {
-            return Forbid();
+            return TypedResults.Forbid();
         }
 
         // TODO
@@ -160,7 +161,7 @@ public partial class ClientController : ViennaControllerBase
     }
 
     [HttpPost("WritePlayerEvent")]
-    public IActionResult WritePlayerEvent()
+    public ContentHttpResult WritePlayerEvent()
     {
         return JsonPascalCase(new PlayfabOkResponse(
             200,

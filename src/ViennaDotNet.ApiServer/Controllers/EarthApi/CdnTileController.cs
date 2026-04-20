@@ -1,4 +1,5 @@
 ﻿using Asp.Versioning;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using ViennaDotNet.ApiServer.Utils;
 
@@ -10,17 +11,17 @@ namespace ViennaDotNet.ApiServer.Controllers.EarthApi;
 public class CdnTileController : ViennaControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult> GetTile(int _, int tilePos1, int tilePos2, CancellationToken cancellationToken) // _ used because we dont care :|
+    public async Task<Results<EmptyHttpResult, NotFound>> GetTile(int _, int tilePos1, int tilePos2, CancellationToken cancellationToken) // _ used because we dont care :|
     {
         if (!await TileUtils.TryWriteTile(tilePos1, tilePos2, Response.Body, cancellationToken))
         {
-            return NotFound();
+            return TypedResults.NotFound();
         }
 
         var cd = new System.Net.Mime.ContentDisposition { FileName = tilePos1 + "_" + tilePos2 + "_16.png", Inline = true };
         Response.Headers.Append("Content-Disposition", cd.ToString());
         Response.Headers.ContentType = "application/octet-stream";
 
-        return new EmptyResult();
+        return TypedResults.Empty;
     }
 }

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
 using ViennaDotNet.ApiServer.Models;
@@ -30,7 +31,7 @@ public partial class LoginController : ViennaControllerBase
     );
 
     [HttpPost("LoginWithCustomID")]
-    public async Task<IActionResult> LoginWithCustomID()
+    public async Task<Results<ContentHttpResult, BadRequest>> LoginWithCustomID()
     {
         var cancellationToken = Request.HttpContext.RequestAborted;
 
@@ -38,7 +39,7 @@ public partial class LoginController : ViennaControllerBase
 
         if (request is null || !GetTitleIdRegex().IsMatch(request.TitleId))
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         return JsonCamelCase(new PlayfabErrorResponse(
@@ -60,7 +61,7 @@ public partial class LoginController : ViennaControllerBase
     );
 
     [HttpPost("LoginWithXbox")]
-    public async Task<IActionResult> LoginWithXbox()
+    public async Task<Results<ContentHttpResult, ForbidHttpResult, NotFound, BadRequest>> LoginWithXbox()
     {
         var cancellationToken = Request.HttpContext.RequestAborted;
 
@@ -68,14 +69,14 @@ public partial class LoginController : ViennaControllerBase
 
         if (request is null || !GetTitleIdRegex().IsMatch(request.TitleId))
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         var authorization = XboxAuthorizationUtils.Parse(request.XboxToken);
 
         if (authorization is not { } authValue)
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         var xboxToken = JwtUtils.Verify<Tokens.Shared.PlayfabXboxToken>(authValue.TokenString, config.XboxLive.PlayfabTokenSecretBytes);
@@ -83,7 +84,7 @@ public partial class LoginController : ViennaControllerBase
         if (xboxToken is null || xboxToken.Data.UserId != authValue.UserId)
         {
             // TODO: probably supposed to use a "fake 403" as with LoginWithCustomID
-            return Forbid();
+            return TypedResults.Forbid();
         }
 
         string userId = xboxToken.Data.UserId;
@@ -93,7 +94,7 @@ public partial class LoginController : ViennaControllerBase
 
         if (account is null)
         {
-            return NotFound();
+            return TypedResults.NotFound();
         }
 
         var sessionTicketValidity = ValidityDatePair.Create(config.PlayfabApi.SessionTicketValidityMinutes);
@@ -178,7 +179,7 @@ public partial class LoginController : ViennaControllerBase
     }
 
     [HttpPost("LinkXboxAccount")]
-    public IActionResult LinkXboxAccount()
+    public ContentHttpResult LinkXboxAccount()
         => JsonCamelCase(new PlayfabErrorResponse(
             401,
             "Unauthorized",

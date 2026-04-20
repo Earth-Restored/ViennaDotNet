@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using ViennaDotNet.ApiServer.Models;
 using ViennaDotNet.ApiServer.Utils;
 
@@ -31,13 +32,13 @@ public class UserController : ViennaControllerBase
     );
 
     [HttpPost]
-    public IActionResult Authenticate([FromBody] AuthenticateRequest request)
+    public Results<ContentHttpResult, UnauthorizedHttpResult> Authenticate([FromBody] AuthenticateRequest request)
     {
         var ticket = JwtUtils.Verify<Tokens.Shared.XboxTicketToken>(request.Properties.RpsTicket, config.Login.XboxTokenSecretBytes)?.Data;
 
         if (ticket is null)
         {
-            return Unauthorized();
+            return TypedResults.Unauthorized();
         }
 
         var tokenValidity = ValidityDatePair.Create(config.XboxLive.TokenValidityMinutes);

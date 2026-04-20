@@ -1,5 +1,6 @@
 ﻿using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using ViennaDotNet.ApiServer.Exceptions;
@@ -19,11 +20,13 @@ public class JournalController : ControllerBase
     private static EarthDB earthDB => Program.DB;
 
     [HttpGet]
-    public async Task<IActionResult> Get(CancellationToken cancellationToken)
+    public async Task<Results<ContentHttpResult, BadRequest>> Get(CancellationToken cancellationToken)
     {
         string? playerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(playerId))
-            return BadRequest();
+        {
+            return TypedResults.BadRequest();
+        }
 
         Journal journalModel;
         ActivityLog activityLogModel;
@@ -57,7 +60,7 @@ public class JournalController : ControllerBase
         Types.Journal.JournalRecord.ActivityLogEntry[] activityLog = activityLogList;
 
         string resp = Json.Serialize(new EarthApiResponse(new Types.Journal.JournalRecord(inventoryJournal, activityLog)));
-        return Content(resp, "application/json");
+        return TypedResults.Content(resp, "application/json");
     }
 
     private static Types.Journal.JournalRecord.ActivityLogEntry ActivityLogEntryToApiResponse(ActivityLog.Entry entry)

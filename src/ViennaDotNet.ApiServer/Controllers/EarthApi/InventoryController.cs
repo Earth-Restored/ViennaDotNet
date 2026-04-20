@@ -1,5 +1,6 @@
 ﻿using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
 using System.Security.Claims;
@@ -24,12 +25,12 @@ public class InventoryController : ControllerBase
     private static Catalog catalog => Program.staticData.Catalog;
 
     [HttpGet]
-    public async Task<IActionResult> GetInventory(CancellationToken cancellationToken)
+    public async Task<Results<ContentHttpResult, BadRequest>> GetInventory(CancellationToken cancellationToken)
     {
         string? playerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(playerId))
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         DB.Models.Player.Inventory inventoryModel;
@@ -106,22 +107,22 @@ public class InventoryController : ControllerBase
         );
 
         string resp = Json.Serialize(new EarthApiResponse(inventory));
-        return Content(resp, "application/json");
+        return TypedResults.Content(resp, "application/json");
     }
 
     [HttpPut("hotbar")]
-    public async Task<IActionResult> SetHotbar(CancellationToken cancellationToken)
+    public async Task<Results<BadRequest, ContentHttpResult>> SetHotbar(CancellationToken cancellationToken)
     {
         string? playerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(playerId))
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         SetHotbarRequestItem[]? setHotbarRequestItems = await Request.Body.AsJsonAsync<SetHotbarRequestItem[]>(cancellationToken);
         if (setHotbarRequestItems is null || setHotbarRequestItems.Length != 7)
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         DB.Models.Player.Inventory inventoryModel;
@@ -163,16 +164,16 @@ public class InventoryController : ControllerBase
         ) : null)];
 
         string resp = Json.Serialize(hotbarItems);
-        return Content(resp, "application/json");
+        return TypedResults.Content(resp, "application/json");
     }
 
     [HttpPost("{itemId}/consume")]
-    public async Task<IActionResult> ConsumeItem(string itemId, CancellationToken cancellationToken)
+    public async Task<Results<ContentHttpResult, BadRequest>> ConsumeItem(string itemId, CancellationToken cancellationToken)
     {
         string? playerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(playerId))
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         // request.timestamp
@@ -182,7 +183,7 @@ public class InventoryController : ControllerBase
 
         if (item is null || item.ConsumeInfo is null)
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         try
@@ -252,7 +253,7 @@ public class InventoryController : ControllerBase
                 .ExecuteAsync(earthDB, cancellationToken);
 
             string resp = Json.Serialize(new EarthApiResponse(null, new EarthApiResponse.UpdatesResponse(results)));
-            return Content(resp, "application/json");
+            return TypedResults.Content(resp, "application/json");
         }
         catch (EarthDB.DatabaseException exception)
         {
