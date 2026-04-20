@@ -1,5 +1,6 @@
 ﻿using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Serilog;
 using System.Diagnostics;
@@ -30,11 +31,11 @@ public class ShopController : ViennaControllerBase
     private sealed record StoreItemInfoRequest(string Id, string StoreItemType, uint StreamVersion);
 
     [HttpPost("storeItemInfo")]
-    public async Task<IActionResult> GetStoreItemInfo(CancellationToken cancellationToken)
+    public async Task<ContentHttpResult> GetStoreItemInfo(CancellationToken cancellationToken)
     {
         var request = await Request.Body.AsJsonAsync<StoreItemInfoRequest[]>(cancellationToken);
 
-        if (request is null || request.Length == 0)
+        if (request is null or { Length: 0 })
         {
             return EarthJson(Array.Empty<StoreItemInfo>());
         }
@@ -109,52 +110,52 @@ public class ShopController : ViennaControllerBase
     );
 
     [HttpPost("purchase")]
-    public async Task<IActionResult> Purchase(CancellationToken cancellationToken)
+    public async Task<Results<ContentHttpResult, BadRequest>> Purchase(CancellationToken cancellationToken)
     {
         string? playerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(playerId))
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         var request = await Request.Body.AsJsonAsync<PurchaseItemRequest>(cancellationToken);
 
         if (request is null)
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         var rubies = await ProcessPurchase(playerId, request.ItemId, request.ExpectedPurchasePrice, cancellationToken);
 
         if (rubies is not { } rubiesVal)
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         return EarthJson(rubiesVal.Purchased + rubiesVal.Earned);
     }
 
     [HttpPost("purchaseV2")]
-    public async Task<IActionResult> PurchaseV2(CancellationToken cancellationToken)
+    public async Task<Results<ContentHttpResult, BadRequest>> PurchaseV2(CancellationToken cancellationToken)
     {
         string? playerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(playerId))
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         var request = await Request.Body.AsJsonAsync<PurchaseItemRequest>(cancellationToken);
 
         if (request is null)
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         var rubies = await ProcessPurchase(playerId, request.ItemId, request.ExpectedPurchasePrice, cancellationToken);
 
         if (rubies is not { } rubiesVal)
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         return EarthJson(new Types.Profile.SplitRubies(rubiesVal.Purchased, rubiesVal.Earned));

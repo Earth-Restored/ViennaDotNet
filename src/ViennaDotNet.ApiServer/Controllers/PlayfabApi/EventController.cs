@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using ViennaDotNet.ApiServer.Models.Playfab;
 using ViennaDotNet.Common.Utils;
 
@@ -14,7 +15,7 @@ public class EventController : ViennaControllerBase
     );
 
     [HttpPost("WriteTelemetryEvents")]
-    public async Task<IActionResult> WriteTelemetryEvents()
+    public async Task<Results<ContentHttpResult, BadRequest>> WriteTelemetryEvents()
     {
         var cancellationToken = Request.HttpContext.RequestAborted;
 
@@ -22,7 +23,7 @@ public class EventController : ViennaControllerBase
 
         if (request is null)
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         return JsonPascalCase(new PlayfabOkResponse(

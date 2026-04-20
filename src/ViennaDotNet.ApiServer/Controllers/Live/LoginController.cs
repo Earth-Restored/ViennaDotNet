@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using System.Buffers;
@@ -46,15 +47,15 @@ public partial class LoginController : ViennaControllerBase
     }
 
     [HttpGet("ppsecure/InlineConnect.srf")]
-    public IActionResult GetLoginPage()
+    public VirtualFileHttpResult GetLoginPage()
     {
-        return File("/login.html", "text/html");
+        return TypedResults.VirtualFile("/login.html", "text/html");
     }
 
     [HttpGet("ppsecure/reauthenticateStart")]
-    public IActionResult GetReauthenticatePage()
+    public VirtualFileHttpResult GetReauthenticatePage()
     {
-        return File("/reauthenticate.html", "text/html");
+        return TypedResults.VirtualFile("/reauthenticate.html", "text/html");
     }
 
     private sealed record LoginResponse(
@@ -69,7 +70,7 @@ public partial class LoginController : ViennaControllerBase
     );
 
     [HttpPost("ppsecure/login")]
-    public async Task<IActionResult> Login([FromForm] string username, [FromForm] string password, CancellationToken cancellationToken)
+    public async Task<Results<ContentHttpResult, BadRequest<string>>> Login([FromForm] string username, [FromForm] string password, CancellationToken cancellationToken)
     {
         username = username.Trim();
         password = password.Trim();
@@ -81,21 +82,21 @@ public partial class LoginController : ViennaControllerBase
 
         if (account is null)
         {
-            return BadRequest("Username or password is incorrect");
+            return TypedResults.BadRequest("Username or password is incorrect");
         }
 
         byte[] passwordHash = HashPassword(password, account.PasswordSalt);
 
         if (!passwordHash.AsSpan().SequenceEqual(account.PasswordHash))
         {
-            return BadRequest("Username or password is incorrect");
+            return TypedResults.BadRequest("Username or password is incorrect");
         }
 
         return JsonCamelCase(CreateLoginResponse(account));
     }
 
     [HttpPost("ppsecure/register")]
-    public async Task<IActionResult> Register([FromForm] string username, [FromForm] string password, [FromForm] string? firstName, [FromForm] string? lastName, CancellationToken cancellationToken)
+    public async Task<Results<ContentHttpResult, BadRequest<string>>> Register([FromForm] string username, [FromForm] string password, [FromForm] string? firstName, [FromForm] string? lastName, CancellationToken cancellationToken)
     {
         username = username.Trim();
         password = password.Trim();
@@ -116,27 +117,27 @@ public partial class LoginController : ViennaControllerBase
 
         if (string.IsNullOrWhiteSpace(username) || username.Length < 3 || username.Length > 16)
         {
-            return BadRequest("Username must be 3-16 characters long");
+            return TypedResults.BadRequest("Username must be 3-16 characters long");
         }
 
         if (string.IsNullOrWhiteSpace(password) || password.Length < 4 || password.Length > 32)
         {
-            return BadRequest("Password must be 4-32 characters long");
+            return TypedResults.BadRequest("Password must be 4-32 characters long");
         }
 
         if (!string.IsNullOrWhiteSpace(firstName) && (firstName.Length < 2 || firstName.Length > 100))
         {
-            return BadRequest("First name must be 2-100 characters long");
+            return TypedResults.BadRequest("First name must be 2-100 characters long");
         }
 
         if (!string.IsNullOrWhiteSpace(lastName) && (lastName.Length < 2 || lastName.Length > 100))
         {
-            return BadRequest("Last name must be 2-100 characters long");
+            return TypedResults.BadRequest("Last name must be 2-100 characters long");
         }
 
         if (!GetUsernameRegex().IsMatch(username))
         {
-            return BadRequest("Username must contain only: lowercase letters, numbers, underscore and colon");
+            return TypedResults.BadRequest("Username must contain only: lowercase letters, numbers, underscore and colon");
         }
 
         var account = await _dbContext.Accounts
@@ -144,7 +145,7 @@ public partial class LoginController : ViennaControllerBase
 
         if (account is not null)
         {
-            return BadRequest("Account with the specified username already exists");
+            return TypedResults.BadRequest("Account with the specified username already exists");
         }
 
         string userId = GenerateUserId(username);
@@ -182,13 +183,13 @@ public partial class LoginController : ViennaControllerBase
     }
 
     [HttpPost("ppsecure/deviceaddcredential.srf")]
-    public IActionResult DeviceAddCredential()
-        => Content("""
+    public ContentHttpResult DeviceAddCredential()
+        => TypedResults.Content("""
             <DeviceAddResponse Success="true"><success>true</success><puid>0</puid></DeviceAddResponse>
             """);
 
     [HttpPost("RST2.srf")]
-    public async Task<IActionResult> RST2()
+    public async Task<Results<ContentHttpResult, BadRequest>> RST2()
     {
         var cancellationToken = Request.HttpContext.RequestAborted;
 
@@ -201,7 +202,7 @@ public partial class LoginController : ViennaControllerBase
         }
         catch
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         var nsmgr = new XmlNamespaceManager(request.NameTable);
@@ -221,7 +222,7 @@ public partial class LoginController : ViennaControllerBase
 
             if (requestType is not "http://schemas.xmlsoap.org/ws/2005/02/trust/Issue" || requestAppliesTo is not "http://Passport.NET/tb")
             {
-                return BadRequest();
+                return TypedResults.BadRequest();
             }
 
             var headerValidity = ValidityDatePair.Create(config.Login.SoapHeaderValidityMinutes);
@@ -351,7 +352,7 @@ public partial class LoginController : ViennaControllerBase
 
             response.AppendChild(envelope);
 
-            return Content("""
+            return TypedResults.Content("""
                 <?xml version="1.0" encoding="UTF-8"?>
 
                 """ + response.OuterXml);
@@ -395,7 +396,7 @@ public partial class LoginController : ViennaControllerBase
 
             if (requestCount is not 2 || requestType1 is not "http://schemas.xmlsoap.org/ws/2005/02/trust/Issue" || appliesTo1 is not "http://Passport.NET/tb" || requestType2 is not "http://schemas.xmlsoap.org/ws/2005/02/trust/Issue" || appliesTo2 is not "cobrandid=90023&scope=service%3A%3Auser.auth.xboxlive.com%3A%3Ambi_ssl" || userTokenString is null)
             {
-                return BadRequest();
+                return TypedResults.BadRequest();
             }
 
             var userToken = JwtUtils.Verify<Tokens.Live.UserToken>(userTokenString, config.Login.UserTokenSecretBytes, allowExpired: true);
@@ -596,15 +597,15 @@ public partial class LoginController : ViennaControllerBase
 
                 response.AppendChild(envelope);
 
-                return Content(response.OuterXml);
+                return TypedResults.Content(response.OuterXml);
             }
         }
         else
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
-        return Ok();
+        // return TypedResults.Ok();
 
         XmlElement CreateElement(XmlDocument doc, string prefix, string localName)
         {

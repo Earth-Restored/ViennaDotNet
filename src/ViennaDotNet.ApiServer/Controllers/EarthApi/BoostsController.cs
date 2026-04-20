@@ -1,5 +1,6 @@
 ﻿using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Serilog;
 using System.Diagnostics;
@@ -28,12 +29,12 @@ public class BoostsController : ViennaControllerBase
     );
 
     [HttpGet("boosts")]
-    public async Task<IActionResult> GetBoosts(CancellationToken cancellation)
+    public async Task<Results<ContentHttpResult, BadRequest>> GetBoosts(CancellationToken cancellation)
     {
         string? playerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(playerId))
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         long requestStartedOn = HttpContext.GetTimestamp();
@@ -166,12 +167,12 @@ public class BoostsController : ViennaControllerBase
     }
 
     [HttpPost("boosts/potions/{itemId}/activate")]
-    public async Task<IActionResult> ActivateBoost(string itemId, CancellationToken cancellationToken)
+    public async Task<Results<ContentHttpResult, BadRequest>> ActivateBoost(string itemId, CancellationToken cancellationToken)
     {
         string? playerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(playerId))
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         long requestStartedOn = HttpContext.GetTimestamp();
@@ -180,7 +181,7 @@ public class BoostsController : ViennaControllerBase
 
         if (item is null || item.BoostInfo is null || item.BoostInfo.Type is not Catalog.ItemsCatalogR.Item.BoostInfoR.TypeE.POTION)
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         try
@@ -276,12 +277,12 @@ public class BoostsController : ViennaControllerBase
     }
 
     [HttpDelete("boosts/{instanceId}")]
-    public async Task<IActionResult> DeactivateBoost(string instanceId, CancellationToken cancellationToken)
+    public async Task<Results<ContentHttpResult, BadRequest>> DeactivateBoost(string instanceId, CancellationToken cancellationToken)
     {
         string? playerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(playerId))
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         long requestStartedOn = HttpContext.GetTimestamp();

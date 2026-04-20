@@ -1,4 +1,5 @@
 ﻿using Asp.Versioning;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Serilog;
 using ViennaDotNet.ApiServer.Types;
@@ -33,14 +34,14 @@ public class ResourcePackController : ControllerBase
 public class ResourcePackCdnController : ControllerBase
 {
     [HttpGet, HttpHead]
-    public async Task<IActionResult> Get()
+    public async Task<Results<BadRequest, FileContentHttpResult>> Get()
     {
         string resourcePackFilePath = Path.Combine(Program.staticData.Directory, @"resourcepacks/vanilla.zip"); //resource packs are distributed as renamed zip files containing an MCpack
 
         if (!System.IO.File.Exists(resourcePackFilePath))
         {
             Log.Error("[Resourcepacks] Error! Resource pack file not found.");
-            return BadRequest(); //we cannot serve you.
+            return TypedResults.BadRequest(); //we cannot serve you.
         }
 
         // TODO: use Stream
@@ -48,6 +49,6 @@ public class ResourcePackCdnController : ControllerBase
         var cd = new System.Net.Mime.ContentDisposition { FileName = "dba38e59-091a-4826-b76a-a08d7de5a9e2-1301b0c257a311678123b9e7325d0d6c61db3c35", Inline = true };
         Response.Headers.Append("Content-Disposition", cd.ToString());
 
-        return File(fileData, "application/octet-stream", "dba38e59-091a-4826-b76a-a08d7de5a9e2-1301b0c257a311678123b9e7325d0d6c61db3c35");
+        return TypedResults.File(fileData, "application/octet-stream", "dba38e59-091a-4826-b76a-a08d7de5a9e2-1301b0c257a311678123b9e7325d0d6c61db3c35");
     }
 }

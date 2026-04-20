@@ -83,13 +83,15 @@ public sealed class Importer : IAsyncDisposable
         WorldData? worldData;
         using (var ms = new MemoryStream(serverData))
         {
-            worldData = await ReadWorldFile(ms, cancellationToken);
+            worldData = await WorldData.LoadFromZipAsync(ms, Logger, cancellationToken);
         }
 
         if (worldData is null)
         {
             return false;
         }
+
+        worldData = worldData with { Size = template.Size, Offset = template.Offset, Night = template.Night, };
 
         byte[] preview = await GeneratePreview(worldData);
 
@@ -310,13 +312,15 @@ public sealed class Importer : IAsyncDisposable
         WorldData? worldData;
         using (var ms = new MemoryStream(serverData))
         {
-            worldData = await ReadWorldFile(ms, cancellationToken);
+            worldData = await WorldData.LoadFromZipAsync(ms, Logger, cancellationToken);
         }
 
         if (worldData is null)
         {
             return false;
         }
+
+        worldData = worldData with { Size = buildplate.Size, Offset = buildplate.Offset, Night = buildplate.Night, };
 
         byte[] preview = await GeneratePreview(worldData);
 
@@ -420,171 +424,8 @@ public sealed class Importer : IAsyncDisposable
         {
             await EventBusClient.DisposeAsync();
         }
-        
+
         await ObjectStoreClient.DisposeAsync();
-    }
-
-    public async Task<WorldData?> ReadWorldFile(Stream stream, CancellationToken cancellationToken)
-    {
-        Dictionary<string, byte[]> worldFileContents = [];
-
-        try
-        {
-            using (var zip = new ZipArchive(stream, ZipArchiveMode.Read, true))
-            {
-                foreach (var entry in zip.Entries)
-                {
-                    if (entry.IsDirectory)
-                    {
-                        continue;
-                    }
-
-                    var entryPath = entry.FullName.AsSpan().Trim(['/', '\\']);
-
-                    if (entryPath is not "buildplate_metadata.json")
-                    {
-                        // must be allocated here because of await
-#pragma warning disable CA2014 // Do not use stackalloc in loops
-                        Span<Range> parts = stackalloc Range[3];
-#pragma warning restore CA2014 // Do not use stackalloc in loops
-                        int partCount = entryPath.SplitAny(parts, ['/', '\\'], StringSplitOptions.RemoveEmptyEntries);
-
-                        if (partCount != 2)
-                        {
-                            continue;
-                        }
-
-                        if (entryPath[parts[0]] is not ("region" or "entities"))
-                        {
-                            continue;
-                        }
-
-                        if (entryPath[parts[1]] is not ("r.0.0.mca" or "r.0.-1.mca" or "r.-1.0.mca" or "r.-1.-1.mca"))
-                        {
-                            continue;
-                        }
-                    }
-
-                    using (var entryStream = entry.Open())
-                    using (var ms = new MemoryStream())
-                    {
-                        await entryStream.CopyToAsync(ms, cancellationToken);
-
-                        worldFileContents[entry.FullName] = ms.ToArray();
-                    }
-                }
-            }
-        }
-        catch (IOException ex)
-        {
-            Logger.Error($"Could not read world file: {ex}");
-            return null;
-        }
-
-        byte[] serverData;
-        try
-        {
-            using (var zipStream = new MemoryStream())
-            {
-                using (var zip = new ZipArchive(zipStream, ZipArchiveMode.Create, true))
-                {
-                    foreach (string dirName in (IEnumerable<string>)["region", "entities"])
-                    {
-                        foreach (string fileName in (IEnumerable<string>)["r.0.0.mca", "r.0.-1.mca", "r.-1.0.mca", "r.-1.-1.mca"])
-                        {
-                            string filePath = $"{dirName}/{fileName}";
-
-                            if (!worldFileContents.TryGetValue(filePath, out byte[]? data))
-                            {
-                                Logger.Error($"World file is missing {filePath}");
-                                return null;
-                            }
-
-                            var entry = zip.CreateEntry(filePath, CompressionLevel.SmallestSize);
-                            using (var entryStream = entry.Open())
-                            {
-                                entryStream.Write(data);
-                            }
-                        }
-                    }
-                }
-
-                serverData = zipStream.ToArray();
-            }
-        }
-        catch (IOException ex)
-        {
-            Logger.Error($"Could not prepare server data: {ex}");
-            return null;
-        }
-
-        int size;
-        int offset;
-        bool night;
-
-        try
-        {
-            byte[]? buildplateMetadataFileData = worldFileContents.GetValueOrDefault("buildplate_metadata.json");
-            string? buildplateMetadataString = buildplateMetadataFileData is not null
-                ? Encoding.UTF8.GetString(buildplateMetadataFileData)
-                : null;
-
-            if (buildplateMetadataString is null)
-            {
-                Logger.Warning("World file does not contain buildplate_metadata.json, using default values");
-                size = 16;
-                offset = 63;
-                night = false;
-            }
-            else
-            {
-                var buildplateMetadataVersion = Json.Deserialize<BuildplateMetadataVersion>(buildplateMetadataString);
-
-                if (buildplateMetadataVersion is null)
-                {
-                    Logger.Error("Invalid buildplate metadata");
-                    return null;
-                }
-
-                switch (buildplateMetadataVersion.Version)
-                {
-                    case 1:
-                        {
-                            var buildplateMetadata = Json.Deserialize<BuildplateMetadataV1>(buildplateMetadataString);
-
-                            if (buildplateMetadata is null)
-                            {
-                                Logger.Error("Invalid buildplate metadata");
-                                return null;
-                            }
-
-                            size = buildplateMetadata.Size;
-                            offset = buildplateMetadata.Offset;
-                            night = buildplateMetadata.Night;
-                        }
-
-                        break;
-                    default:
-                        {
-                            Logger.Error($"Unsupported buildplate metadata version {buildplateMetadataVersion.Version}");
-                            return null;
-                        }
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.Error($"Could not read buildplate metadata file: {ex}");
-            return null;
-        }
-
-        if (size != 8 && size != 16 && size != 32)
-        {
-            Logger.Error($"Invalid buildplate size {size}, must be on of: 8, 16, 32");
-            return null;
-        }
-
-        return new WorldData(serverData, size, offset, night);
     }
 
     private async Task<byte[]> GeneratePreview(WorldData worldData)
@@ -705,7 +546,7 @@ public sealed class Importer : IAsyncDisposable
                 _ => 33,
             };
 
-            template = new TemplateBuildplate(name, worldData.Size, worldData.Offset, scale, worldData.Night, serverDataObjectId, previewObjectId, null);
+            template = new TemplateBuildplate(name, worldData.Size, worldData.Offset, scale, worldData.Night, serverDataObjectId, previewObjectId);
 
             try
             {
@@ -754,7 +595,7 @@ public sealed class Importer : IAsyncDisposable
 
                     long lastModified = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-                    var buildplate = new Buildplates.Buildplate(templateId, template.Name, template.Size, template.Offset, template.Scale, template.Night, lastModified, serverDataObjectId, previewObjectId, null);
+                    var buildplate = new Buildplates.Buildplate(templateId, template.Name, template.Size, template.Offset, template.Scale, template.Night, lastModified, serverDataObjectId, previewObjectId);
 
                     buildplates.AddBuildplate(buildplateId, buildplate);
 

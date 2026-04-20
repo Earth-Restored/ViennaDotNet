@@ -1,5 +1,6 @@
 ﻿using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using ViennaDotNet.ApiServer.Types.Common;
 using ViennaDotNet.ApiServer.Utils;
@@ -36,7 +37,7 @@ public class ChallengesController : ControllerBase
     );
 
     [HttpGet]
-    public IActionResult Get()
+    public ContentHttpResult Get()
     {
         // TODO: this is currently just a stub required for the journal to load properly in the client
 
@@ -88,6 +89,6 @@ public class ChallengesController : ControllerBase
             } },
             { "activeSeasonChallenge", "00000000-0000-0000-0000-000000000000" },
         }));
-        return Content(resp, "application/json");
+        return TypedResults.Content(resp, "application/json");
     }
 }

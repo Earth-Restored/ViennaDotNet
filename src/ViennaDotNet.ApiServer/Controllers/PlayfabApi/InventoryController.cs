@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using ViennaDotNet.ApiServer.Models.Playfab;
 
 namespace ViennaDotNet.ApiServer.Controllers.PlayfabApi;
@@ -8,7 +9,7 @@ namespace ViennaDotNet.ApiServer.Controllers.PlayfabApi;
 public class InventoryController : ViennaControllerBase
 {
     [HttpPost("GetVirtualCurrencies")]
-    public IActionResult GetVirtualCurrencies()
+    public ContentHttpResult GetVirtualCurrencies()
         => JsonPascalCase(new PlayfabOkResponse(
             200,
             "OK",
@@ -24,7 +25,7 @@ public class InventoryController : ViennaControllerBase
         ));
 
     [HttpPost("redeem")]
-    public IActionResult Redeem()
+    public ContentHttpResult Redeem()
         => JsonPascalCase(new PlayfabOkResponse(
             200,
             "OK",
@@ -36,7 +37,7 @@ public class InventoryController : ViennaControllerBase
         ));
 
     [HttpPost("GetInventoryItems")]
-    public IActionResult GetInventoryItems()
+    public ContentHttpResult GetInventoryItems()
         => JsonPascalCase(new PlayfabOkResponse(
             200,
             "OK",

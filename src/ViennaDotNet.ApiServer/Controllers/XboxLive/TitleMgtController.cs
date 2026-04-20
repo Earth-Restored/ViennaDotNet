@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using Nager.PublicSuffix;
 using Nager.PublicSuffix.RuleProviders;
 using System.Diagnostics;
@@ -24,7 +25,7 @@ public class TitleMgtController : ViennaControllerBase
     private sealed record Endpoint(string Protocol, string Host, int? Port, string HostType, string? RelyingParty, string? TokenType);
 
     [HttpGet("{title}/endpoints")]
-    public async Task<IActionResult> GetEndpoints(string title)
+    public async Task<Results<ContentHttpResult, BadRequest>> GetEndpoints(string title)
     {
         var cancellationToken = Request.HttpContext.RequestAborted;
 
@@ -118,10 +119,10 @@ public class TitleMgtController : ViennaControllerBase
 
                 break;
             default:
-                return BadRequest();
+                return TypedResults.BadRequest();
         }
 
-        return Content(JsonSerializer.Serialize(new EndpointsResponse(endpoints), jsonOptions), "application/json");
+        return TypedResults.Content(JsonSerializer.Serialize(new EndpointsResponse(endpoints), jsonOptions), "application/json");
     }
 
     private static async Task<DomainParser> GetDomainParserAsync(CancellationToken cancellationToken)

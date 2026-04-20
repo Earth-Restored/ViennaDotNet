@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Microsoft.EntityFrameworkCore;
 using Serilog;
 using ViennaDotNet.Buildplate.Model;
 using ViennaDotNet.BuildplateImporter;
@@ -7,6 +8,8 @@ using ViennaDotNet.DB;
 using ViennaDotNet.DB.Models.Global;
 using ViennaDotNet.DB.Models.Player;
 using ViennaDotNet.EventBus.Client;
+using ViennaDotNet.LauncherUI.Data;
+using ViennaDotNet.LauncherUI.Models.Db;
 using ViennaDotNet.ObjectStore.Client;
 
 namespace ViennaDotNet.LauncherUI.Utils;
@@ -27,8 +30,25 @@ public static class ImporterExtensions
 
     extension(Importer importer)
     {
-        public async Task<ArraySegment<byte>?> GetTemplateLauncherPreviewAsync(string templateId, ResourcePackManager resourcePackManager, bool getFromCache = true, CancellationToken cancellationToken = default)
+        public async Task<ArraySegment<byte>?> GetTemplateLauncherPreviewAsync(string templateId, ApplicationDbContext appDbContext, ResourcePackManager resourcePackManager, bool getFromCache = true, CancellationToken cancellationToken = default)
         {
+            var dbBuildplatePreview = await appDbContext.BuildplatePreviews
+                .AsNoTracking()
+                .FirstOrDefaultAsync(preview => preview.PlayerId == null && preview.BuildplateId == templateId);
+
+            if (dbBuildplatePreview is not null)
+            {
+                if (getFromCache)
+                {
+                    return dbBuildplatePreview.PreviewData;
+                }
+                else
+                {
+                    appDbContext.BuildplatePreviews.Remove(dbBuildplatePreview);
+                    await appDbContext.SaveChangesAsync();
+                }
+            }
+
             TemplateBuildplate? template;
             try
             {
@@ -50,26 +70,6 @@ public static class ImporterExtensions
                 return null;
             }
 
-            if (!string.IsNullOrEmpty(template.LauncherPreviewObjectId))
-            {
-                if (getFromCache)
-                {
-                    var previewData = await importer.ObjectStoreClient.GetAsync(template.LauncherPreviewObjectId);
-
-                    if (previewData is null)
-                    {
-                        importer.Logger.Error($"Could not get launcher preview for template '{templateId}'");
-                        return null;
-                    }
-
-                    return previewData;
-                }
-                else
-                {
-                    await importer.ObjectStoreClient.DeleteAsync(template.LauncherPreviewObjectId);
-                }
-            }
-
             var worldDataRaw = await importer.ObjectStoreClient.GetAsync(template.ServerDataObjectId);
 
             if (worldDataRaw is null)
@@ -81,13 +81,15 @@ public static class ImporterExtensions
             WorldData? worldData;
             using (var worldDataStream = new MemoryStream(worldDataRaw))
             {
-                worldData = await importer.ReadWorldFile(worldDataStream, cancellationToken);
+                worldData = await WorldData.LoadFromZipAsync(worldDataStream, importer.Logger, cancellationToken);
             }
 
             if (worldData is null)
             {
                 return null;
             }
+
+            worldData = worldData with { Size = template.Size, Offset = template.Offset, Night = template.Night, };
 
             var meshGenerator = new BuildplateMeshGenerator(resourcePackManager);
 
@@ -102,24 +104,38 @@ public static class ImporterExtensions
             bool getBufferSuccess = ms.TryGetBuffer(out var buffer);
             Debug.Assert(getBufferSuccess);
 
-            var launcherPreviewObjectId = await importer.ObjectStoreClient.StoreAsync(buffer);
-            if (launcherPreviewObjectId is null)
+            dbBuildplatePreview = new DbBuildplatePreview()
             {
-                Log.Warning($"Failed to store launcher preview for template '{templateId}'");
-                return buffer;
-            }
+                PlayerId = null,
+                BuildplateId = templateId,
+                PreviewData = [.. buffer],
+            };
 
-            template = template with { LauncherPreviewObjectId = launcherPreviewObjectId, };
-
-            await new EarthDB.ObjectQuery(true)
-                .UpdateBuildplate(templateId, template)
-                .ExecuteAsync(importer.EarthDB, cancellationToken);
+            appDbContext.BuildplatePreviews.Add(dbBuildplatePreview);
+            await appDbContext.SaveChangesAsync();
 
             return buffer;
         }
 
-        public async Task<ArraySegment<byte>?> GetPlayerBuildplateLauncherPreviewAsync(string playerId, string buildplateId, ResourcePackManager resourcePackManager, bool getFromCache = true, CancellationToken cancellationToken = default)
+        public async Task<ArraySegment<byte>?> GetPlayerBuildplateLauncherPreviewAsync(string playerId, string buildplateId, ApplicationDbContext appDbContext, ResourcePackManager resourcePackManager, bool getFromCache = true, CancellationToken cancellationToken = default)
         {
+            var dbBuildplatePreview = await appDbContext.BuildplatePreviews
+                .AsNoTracking()
+                .FirstOrDefaultAsync(preview => preview.PlayerId == playerId && preview.BuildplateId == buildplateId);
+
+            if (dbBuildplatePreview is not null)
+            {
+                if (getFromCache)
+                {
+                    return dbBuildplatePreview.PreviewData;
+                }
+                else
+                {
+                    appDbContext.BuildplatePreviews.Remove(dbBuildplatePreview);
+                    await appDbContext.SaveChangesAsync();
+                }
+            }
+
             Buildplates playerBuildplates;
 
             try
@@ -144,26 +160,6 @@ public static class ImporterExtensions
                 return null;
             }
 
-            if (!string.IsNullOrEmpty(buildplate.LauncherPreviewObjectId))
-            {
-                if (getFromCache)
-                {
-                    var previewData = await importer.ObjectStoreClient.GetAsync(buildplate.LauncherPreviewObjectId);
-
-                    if (previewData is null)
-                    {
-                        importer.Logger.Error($"Could not get launcher preview for buildplate '{buildplate}'");
-                        return null;
-                    }
-
-                    return previewData;
-                }
-                else
-                {
-                    await importer.ObjectStoreClient.DeleteAsync(buildplate.LauncherPreviewObjectId);
-                }
-            }
-
             var worldDataRaw = await importer.ObjectStoreClient.GetAsync(buildplate.ServerDataObjectId);
 
             if (worldDataRaw is null)
@@ -175,13 +171,15 @@ public static class ImporterExtensions
             WorldData? worldData;
             using (var worldDataStream = new MemoryStream(worldDataRaw))
             {
-                worldData = await importer.ReadWorldFile(worldDataStream, cancellationToken);
+                worldData = await WorldData.LoadFromZipAsync(worldDataStream, importer.Logger, cancellationToken);
             }
 
             if (worldData is null)
             {
                 return null;
             }
+
+            worldData = worldData with { Size = buildplate.Size, Offset = buildplate.Offset, Night = buildplate.Night, };
 
             var meshGenerator = new BuildplateMeshGenerator(resourcePackManager);
 
@@ -196,21 +194,15 @@ public static class ImporterExtensions
             bool getBufferSuccess = ms.TryGetBuffer(out var buffer);
             Debug.Assert(getBufferSuccess);
 
-            var launcherPreviewObjectId = await importer.ObjectStoreClient.StoreAsync(buffer);
-            if (launcherPreviewObjectId is null)
+            dbBuildplatePreview = new DbBuildplatePreview()
             {
-                Log.Warning($"Failed to store launcher preview for buildplate '{buildplateId}'");
-                return buffer;
-            }
+                PlayerId = playerId,
+                BuildplateId = buildplateId,
+                PreviewData = [.. buffer],
+            };
 
-            buildplate = buildplate with { LauncherPreviewObjectId = launcherPreviewObjectId, };
-
-            playerBuildplates.RemoveBuildplate(buildplateId);
-            playerBuildplates.AddBuildplate(buildplateId, buildplate);
-
-            await new EarthDB.Query(true)
-                .Update("buildplates", playerId, playerBuildplates)
-                .ExecuteAsync(importer.EarthDB, cancellationToken);
+            appDbContext.BuildplatePreviews.Add(dbBuildplatePreview);
+            await appDbContext.SaveChangesAsync();
 
             return buffer;
         }

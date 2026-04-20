@@ -1,5 +1,6 @@
 ﻿using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
 using ViennaDotNet.ApiServer.Types.Catalog;
@@ -26,19 +27,19 @@ public class CatalogController : ViennaControllerBase
     private static Catalog catalog => Program.staticData.Catalog;
 
     [HttpGet("inventory/catalogv3")]
-    public IActionResult GetItemsCatalog()
+    public ContentHttpResult GetItemsCatalog()
         => EarthJson(MakeItemsCatalogApiResponse(catalog));
 
     [HttpGet("recipes")]
-    public IActionResult GetRecipeCatalog()
+    public ContentHttpResult GetRecipeCatalog()
         => EarthJson(MakeRecipesCatalogApiResponse(catalog));
 
     [HttpGet("journal/catalog")]
-    public IActionResult GetJournalCatalog()
+    public ContentHttpResult GetJournalCatalog()
         => EarthJson(MakeJournalCatalogApiResponse(catalog));
 
     [HttpGet("products/catalog")]
-    public IActionResult GetNFCBoostsCatalog()
+    public ContentHttpResult GetNFCBoostsCatalog()
         => EarthJson(MakeNFCBoostsCatalogApiResponse(catalog));
 
     // TODO: cache these?

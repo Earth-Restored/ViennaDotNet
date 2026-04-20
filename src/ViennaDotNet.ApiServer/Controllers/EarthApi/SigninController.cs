@@ -1,4 +1,5 @@
 ﻿using Asp.Versioning;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Serilog;
 using System.Text.RegularExpressions;
@@ -14,11 +15,11 @@ public partial class SigninController : ViennaControllerBase
 
     [HttpPost("api/v{version:apiVersion}/player/profile/{profileID}")]
     [HttpPost("1/api/v{version:apiVersion}/player/profile/{profileID}")]
-    public async Task<IActionResult> Post(string profileID, CancellationToken cancellationToken)
+    public async Task<Results<ContentHttpResult, BadRequest>> Post(string profileID, CancellationToken cancellationToken)
     {
         if (profileID != "signin")
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         SigninRequest? signinRequest = await Request.Body.AsJsonAsync<SigninRequest>(cancellationToken);
@@ -27,14 +28,14 @@ public partial class SigninController : ViennaControllerBase
         if (signinRequest is null || (parts = signinRequest.SessionTicket.Split('-')).Length < 2)
         {
             Log.Error($"Sign in request null or parts bad ({parts?.Length ?? -1})");
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         string userId = parts[0];
         if (!GetUserIdRegex().IsMatch(userId))
         {
             Log.Error($"User id not match ({userId})");
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         // TODO: check credentials

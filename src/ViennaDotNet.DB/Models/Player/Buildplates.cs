@@ -39,7 +39,6 @@ public sealed class Buildplates
         bool Night,
         long LastModified,
         string ServerDataObjectId,
-        string PreviewObjectId,
-        string? LauncherPreviewObjectId
+        string PreviewObjectId
     );
 }

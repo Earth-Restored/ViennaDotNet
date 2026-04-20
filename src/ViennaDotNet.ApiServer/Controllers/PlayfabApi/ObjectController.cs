@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using ViennaDotNet.ApiServer.Models.Playfab;
 using ViennaDotNet.Common.Utils;
 
@@ -20,7 +21,7 @@ public class ObjectController : ViennaControllerBase
     }
 
     [HttpPost("GetObjects")]
-    public async Task<IActionResult> GetObjects()
+    public async Task<Results<ContentHttpResult, ForbidHttpResult, BadRequest>> GetObjects()
     {
         var cancellationToken = Request.HttpContext.RequestAborted;
 
@@ -28,21 +29,21 @@ public class ObjectController : ViennaControllerBase
 
         if (request is null)
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         var tokenUnion = PlayfabAuth();
 
         if (tokenUnion.IsB)
         {
-            return tokenUnion.B;
+            return tokenUnion.B.Result is ForbidHttpResult forbid ? forbid : (BadRequest)tokenUnion.B.Result;
         }
 
         var token = tokenUnion.A;
 
         if (token.Id != request.Entity.Id || token.Type != request.Entity.Type)
         {
-            return Forbid();
+            return TypedResults.Forbid();
         }
 
         switch (request.Entity.Type)
@@ -220,7 +221,7 @@ public class ObjectController : ViennaControllerBase
                 ));
 
             default:
-                return BadRequest();
+                return TypedResults.BadRequest();
         }
     }
 
@@ -240,7 +241,7 @@ public class ObjectController : ViennaControllerBase
     }
 
     [HttpPost("SetObjects")]
-    public async Task<IActionResult> SetObjects()
+    public async Task<Results<Ok, ForbidHttpResult, BadRequest>> SetObjects()
     {
         var cancellationToken = Request.HttpContext.RequestAborted;
 
@@ -248,30 +249,30 @@ public class ObjectController : ViennaControllerBase
 
         if (request is null)
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         var tokenUnion = PlayfabAuth();
 
         if (tokenUnion.IsB)
         {
-            return tokenUnion.B;
+            return tokenUnion.B.Result is ForbidHttpResult forbid ? forbid : (BadRequest)tokenUnion.B.Result;
         }
 
         var token = tokenUnion.A;
 
         if (token.Id != request.Entity.Id || token.Type != request.Entity.Type)
         {
-            return Forbid();
+            return TypedResults.Forbid();
         }
 
         switch (request.Entity.Type)
         {
             case "master_player_account":
-                return Ok(); // TODO
+                return TypedResults.Ok(); // TODO
 
             default:
-                return BadRequest();
+                return TypedResults.BadRequest();
         }
     }
 }

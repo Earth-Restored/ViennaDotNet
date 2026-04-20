@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using System.Text.RegularExpressions;
 
 namespace ViennaDotNet.ApiServer.Controllers.XboxLive;
@@ -8,12 +9,12 @@ namespace ViennaDotNet.ApiServer.Controllers.XboxLive;
 public partial class UserpresenceController : ViennaControllerBase
 {
     [HttpPost("{xuidParam}/devices/current/titles/current")]
-    public IActionResult GetTitles(string xuidParam)
+    public Results<Ok, UnauthorizedHttpResult, BadRequest> GetTitles(string xuidParam)
     {
         var authUnion = XboxLiveAuth();
         if (authUnion.IsB)
         {
-            return authUnion.B;
+            return authUnion.B.Result is UnauthorizedHttpResult unauthorized ? unauthorized : (BadRequest)authUnion.B.Result;
         }
 
         var token = authUnion.A;
@@ -24,17 +25,17 @@ public partial class UserpresenceController : ViennaControllerBase
 
         if (xuid is null)
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         if (xuid != token.UserId)
         {
-            return Unauthorized();
+            return TypedResults.Unauthorized();
         }
 
         // TODO
 
-        return Ok();
+        return TypedResults.Ok();
     }
 
     // TODO

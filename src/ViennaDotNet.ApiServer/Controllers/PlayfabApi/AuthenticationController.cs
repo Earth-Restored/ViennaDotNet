@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using ViennaDotNet.ApiServer.Models;
 using ViennaDotNet.ApiServer.Models.Playfab;
 using ViennaDotNet.ApiServer.Utils;
@@ -36,7 +37,7 @@ public class AuthenticationController : ViennaControllerBase
     }
 
     [HttpPost("GetEntityToken")]
-    public async Task<IActionResult> GetEntityTokenAsync()
+    public async Task<Results<ContentHttpResult, ForbidHttpResult, BadRequest>> GetEntityTokenAsync()
     {
         var cancellationToken = Request.HttpContext.RequestAborted;
 
@@ -44,14 +45,14 @@ public class AuthenticationController : ViennaControllerBase
 
         if (request is null)
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         var tokenUnion = PlayfabAuth();
 
         if (tokenUnion.IsB)
         {
-            return tokenUnion.B;
+            return tokenUnion.B.Result is ForbidHttpResult forbid ? forbid : (BadRequest)tokenUnion.B.Result;
         }
 
         var token = tokenUnion.A;
@@ -62,7 +63,7 @@ public class AuthenticationController : ViennaControllerBase
                 {
                     if (token.Type is not "title_player_account" || token.Id != request.Entity.Id)
                     {
-                        return Forbid();
+                        return TypedResults.Forbid();
                     }
 
                     var entityTokenValidity = ValidityDatePair.Create(config.PlayfabApi.EntityTokenValidityMinutes);
@@ -85,7 +86,7 @@ public class AuthenticationController : ViennaControllerBase
                 }
 
             default:
-                return BadRequest();
+                return TypedResults.BadRequest();
         }
     }
 }

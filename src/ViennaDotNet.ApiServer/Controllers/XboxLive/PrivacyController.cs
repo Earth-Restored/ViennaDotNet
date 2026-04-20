@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using System.Text.RegularExpressions;
 
 namespace ViennaDotNet.ApiServer.Controllers.XboxLive;
@@ -12,12 +13,12 @@ public partial class PrivacyController : ViennaControllerBase
     );
 
     [HttpGet("{xuidParam}/people/avoid")]
-    public IActionResult GetPeopleAvoid(string xuidParam)
+    public Results<ContentHttpResult, UnauthorizedHttpResult, BadRequest> GetPeopleAvoid(string xuidParam)
     {
         var authUnion = XboxLiveAuth();
         if (authUnion.IsB)
         {
-            return authUnion.B;
+            return authUnion.B.Result is UnauthorizedHttpResult unauthorized ? unauthorized : (BadRequest)authUnion.B.Result;
         }
 
         var token = authUnion.A;
@@ -28,12 +29,12 @@ public partial class PrivacyController : ViennaControllerBase
 
         if (xuid is null)
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         if (xuid != token.UserId)
         {
-            return Unauthorized();
+            return TypedResults.Unauthorized();
         }
 
         return JsonCamelCase(new PeopleResponse(
@@ -42,12 +43,12 @@ public partial class PrivacyController : ViennaControllerBase
     }
 
     [HttpGet("{xuidParam}/people/mute")]
-    public IActionResult GetPeopleMute(string xuidParam)
+    public Results<ContentHttpResult, UnauthorizedHttpResult, BadRequest> GetPeopleMute(string xuidParam)
     {
         var authUnion = XboxLiveAuth();
         if (authUnion.IsB)
         {
-            return authUnion.B;
+            return authUnion.B.Result is UnauthorizedHttpResult unauthorized ? unauthorized : (BadRequest)authUnion.B.Result;
         }
 
         var token = authUnion.A;
@@ -58,12 +59,12 @@ public partial class PrivacyController : ViennaControllerBase
 
         if (xuid is null)
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         if (xuid != token.UserId)
         {
-            return Unauthorized();
+            return TypedResults.Unauthorized();
         }
 
         return JsonPascalCase(new PeopleResponse(
