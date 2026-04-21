@@ -26,12 +26,12 @@ public static class Program
     internal static EarthDB DB;
     internal static SData staticData;
     internal static EventBusClient eventBus;
-    internal static ObjectStoreClient objectStore;
+    private static string objectStoreClientConnectionString;
     internal static TappablesManager tappablesManager;
     internal static BuildplateInstancesManager buildplateInstancesManager;
     internal static Importer importer;
-#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
     private sealed class Options
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
     {
@@ -178,9 +178,11 @@ public static class Program
 
         Log.Information("Connected to event bus");
         Log.Information("Connecting to object storage");
+        ObjectStoreClient objectStore;
         try
         {
             objectStore = await ObjectStoreClient.ConnectAsync(options.ObjectStoreConnectionString);
+            objectStoreClientConnectionString = options.ObjectStoreConnectionString;
         }
         catch (ObjectStoreClientException ex)
         {
@@ -295,4 +297,7 @@ public static class Program
                 webBuilder.UseStartup<Startup>();
                 webBuilder.UseUrls($"http://*:{httpPort}/");
             });
+
+    public static async Task<ObjectStoreClient> GetObjectStoreClient()
+        => await ObjectStoreClient.ConnectAsync(objectStoreClientConnectionString);
 }

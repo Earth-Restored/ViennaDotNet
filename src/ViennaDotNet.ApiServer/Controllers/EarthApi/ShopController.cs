@@ -25,7 +25,6 @@ public class ShopController : ViennaControllerBase
 {
     private static StaticData.StaticData staticData => Program.staticData;
     private static EarthDB earthDB => Program.DB;
-    private static ObjectStoreClient objectStoreClient => Program.objectStore;
     private static Importer importer => Program.importer;
 
     private sealed record StoreItemInfoRequest(string Id, string StoreItemType, uint StreamVersion);
@@ -71,6 +70,8 @@ public class ShopController : ViennaControllerBase
                             result.Add(new StoreItemInfo(itemId, storeItemType, StoreItemInfo.StoreItemStatus.NotFound, item.StreamVersion, null, null, null, null, null));
                             break;
                         }
+
+                        await using var objectStoreClient = await Program.GetObjectStoreClient();
 
                         byte[]? previewData = await objectStoreClient.GetAsync(buildplate.PreviewObjectId);
 

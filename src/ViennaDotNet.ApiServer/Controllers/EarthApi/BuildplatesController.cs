@@ -28,7 +28,6 @@ namespace ViennaDotNet.ApiServer.Controllers.EarthApi;
 public class BuildplatesController : ViennaControllerBase
 {
     private static EarthDB earthDB => Program.DB;
-    private static ObjectStoreClient objectStoreClient => Program.objectStore;
     private static BuildplateInstancesManager buildplateInstancesManager => Program.buildplateInstancesManager;
     private static Catalog catalog => Program.staticData.Catalog;
     private static TappablesManager tappablesManager => Program.tappablesManager;
@@ -55,7 +54,9 @@ public class BuildplatesController : ViennaControllerBase
             throw new ServerErrorException(ex);
         }
 
-        OwnedBuildplate[] ownedBuildplates = [.. buildplatesModel.GetBuildplates().Select(async buildplateEntry =>
+        await using var objectStoreClient = await Program.GetObjectStoreClient();
+
+        OwnedBuildplate[] ownedBuildplates = await Task.WhenAll(buildplatesModel.GetBuildplates().Select(async buildplateEntry =>
         {
             byte[]? previewData = await objectStoreClient.GetAsync(buildplateEntry.Buildplate.PreviewObjectId);
             if (previewData is null)
@@ -82,8 +83,7 @@ public class BuildplatesController : ViennaControllerBase
                 0,    // TODO
                 ""
             );
-        }).Where(ownedBuildplate => ownedBuildplate is not null)
-        .Select(task => task.Result)];
+        }).Where(ownedBuildplate => ownedBuildplate is not null));
 
         return EarthJson(ownedBuildplates);
     }
@@ -145,6 +145,8 @@ public class BuildplatesController : ViennaControllerBase
         {
             return TypedResults.NotFound();
         }
+
+        await using var objectStoreClient = await Program.GetObjectStoreClient();
 
         byte[]? serverData = await objectStoreClient.GetAsync(buildplate.ServerDataObjectId);
         if (serverData is null)
@@ -243,6 +245,8 @@ public class BuildplatesController : ViennaControllerBase
         {
             return TypedResults.NotFound();
         }
+        
+        await using var objectStoreClient = await Program.GetObjectStoreClient();
 
         byte[]? serverData = await objectStoreClient.GetAsync(sharedBuildplate.ServerDataObjectId);
         if (serverData is null)
