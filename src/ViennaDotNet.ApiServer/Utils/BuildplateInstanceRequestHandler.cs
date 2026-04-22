@@ -369,6 +369,9 @@ public sealed class BuildplateInstanceRequestHandler
                             oldPreviewObjectId = "";
                         }
 
+                        buildplates.RemoveBuildplate(buildplateId);
+                        buildplates.AddBuildplate(buildplateId, buildplate);
+
                         return new EarthDB.Query(true)
                             .Update("buildplates", playerId, buildplates)
                             .Extra("exists", true)
