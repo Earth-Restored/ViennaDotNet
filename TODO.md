@@ -1,7 +1,6 @@
 # TODO
 
 - Make it easier to update, deleting data/staticdata is kinda bad UX
-- Launcher buildplate preview - don't store preview in earthdb/object store, but in the launcher's db
 - Launcher buildplate preview - liquid rendering
 - Shop management
 - Player items management
