@@ -1,4 +1,5 @@
-﻿using System.Collections.Immutable;
+﻿using System.Collections.Frozen;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
@@ -486,9 +487,7 @@ public sealed class Catalog
 
     public sealed class NFCBoostsCatalogR
     {
-        private sealed record NFCBoostsCatalogFile(
-        // TODO
-        );
+        public readonly FrozenDictionary<string, MiniFig> MiniFigs;
 
         internal NFCBoostsCatalogR(string file)
         {
@@ -498,12 +497,68 @@ public sealed class Catalog
                 nfcBoostsCatalogFile = Json.Deserialize<NFCBoostsCatalogFile>(stream);
             }
 
-            // TODO
+            Debug.Assert(nfcBoostsCatalogFile is not null);
+
+            MiniFigs = nfcBoostsCatalogFile.MiniFigs
+                .Select(miniFig => new KeyValuePair<string ,MiniFig>(miniFig.Id, miniFig))
+                .ToFrozenDictionary();
         }
 
-        public sealed record BoostInfo
-        {
+        private sealed record NFCBoostsCatalogFile(
+            ImmutableArray<MiniFig> MiniFigs
+        );
 
+        public sealed record MiniFig(
+            string Id,
+            MiniFig.Metadata BoostMetadata,
+            string Name,
+            bool Deprecated,
+            string ToolsVersion,
+            MiniFig.RewardsR Rewards
+        )
+        {
+            public sealed record Metadata(
+                string Name,
+                string Attribute,
+                bool CanBeDeactivated,
+                bool CanBeRemoved,
+                string? ActiveDuration,
+                bool Additive,
+                int Level,
+                ImmutableArray<Effect> Effects,
+                string? Scenario,
+                string? Cooldown
+            );
+
+            public sealed record RewardsR(
+                int ExperiencePoints
+            );
+
+            public sealed record Effect(
+                string Type,
+                string? Duration,
+                float? Value,
+                Unit? Unit,
+                string Targets,
+                ImmutableArray<string> Items,
+                ImmutableArray<string> ItemScenarios, // e.g. "Encounter"
+                Activation Activation,
+                string? ModifiesType // e.g. "Health"
+            );
+
+            [JsonConverter(typeof(JsonStringEnumConverter))]
+            public enum Unit
+            {
+                Percentage,
+                Increment,
+            }
+
+            [JsonConverter(typeof(JsonStringEnumConverter))]
+            public enum Activation
+            {
+                Timed,
+                Triggered,
+            }
         }
     }
 }

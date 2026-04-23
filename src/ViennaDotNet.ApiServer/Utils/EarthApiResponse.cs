@@ -33,18 +33,18 @@ public class EarthApiResponse
         public UpdatesResponse(EarthDB.Results results)
         {
             Dictionary<string, int?> updates = results.GetUpdates();
-            set(updates, "profile", "characterProfile");
-            set(updates, "inventory", "inventory");
-            set(updates, "crafting", "crafting");
-            set(updates, "smelting", "smelting");
-            set(updates, "boosts", "boosts");
-            set(updates, "buildplates", "buildplates");
-            set(updates, "journal", "playerJournal");
-            set(updates, "challenges", "challenges");
-            set(updates, "tokens", "tokens");
+            Set(updates, "profile", "characterProfile");
+            Set(updates, "inventory", "inventory");
+            Set(updates, "crafting", "crafting");
+            Set(updates, "smelting", "smelting");
+            Set(updates, "boosts", "boosts");
+            Set(updates, "buildplates", "buildplates");
+            Set(updates, "journal", "playerJournal");
+            Set(updates, "challenges", "challenges");
+            Set(updates, "tokens", "tokens");
         }
 
-        private void set(Dictionary<string, int?> updates, string name, string @as)
+        private void Set(Dictionary<string, int?> updates, string name, string @as)
         {
             int? version = updates.GetOrDefault(name, null);
             if (version is not null)

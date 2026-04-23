@@ -3,7 +3,7 @@
 public sealed record Effect(
     string Type,
     string? Duration,
-    int? Value,
+    float? Value,
     string? Unit,
     string Targets,
     string[] Items,

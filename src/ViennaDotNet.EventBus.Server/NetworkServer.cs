@@ -149,8 +149,6 @@ public sealed class NetworkServer
 
         private bool HandleCommand(string command)
         {
-            Log.Debug("Receive: " + command);
-
             string[] parts = command.Split(' ', 2);
             if (parts.Length is not 2)
             {

@@ -1,4 +1,5 @@
-﻿using ViennaDotNet.ApiServer.Types.Common;
+﻿using System.Text.Json.Serialization;
+using ViennaDotNet.ApiServer.Types.Common;
 
 namespace ViennaDotNet.ApiServer.Types.Catalog;
 

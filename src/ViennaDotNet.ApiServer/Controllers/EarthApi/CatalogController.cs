@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using ViennaDotNet.ApiServer.Types.Catalog;
+using ViennaDotNet.ApiServer.Types.Common;
 using ViennaDotNet.ApiServer.Utils;
 using ViennaDotNet.StaticData;
 using CICIBIEType = ViennaDotNet.StaticData.Catalog.ItemsCatalogR.Item.BoostInfoR.Effect.TypeE;
@@ -399,7 +401,42 @@ public class CatalogController : ViennaControllerBase
 
     private static NFCBoost[] MakeNFCBoostsCatalogApiResponse(Catalog catalog)
     {
-        // TODO
-        return [];
+        var miniFigs = catalog.NfcBoostsCatalog.MiniFigs;
+        var nfcs = new NFCBoost[miniFigs.Count];
+
+        int i = 0;
+        foreach (var (_, miniFig) in miniFigs)
+        {
+            var metadata = miniFig.BoostMetadata;
+
+            var rewards = new ViennaDotNet.ApiServer.Utils.Rewards();
+            rewards.AddExperiencePoints(miniFig.Rewards.ExperiencePoints);
+
+            nfcs[i] = new NFCBoost(
+                miniFig.Id, 
+                miniFig.Name, 
+                "NfcMiniFig", 
+                rewards.ToApiResponse(), 
+                new BoostMetadata(
+                    metadata.Name,
+                    "MiniFig",
+                    metadata.Attribute,
+                    metadata.CanBeDeactivated,
+                    metadata.CanBeRemoved,
+                    metadata.ActiveDuration,
+                    metadata.Additive,
+                    metadata.Level,
+                    [.. metadata.Effects.Select(effect => new Effect(effect.Type, effect.Duration, effect.Value, effect.Unit?.ToString(), effect.Targets, ImmutableCollectionsMarshal.AsArray(effect.Items)!, ImmutableCollectionsMarshal.AsArray(effect.ItemScenarios)!, effect.Activation.ToString(), effect.ModifiesType))],
+                    metadata.Scenario,
+                    metadata.Cooldown
+                ),
+                miniFig.Deprecated, 
+                miniFig.ToolsVersion
+            );
+
+            i++;
+        }
+
+        return nfcs;
     }
 }
