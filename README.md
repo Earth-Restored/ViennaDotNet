@@ -73,7 +73,7 @@ git clone https://github.com/Earth-Restored/ViennaDotNet.git
 - Install the patcher on your device
 - Make sure you have a LEGAL copy of Minecraft Earth installed on that same device
 - Open the patcher, press on the 3 dots then go to Settings
-- Under Locator Server, set the following: `http://{ip}:8080`, replace `{ip}` with your PC's ip or domain name pointing to your PC
+- Under Locator Server, set the following: `http://{ip}:8080`, replace `{ip}` with your PC's ip or domain name pointing to your PC, **make sure you have http:// instead of https://**
 - Now go back and start patching
 - Once that's done, congratulations! You can now open the newly installed app and play Minecraft Earth!
 
@@ -110,3 +110,15 @@ git clone https://github.com/Earth-Restored/ViennaDotNet.git
     * Navigate to: `launcher/Data/`
     * **Delete** the `app.db` file.
     * *Note: This will remove all existing accounts and allow you to register a new primary admin account.*
+
+### When I open the app, I get "Cannot connect to the network! ..."
+**Possible causes**:
+- Server is not running
+- Incorrect PC IP address
+- Firewall blocks the server
+- PC and phone are not on the same network
+
+### The app closes when I join a buildplate
+**Possible causes**:
+- The server took too long to start - quickly open the app and join the same buildplate again
+- You do not have Java 17 installed - check that the `JAVA_HOME` environment variable is set to Java 17, or that `java --version` prints java 17
