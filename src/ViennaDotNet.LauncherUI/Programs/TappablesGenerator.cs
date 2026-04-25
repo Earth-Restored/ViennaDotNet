@@ -33,8 +33,8 @@ internal static class TappablesGenerator
         ])
         {
             WorkingDirectory = Path.GetFullPath(Program.ProgramsDir),
-            CreateNoWindow = true,
-            UseShellExecute = false,
+            CreateNoWindow = false,
+            UseShellExecute = true,
         });
     }
 }

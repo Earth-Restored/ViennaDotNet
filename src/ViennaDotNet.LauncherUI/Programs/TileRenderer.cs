@@ -38,8 +38,8 @@ internal static class TileRenderer
         ])
         {
             WorkingDirectory = Path.GetFullPath(Program.ProgramsDir),
-            CreateNoWindow = true,
-            UseShellExecute = false,
+            CreateNoWindow = false,
+            UseShellExecute = true,
         });
     }
 }
