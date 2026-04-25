@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace ViennaDotNet.Common.Buildplate.Connector.Model;
+namespace ViennaDotNet.Buildplate.Connector.Model;
 
 public sealed record InitialPlayerStateResponse(
     float Health,

@@ -33,7 +33,7 @@ internal static class EventBusServer
         {
             WorkingDirectory = Path.GetFullPath(Program.ProgramsDir),
             CreateNoWindow = false,
-            UseShellExecute = true
+            UseShellExecute = true,
         });
     }
 }

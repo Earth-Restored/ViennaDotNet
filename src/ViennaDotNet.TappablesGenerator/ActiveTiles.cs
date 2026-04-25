@@ -13,11 +13,16 @@ public sealed class ActiveTiles
     private readonly Dictionary<int, ActiveTile> _activeTiles = [];
     private readonly IActiveTileListener _activeTileListener;
 
-    public ActiveTiles(EventBusClient eventBusClient, IActiveTileListener activeTileListener)
+    private ActiveTiles(IActiveTileListener activeTileListener)
     {
         _activeTileListener = activeTileListener;
+    }
 
-        eventBusClient.AddRequestHandler("tappables", new RequestHandler.Handler(async request =>
+    public static async Task<ActiveTiles> CreateAsync(EventBusClient eventBusClient, IActiveTileListener activeTileListener)
+    {
+        var tiles = new ActiveTiles(activeTileListener);
+
+        await eventBusClient.AddRequestHandlerAsync("tappables", new RequestHandlerLister(async request =>
         {
             if (request.Type == "activeTile")
             {
@@ -33,14 +38,14 @@ public sealed class ActiveTiles
                 }
 
                 long currentTime = U.CurrentTimeMillis();
-                PruneActiveTiles(currentTime);
+                tiles.PruneActiveTiles(currentTime);
 
                 LinkedList<ActiveTile> newActiveTiles = [];
                 for (int tileX = activeTileNotification.X - ACTIVE_TILE_RADIUS; tileX < activeTileNotification.X + ACTIVE_TILE_RADIUS + 1; tileX++)
                 {
                     for (int tileY = activeTileNotification.Y - ACTIVE_TILE_RADIUS; tileY < activeTileNotification.Y + ACTIVE_TILE_RADIUS + 1; tileY++)
                     {
-                        ActiveTile activeTile = MarkTileActive(tileX, tileY, currentTime);
+                        ActiveTile activeTile = tiles.MarkTileActive(tileX, tileY, currentTime);
 
                         if (activeTile.LatestActiveTime == activeTile.FirstActiveTime) // indicating that the tile is newly-active
                         {
@@ -58,12 +63,15 @@ public sealed class ActiveTiles
             }
             else
                 return null;
-        }, () =>
+        },
+        async () =>
         {
             Log.Error("Event bus subscriber error");
             Log.CloseAndFlush();
             Environment.Exit(1);
         }));
+
+        return tiles;
     }
 
     public IEnumerable<ActiveTile> GetActiveTiles(long currentTime)

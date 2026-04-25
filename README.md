@@ -24,33 +24,80 @@ In addition to the original Vienna feature set, this port adds:
 
 ### Requirements
 
+- Hardware/OS: A PC running Windows or Linux.
+   - Note: macOS is currently untested. High-end Android devices using Termux may work but are not officially supported.
 - [.NET 10.0 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/10.0)
-- Java 17 or higher (JRE)
+- Java 17 (JRE or JDK), newer versions may not work
+- On linux, [powershell](https://learn.microsoft.com/en-us/powershell/scripting/install/linux-overview) to run the build script
 
 ### Instructions
+
+- Before you start, you'll need to know the IP address of your PC
+- Windows:
+   - Open Terminal or Command Prompt
+   - Type `ipconfig` and press enter
+   - Look for either `Wireless LAN adapter Wi-Fi` if you use WiFi or `Ethernet adapter Ethernet` if you use ethernet
+   - Under it, there should be `IPv4 Address`
+- Linux
+   - Use a command such as `ip address`, `hostname -I` or `ifconfig -a`
+- The address will usually (but not always) be in the format `192.168.XXX.XXX`
+
+#### Server
 
 - Clone the repository by running the following command on your terminal:
 ```
 git clone https://github.com/Earth-Restored/ViennaDotNet.git
 ```
-- CD to the ViennaDotNet directory, then run "publish.ps1";
-- CD to build/{configuration}/{profile};
-- Run "run_launcher.ps1";
-- Now on the same device open http://localhost:5000, create an account and login;
-- Under "Server Options", set "Network/IPv4 Address" to your PC's IP address and either disable "Map/Enable Tile Rendering" or set the "Map/MapTiler API Key" (it can be found [here](https://cloud.maptiler.com/account/keys/) when logged in);
-- Under "Server Status", click "Start";
-- Accept the Minecraft Server's EULA when prompted in the Launcher's logs;
-- Download and move the "resourcepack" file as described in the Launcher's logs;
-- Download a tool to patch Minecraft Earth's apk, such as [Project Earth's patcher;](https://archive.org/download/dev.projectearth.patcher-1.0/dev.projectearth.patcher-1.0.apk)
-- Install the app on your device;
-- Make sure you have a LEGAL copy of Minecraft Earth installed on that same device;
-- Open the patcher, press on the 3 dots then go to Settings;
-- Under Locator Server, set the following:
-```
-http://YOURPCIPADDRESS:8080
-```
-- Now go back and start patching;
+- CD to the ViennaDotNet directory, then run `publish.ps1 -profiles framework-dependent-{os}-{arch}`, replace `{os}` with you os (win, linux, osx) and `{arch}` with the cpu architecture (x64, x86, arm64, arm32), e.g. `framework-dependent-win-x64`
+- Run "run_launcher.ps1"
+- Now on the same device open http://localhost:5000, create an account, make sure you confirm your email on the page that opens, if you fail to do this, you need to [Delete account db (Option B)](#i-cannot-see-the-start-server-button-when-logged-in), and login
+- Under "Server Options", set "Network/IPv4 Address" to your PC's IP address and either disable "Map/Enable Tile Rendering" or set the "Map/MapTiler API Key" (it can be found [here](https://cloud.maptiler.com/account/keys/) when logged in)
+- Under "Server Status", click "Start"
+- Accept the Minecraft Server's EULA when prompted in the Launcher's logs
+- Download and move the "resourcepack" file as described in the Launcher's logs
+
+#### Client
+
+- For iOS you may use [this patcher](https://github.com/catdogmat/ProjectEarthiOSPatcher), but it is not officially supported
+
+| Feature | Project Earth patcher | MCE Patcher |
+| ------- | --------------------- | ----------- |
+| Target Device | Android | Android |
+| Patcher Runs On | Android | Windows, Linux, macOS |
+| Login | Microsoft account only | Microsoft or custom |
+| Shop | Requires that you have played the game before it shut down using the microsoft account | Always works if you use custom login |
+
+##### Project Earth patcher
+
+- Download [the patcher](https://archive.org/download/dev.projectearth.patcher-1.0/dev.projectearth.patcher-1.0.apk)
+- Install the patcher on your device
+- Make sure you have a LEGAL copy of Minecraft Earth installed on that same device
+- Open the patcher, press on the 3 dots then go to Settings
+- Under Locator Server, set the following: `http://{ip}:8080`, replace `{ip}` with your PC's ip or hostnamr, **make sure you have http:// instead of https://**
+- Now go back and start patching
 - Once that's done, congratulations! You can now open the newly installed app and play Minecraft Earth!
+
+##### MCE patcher
+
+- Download [the patcher](https://github.com/Earth-Restored/Minecraft_Earth_Patcher/releases) (UI is highly recommended) or build it from source
+- Acquire a Minecraft Earth apk, such as by dumping in from you phone.
+- Run the patcher.
+- Select the downloaded APK file.
+- Change locator Hostname/IP to `http://{ip}:8080`, replace `{ip}` with your PC's ip or hostname
+- If you want to use non microsoft login, change the options like so (use the same ip/hostname as the locator):
+![Correct options for replacement server](https://github.com/Earth-Restored/ViennaDotNet/blob/main/images/patcher-login-server-options.png?raw=true)
+- Click patch
+- Move the patched apk to your phone and install it
+- Once that's done, congratulations! You can now open the newly installed app and play Minecraft Earth!
+
+#### Launcher Buildplate Preview
+1. To enable the buildplate preview, you must first obtain the Minecraft 1.20.4 resource pack.
+2. The simplest method is to extract the files directly from the game's JAR:
+   - Locate and open '1.20.4.jar' in your Minecraft installation folder using an archive viewer (like 7-Zip).
+   - Navigate to the 'assets/minecraft/' directory.
+3. Copy all folders from 'assets/minecraft/' and paste them into:
+   - 'staticdata/resourcepacks/java/minecraft/'
+4. Finally, toggle 'Enable Buildplate Preview in Launcher' within ServerOptions/Data Handling.
 
 ## Common Errors & Troubleshooting
 
@@ -63,3 +110,15 @@ http://YOURPCIPADDRESS:8080
     * Navigate to: `launcher/Data/`
     * **Delete** the `app.db` file.
     * *Note: This will remove all existing accounts and allow you to register a new primary admin account.*
+
+### When I open the app, I get "Cannot connect to the network! ..."
+**Possible causes**:
+- Server is not running
+- Incorrect PC IP address
+- Firewall blocks the server
+- PC and phone are not on the same network
+
+### The app closes when I join a buildplate
+**Possible causes**:
+- The server took too long to start - quickly open the app and join the same buildplate again
+- You do not have Java 17 installed - check that the `JAVA_HOME` environment variable is set to Java 17, or that `java --version` prints java 17

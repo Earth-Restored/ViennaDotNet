@@ -3,16 +3,13 @@ using ViennaDotNet.Common.Utils;
 
 namespace ViennaDotNet.EventBus.Client;
 
-public sealed partial class Publisher
+public sealed class Publisher
 {
     private readonly EventBusClient _client;
     private readonly int _channelId;
-
-    private readonly object _lock = new();
-
+    private readonly SemaphoreSlim _lock = new(1, 1);
+    
     private bool _closed = false;
-
-    // TODO: probably should be a queue
     private readonly LinkedList<string> _queuedEvents = new();
     private readonly LinkedList<TaskCompletionSource<bool>> _queuedEventResults = new();
     private TaskCompletionSource<bool>? _currentPendingEventResult = null;
@@ -23,132 +20,172 @@ public sealed partial class Publisher
         _channelId = channelId;
     }
 
-    public void Close()
+    public async Task CloseAsync()
     {
         _client.RemovePublisher(_channelId);
-        _client.SendMessage(_channelId, "CLOSE");
-        Closed();
+        await _client.SendMessageAsync(_channelId, "CLOSE");
+        await ClosedAsync();
     }
 
-    public Task<bool> Publish(string queueName, string type, string data)
+    public async Task<bool> PublishAsync(string queueName, string type, string data)
     {
-        if (!ValidateQueueName(queueName))
-            throw new ArgumentException("Queue name contains invalid characters", nameof(queueName));
+        if (!ValidateQueueName(queueName)) throw new ArgumentException("Queue name contains invalid characters");
+        if (!ValidateType(type)) throw new ArgumentException("Type contains invalid characters");
+        if (!ValidateData(data)) throw new ArgumentException("Data contains invalid characters");
 
-        if (!ValidateType(type))
-            throw new ArgumentException("Type contains invalid characters", nameof(type));
+        string eventMessage = $"SEND {queueName}:{type}:{data}";
+        
+        // Use RunContinuationsAsynchronously to prevent deadlocks when the result is set
+        var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        if (!ValidateData(data))
-            throw new ArgumentException("Data contains invalid characters", nameof(data));
-
-        string eventMessage = "SEND " + queueName + ":" + type + ":" + data;
-
-        TaskCompletionSource<bool> completableFuture = new TaskCompletionSource<bool>();
-
-        lock (_lock)
+        await _lock.WaitAsync();
+        try
         {
             if (_closed)
-                completableFuture.SetResult(false);
+            {
+                tcs.SetResult(false);
+            }
             else
             {
                 _queuedEvents.AddLast(eventMessage);
-                _queuedEventResults.AddLast(completableFuture);
-                if (_currentPendingEventResult is null)
+                _queuedEventResults.AddLast(tcs);
+
+                if (_currentPendingEventResult == null)
                 {
-                    SendNextEvent();
+                    await SendNextEventAsync();
                 }
             }
         }
+        finally
+        {
+            _lock.Release();
+        }
 
-        return completableFuture.Task;
+        return await tcs.Task;
     }
 
-    public void Flush()
+    public async Task FlushAsync()
     {
-        Monitor.Enter(_lock);
-        var task = _queuedEventResults.Count == 0 ? _currentPendingEventResult : _queuedEventResults.Last!.Value;
-        Monitor.Exit(_lock);
+        Task<bool>? taskToAwait = null;
 
-        task?.Task.Wait();
+        await _lock.WaitAsync();
+        try
+        {
+            taskToAwait = _queuedEventResults.Count == 0 
+                ? _currentPendingEventResult?.Task 
+                : _queuedEventResults.Last.Value.Task;
+        }
+        finally
+        {
+            _lock.Release();
+        }
+
+        if (taskToAwait != null)
+        {
+            await taskToAwait;
+        }
     }
 
-    internal Task<bool> HandleMessage(string message)
+    internal async Task<bool> HandleMessageAsync(string message)
     {
         if (message == "ACK")
         {
-            lock (_lock)
+            await _lock.WaitAsync();
+            try
             {
-                if (_currentPendingEventResult is not null)
+                if (_currentPendingEventResult != null)
                 {
                     _currentPendingEventResult.SetResult(true);
                     _currentPendingEventResult = null;
-                    if (!_queuedEvents.IsEmpty())
-                        SendNextEvent();
 
-                    return Task.FromResult(true);
+                    if (_queuedEvents.Count > 0)
+                    {
+                        await SendNextEventAsync();
+                    }
+                    return true;
                 }
-                else
-                    return Task.FromResult(false);
+                return false;
+            }
+            finally
+            {
+                _lock.Release();
             }
         }
-        else if (message == "ERR")
+        
+        if (message == "ERR")
         {
-            Close();
-            return Task.FromResult(true);
+            await CloseAsync();
+            return true;
         }
-        else
-            return Task.FromResult(false);
+        
+        return false;
     }
 
-    private void SendNextEvent()
+    private async Task SendNextEventAsync()
     {
-        string message = _queuedEvents.First!.Value;
+        string message = _queuedEvents.First.Value;
         _queuedEvents.RemoveFirst();
-        _client.SendMessage(_channelId, message);
-        _currentPendingEventResult = _queuedEventResults.First!.Value;
+
+        await _client.SendMessageAsync(_channelId, message);
+
+        _currentPendingEventResult = _queuedEventResults.First.Value;
         _queuedEventResults.RemoveFirst();
     }
 
-    internal void Closed()
+    internal async Task ClosedAsync()
     {
-        lock (_lock)
+        await _lock.WaitAsync();
+        try
         {
             _closed = true;
 
-            if (_currentPendingEventResult is not null)
+            if (_currentPendingEventResult != null)
             {
-                _currentPendingEventResult.SetResult(false);
+                _currentPendingEventResult.TrySetResult(false);
                 _currentPendingEventResult = null;
             }
 
-            foreach (var task in _queuedEventResults)
+            foreach (var tcs in _queuedEventResults)
             {
-                task.SetResult(false);
+                tcs.TrySetResult(false);
             }
 
             _queuedEventResults.Clear();
             _queuedEvents.Clear();
         }
+        finally
+        {
+            _lock.Release();
+        }
     }
 
+    // Note: Emulates Java's String.matches() which applies the regex to the ENTIRE string implicitly
     private static bool ValidateQueueName(string queueName)
-        => !string.IsNullOrWhiteSpace(queueName) && queueName.Length != 0 && !GetRegex1().IsMatch(queueName) && !GetRegex2().IsMatch(queueName);
-
-    private static bool ValidateType(string type)
-        => !string.IsNullOrWhiteSpace(type) && type.Length != 0 && !GetRegex1().IsMatch(type) && !GetRegex2().IsMatch(type);
-
-    private static bool ValidateData(string str)
     {
-        for (int i = 0; i < str.Length; i++)
-            if (str[i] < 32 || str[i] >= 127)
-                return false;
-
+        if (queueName.Any(c => c < 32 || c >= 127) || 
+            string.IsNullOrEmpty(queueName) || 
+            Regex.IsMatch(queueName, "^[^A-Za-z0-9_\\-]$") || 
+            Regex.IsMatch(queueName, "^^[^A-Za-z0-9]$"))
+        {
+            return false;
+        }
         return true;
     }
 
-    [GeneratedRegex("[^A-Za-z0-9_\\-]")]
-    private static partial Regex GetRegex1();
+    private static bool ValidateType(string type)
+    {
+        if (type.Any(c => c < 32 || c >= 127) || 
+            string.IsNullOrEmpty(type) || 
+            Regex.IsMatch(type, "^[^A-Za-z0-9_\\-]$") || 
+            Regex.IsMatch(type, "^^[^A-Za-z0-9]$"))
+        {
+            return false;
+        }
+        return true;
+    }
 
-    [GeneratedRegex("^[^A-Za-z0-9]")]
-    private static partial Regex GetRegex2();
+    private static bool ValidateData(string data)
+    {
+        return !data.Any(c => c < 32 || c >= 127);
+    }
 }

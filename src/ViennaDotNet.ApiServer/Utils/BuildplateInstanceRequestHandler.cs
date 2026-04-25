@@ -3,7 +3,6 @@ using System.Diagnostics;
 using System.Text;
 using ViennaDotNet.Buildplate.Connector.Model;
 using ViennaDotNet.Common;
-using ViennaDotNet.Common.Buildplate.Connector.Model;
 using ViennaDotNet.Common.Utils;
 using ViennaDotNet.DB;
 using ViennaDotNet.DB.Models.Common;
@@ -20,169 +19,175 @@ namespace ViennaDotNet.ApiServer.Utils;
 public sealed class BuildplateInstanceRequestHandler
 {
     public static void Start(EarthDB earthDB, EventBusClient eventBusClient, ObjectStoreClient objectStoreClient, Catalog catalog)
-        => _ = new BuildplateInstanceRequestHandler(earthDB, eventBusClient, objectStoreClient, catalog);
+        => CreateAsync(earthDB, eventBusClient, objectStoreClient, catalog).Forget();
 
     private readonly EarthDB _earthDB;
     private readonly ObjectStoreClient _objectStoreClient;
     private readonly Catalog _catalog;
     private static BuildplateInstancesManager BuildplateInstancesManager => Program.buildplateInstancesManager;
 
-    public BuildplateInstanceRequestHandler(EarthDB earthDB, EventBusClient eventBusClient, ObjectStoreClient objectStoreClient, Catalog catalog)
+    private BuildplateInstanceRequestHandler(EarthDB earthDB, ObjectStoreClient objectStoreClient, Catalog catalog)
     {
         _earthDB = earthDB;
         _objectStoreClient = objectStoreClient;
         _catalog = catalog;
+    }
 
-        RequestHandler requestHandler = eventBusClient.AddRequestHandler("buildplates", new RequestHandler.Handler(
-            async request =>
-            {
-                try
-                {
-                    switch (request.Type)
-                    {
-                        case "load":
-                            {
-                                BuildplateLoadRequest? buildplateLoadRequest = ReadRawRequest<BuildplateLoadRequest>(request.Data);
-                                if (buildplateLoadRequest is null)
-                                {
-                                    return null;
-                                }
+    public static async Task<BuildplateInstanceRequestHandler> CreateAsync(EarthDB earthDB, EventBusClient eventBusClient, ObjectStoreClient objectStoreClient, Catalog catalog)
+    {
+        var buildplateInstanceRequestHandler = new BuildplateInstanceRequestHandler(earthDB, objectStoreClient, catalog);
 
-                                BuildplateLoadResponse? buildplateLoadResponse = await HandleLoad(buildplateLoadRequest.PlayerId, buildplateLoadRequest.BuildplateId);
-                                return buildplateLoadResponse is not null ? Json.Serialize(buildplateLoadResponse) : null;
-                            }
-                        case "loadShared":
-                            {
-                                SharedBuildplateLoadRequest? sharedBuildplateLoadRequest = ReadRawRequest<SharedBuildplateLoadRequest>(request.Data);
-                                if (sharedBuildplateLoadRequest is null)
-                                {
-                                    return null;
-                                }
+        RequestHandler requestHandler = await eventBusClient.AddRequestHandlerAsync("buildplates", new RequestHandlerLister(
+           async request =>
+           {
+               try
+               {
+                   switch (request.Type)
+                   {
+                       case "load":
+                           {
+                               BuildplateLoadRequest? buildplateLoadRequest = ReadRawRequest<BuildplateLoadRequest>(request.Data);
+                               if (buildplateLoadRequest is null)
+                               {
+                                   return null;
+                               }
 
-                                BuildplateLoadResponse? buildplateLoadResponse = await HandleLoadShared(sharedBuildplateLoadRequest.SharedBuildplateId);
-                                return buildplateLoadResponse is not null ? Json.Serialize(buildplateLoadResponse) : null;
-                            }
-                        case "loadEncounter":
+                               BuildplateLoadResponse? buildplateLoadResponse = await buildplateInstanceRequestHandler.HandleLoad(buildplateLoadRequest.PlayerId, buildplateLoadRequest.BuildplateId);
+                               return buildplateLoadResponse is not null ? Json.Serialize(buildplateLoadResponse) : null;
+                           }
+                       case "loadShared":
+                           {
+                               SharedBuildplateLoadRequest? sharedBuildplateLoadRequest = ReadRawRequest<SharedBuildplateLoadRequest>(request.Data);
+                               if (sharedBuildplateLoadRequest is null)
+                               {
+                                   return null;
+                               }
 
-                            {
-                                EncounterBuildplateLoadRequest? encounterBuildplateLoadRequest = ReadRawRequest<EncounterBuildplateLoadRequest>(request.Data);
-                                if (encounterBuildplateLoadRequest is null)
-                                {
-                                    return null;
-                                }
+                               BuildplateLoadResponse? buildplateLoadResponse = await buildplateInstanceRequestHandler.HandleLoadShared(sharedBuildplateLoadRequest.SharedBuildplateId);
+                               return buildplateLoadResponse is not null ? Json.Serialize(buildplateLoadResponse) : null;
+                           }
+                       case "loadEncounter":
 
-                                BuildplateLoadResponse? buildplateLoadResponse = await HandleLoadEncounter(encounterBuildplateLoadRequest.EncounterBuildplateId);
-                                return buildplateLoadResponse is not null ? Json.Serialize(buildplateLoadResponse) : null;
-                            }
-                        case "saved":
-                            {
-                                RequestWithInstanceId<WorldSavedMessage>? requestWithInstanceId = ReadRequest<WorldSavedMessage>(request.Data);
-                                return requestWithInstanceId is null
-                                    ? null
-                                    : await HandleSaved(requestWithInstanceId.InstanceId, requestWithInstanceId.Request.DataBase64, request.Timestamp) ? "" : null;
-                            }
-                        case "playerConnected":
-                            {
-                                Log.Debug("RequestHandler playerConnected");
-                                RequestWithInstanceId<PlayerConnectedRequest>? requestWithInstanceId = ReadRequest<PlayerConnectedRequest>(request.Data);
-                                if (requestWithInstanceId is null)
-                                    return null;
+                           {
+                               EncounterBuildplateLoadRequest? encounterBuildplateLoadRequest = ReadRawRequest<EncounterBuildplateLoadRequest>(request.Data);
+                               if (encounterBuildplateLoadRequest is null)
+                               {
+                                   return null;
+                               }
 
-                                PlayerConnectedResponse? playerConnectedResponse = await HandlePlayerConnected(requestWithInstanceId.InstanceId, requestWithInstanceId.Request);
-                                return playerConnectedResponse is not null ? Json.Serialize(playerConnectedResponse) : null;
-                            }
-                        case "playerDisconnected":
-                            {
-                                RequestWithInstanceId<PlayerDisconnectedRequest>? requestWithInstanceId = ReadRequest<PlayerDisconnectedRequest>(request.Data);
-                                if (requestWithInstanceId is null)
-                                    return null;
+                               BuildplateLoadResponse? buildplateLoadResponse = await buildplateInstanceRequestHandler.HandleLoadEncounter(encounterBuildplateLoadRequest.EncounterBuildplateId);
+                               return buildplateLoadResponse is not null ? Json.Serialize(buildplateLoadResponse) : null;
+                           }
+                       case "saved":
+                           {
+                               RequestWithInstanceId<WorldSavedMessage>? requestWithInstanceId = ReadRequest<WorldSavedMessage>(request.Data);
+                               return requestWithInstanceId is null
+                                   ? null
+                                   : await buildplateInstanceRequestHandler.HandleSaved(requestWithInstanceId.InstanceId, requestWithInstanceId.Request.DataBase64, request.Timestamp) ? "" : null;
+                           }
+                       case "playerConnected":
+                           {
+                               Log.Debug("RequestHandler playerConnected");
+                               RequestWithInstanceId<PlayerConnectedRequest>? requestWithInstanceId = ReadRequest<PlayerConnectedRequest>(request.Data);
+                               if (requestWithInstanceId is null)
+                                   return null;
 
-                                PlayerDisconnectedResponse? playerDisconnectedResponse = await HandlePlayerDisconnected(requestWithInstanceId.InstanceId, requestWithInstanceId.Request, request.Timestamp);
-                                return playerDisconnectedResponse is not null ? Json.Serialize(playerDisconnectedResponse) : null;
-                            }
-                        case "playerDead":
-                            {
-                                RequestWithInstanceId<string>? requestWithInstanceId = ReadRequest<string>(request.Data);
-                                if (requestWithInstanceId is null)
-                                {
-                                    return null;
-                                }
+                               PlayerConnectedResponse? playerConnectedResponse = await buildplateInstanceRequestHandler.HandlePlayerConnected(requestWithInstanceId.InstanceId, requestWithInstanceId.Request);
+                               return playerConnectedResponse is not null ? Json.Serialize(playerConnectedResponse) : null;
+                           }
+                       case "playerDisconnected":
+                           {
+                               RequestWithInstanceId<PlayerDisconnectedRequest>? requestWithInstanceId = ReadRequest<PlayerDisconnectedRequest>(request.Data);
+                               if (requestWithInstanceId is null)
+                                   return null;
 
-                                bool? respawn = HandlePlayerDead(requestWithInstanceId.InstanceId, requestWithInstanceId.Request, request.Timestamp);
-                                return respawn is not null ? Json.Serialize(respawn.Value) : null;
-                            }
-                        case "getInitialPlayerState":
-                            {
-                                RequestWithInstanceId<string>? requestWithInstanceId = ReadRequest<string>(request.Data);
-                                if (requestWithInstanceId is null)
-                                {
-                                    return null;
-                                }
+                               PlayerDisconnectedResponse? playerDisconnectedResponse = await buildplateInstanceRequestHandler.HandlePlayerDisconnected(requestWithInstanceId.InstanceId, requestWithInstanceId.Request, request.Timestamp);
+                               return playerDisconnectedResponse is not null ? Json.Serialize(playerDisconnectedResponse) : null;
+                           }
+                       case "playerDead":
+                           {
+                               RequestWithInstanceId<string>? requestWithInstanceId = ReadRequest<string>(request.Data);
+                               if (requestWithInstanceId is null)
+                               {
+                                   return null;
+                               }
 
-                                InitialPlayerStateResponse? initialPlayerStateResponse = await HandleGetInitialPlayerState(requestWithInstanceId.InstanceId, requestWithInstanceId.Request, request.Timestamp);
-                                return initialPlayerStateResponse is not null ? Json.Serialize(initialPlayerStateResponse) : null;
-                            }
-                        case "getInventory":
-                            {
-                                RequestWithInstanceId<string>? requestWithInstanceId = ReadRequest<string>(request.Data);
-                                if (requestWithInstanceId is null)
-                                {
-                                    return null;
-                                }
+                               bool? respawn = HandlePlayerDead(requestWithInstanceId.InstanceId, requestWithInstanceId.Request, request.Timestamp);
+                               return respawn is not null ? Json.Serialize(respawn.Value) : null;
+                           }
+                       case "getInitialPlayerState":
+                           {
+                               RequestWithInstanceId<string>? requestWithInstanceId = ReadRequest<string>(request.Data);
+                               if (requestWithInstanceId is null)
+                               {
+                                   return null;
+                               }
 
-                                InventoryResponse? inventoryResponse = await HandleGetInventory(requestWithInstanceId.InstanceId, requestWithInstanceId.Request);
-                                return inventoryResponse is not null ? Json.Serialize(inventoryResponse) : null;
-                            }
-                        case "inventoryAdd":
-                            {
-                                RequestWithInstanceId<InventoryAddItemMessage>? requestWithInstanceId = ReadRequest<InventoryAddItemMessage>(request.Data);
-                                return requestWithInstanceId is null
-                                    ? null
-                                    : await HandleInventoryAdd(requestWithInstanceId.InstanceId, requestWithInstanceId.Request, request.Timestamp) ? "" : null;
-                            }
-                        case "inventoryRemove":
-                            {
-                                RequestWithInstanceId<InventoryRemoveItemRequest>? requestWithBuildplateId = ReadRequest<InventoryRemoveItemRequest>(request.Data);
-                                if (requestWithBuildplateId is null)
-                                    return null;
+                               InitialPlayerStateResponse? initialPlayerStateResponse = await buildplateInstanceRequestHandler.HandleGetInitialPlayerState(requestWithInstanceId.InstanceId, requestWithInstanceId.Request, request.Timestamp);
+                               return initialPlayerStateResponse is not null ? Json.Serialize(initialPlayerStateResponse) : null;
+                           }
+                       case "getInventory":
+                           {
+                               RequestWithInstanceId<string>? requestWithInstanceId = ReadRequest<string>(request.Data);
+                               if (requestWithInstanceId is null)
+                               {
+                                   return null;
+                               }
 
-                                object response = await HandleInventoryRemove(requestWithBuildplateId.InstanceId, requestWithBuildplateId.Request);
-                                return response is not null ? Json.Serialize(response) : null;
-                            }
-                        case "inventoryUpdateWear":
-                            {
-                                RequestWithInstanceId<InventoryUpdateItemWearMessage>? requestWithInstanceId = ReadRequest<InventoryUpdateItemWearMessage>(request.Data);
+                               InventoryResponse? inventoryResponse = await buildplateInstanceRequestHandler.HandleGetInventory(requestWithInstanceId.InstanceId, requestWithInstanceId.Request);
+                               return inventoryResponse is not null ? Json.Serialize(inventoryResponse) : null;
+                           }
+                       case "inventoryAdd":
+                           {
+                               RequestWithInstanceId<InventoryAddItemMessage>? requestWithInstanceId = ReadRequest<InventoryAddItemMessage>(request.Data);
+                               return requestWithInstanceId is null
+                                   ? null
+                                   : await buildplateInstanceRequestHandler.HandleInventoryAdd(requestWithInstanceId.InstanceId, requestWithInstanceId.Request, request.Timestamp) ? "" : null;
+                           }
+                       case "inventoryRemove":
+                           {
+                               RequestWithInstanceId<InventoryRemoveItemRequest>? requestWithBuildplateId = ReadRequest<InventoryRemoveItemRequest>(request.Data);
+                               if (requestWithBuildplateId is null)
+                                   return null;
 
-                                return requestWithInstanceId is null
-                                    ? null
-                                    : await HandleInventoryUpdateWear(requestWithInstanceId.InstanceId, requestWithInstanceId.Request) ? "" : null;
-                            }
-                        case "inventorySetHotbar":
-                            {
-                                RequestWithInstanceId<InventorySetHotbarMessage>? requestWithInstanceId = ReadRequest<InventorySetHotbarMessage>(request.Data);
+                               object response = await buildplateInstanceRequestHandler.HandleInventoryRemove(requestWithBuildplateId.InstanceId, requestWithBuildplateId.Request);
+                               return response is not null ? Json.Serialize(response) : null;
+                           }
+                       case "inventoryUpdateWear":
+                           {
+                               RequestWithInstanceId<InventoryUpdateItemWearMessage>? requestWithInstanceId = ReadRequest<InventoryUpdateItemWearMessage>(request.Data);
 
-                                return requestWithInstanceId is null
-                                    ? null
-                                    : await HandleInventorySetHotbar(requestWithInstanceId.InstanceId, requestWithInstanceId.Request) ? "" : null;
-                            }
-                        default:
-                            Log.Warning($"Unknown BuildplateInstanceRequestHandler request type '{request.Type}'");
-                            return null;
-                    }
-                }
-                catch (EarthDB.DatabaseException ex)
-                {
-                    Log.Error($"Database error while handling request: {ex}");
-                    return null;
-                }
-            },
-            () =>
-            {
-                Log.Fatal("Buildplates event bus request handler error");
-                Log.CloseAndFlush();
-                Environment.Exit(1);
-            }
-        ));
+                               return requestWithInstanceId is null
+                                   ? null
+                                   : await buildplateInstanceRequestHandler.HandleInventoryUpdateWear(requestWithInstanceId.InstanceId, requestWithInstanceId.Request) ? "" : null;
+                           }
+                       case "inventorySetHotbar":
+                           {
+                               RequestWithInstanceId<InventorySetHotbarMessage>? requestWithInstanceId = ReadRequest<InventorySetHotbarMessage>(request.Data);
+
+                               return requestWithInstanceId is null
+                                   ? null
+                                   : await buildplateInstanceRequestHandler.HandleInventorySetHotbar(requestWithInstanceId.InstanceId, requestWithInstanceId.Request) ? "" : null;
+                           }
+                       default:
+                           return null;
+                   }
+               }
+               catch (EarthDB.DatabaseException ex)
+               {
+                   Log.Error($"Database error while handling request: {ex}");
+                   return null;
+               }
+           },
+           async () =>
+           {
+               Log.Fatal("Buildplates event bus request handler error");
+               Log.CloseAndFlush();
+               Environment.Exit(1);
+           }
+       ));
+
+        return buildplateInstanceRequestHandler;
     }
 
     private sealed record BuildplateLoadRequest(
@@ -215,7 +220,7 @@ public sealed class BuildplateInstanceRequestHandler
             return null;
         }
 
-        byte[]? serverData = (await _objectStoreClient.Get(buildplate.ServerDataObjectId).Task) as byte[];
+        byte[]? serverData = await _objectStoreClient.GetAsync(buildplate.ServerDataObjectId);
         if (serverData is null)
         {
             Log.Error($"Data object {buildplate.ServerDataObjectId} for buildplate {buildplateId} could not be loaded from object store");
@@ -240,7 +245,7 @@ public sealed class BuildplateInstanceRequestHandler
             return null;
         }
 
-        byte[]? serverData = (await _objectStoreClient.Get(sharedBuildplate.ServerDataObjectId).Task) as byte[];
+        byte[]? serverData = await _objectStoreClient.GetAsync(sharedBuildplate.ServerDataObjectId);
         if (serverData is null)
         {
             Log.Error($"Data object {sharedBuildplate.ServerDataObjectId} for shared buildplate {sharedBuildplateId} could not be loaded from object store");
@@ -265,7 +270,7 @@ public sealed class BuildplateInstanceRequestHandler
             return null;
         }
 
-        byte[]? serverData = (await _objectStoreClient.Get(encounterBuildplate.ServerDataObjectId).Task) as byte[];
+        byte[]? serverData = await _objectStoreClient.GetAsync(encounterBuildplate.ServerDataObjectId);
         if (serverData is null)
         {
             Log.Error($"Data object {encounterBuildplate.ServerDataObjectId} for encounter buildplate {encounterBuildplateId} could not be loaded from object store");
@@ -312,11 +317,13 @@ public sealed class BuildplateInstanceRequestHandler
         if (buildplateUnsafeForPreviewGenerator is null)
             return false;
 
-        string? preview = BuildplateInstancesManager.GetBuildplatePreview(serverData, buildplateUnsafeForPreviewGenerator.Night);
+        string? preview = await BuildplateInstancesManager.GetBuildplatePreviewAsync(serverData, buildplateUnsafeForPreviewGenerator.Night);
         if (preview is null)
+        {
             Log.Warning("Could not generate preview for buildplate");
+        }
 
-        string? serverDataObjectId = (await _objectStoreClient.Store(serverData).Task) as string;
+        string? serverDataObjectId = await _objectStoreClient.StoreAsync(serverData);
         if (serverDataObjectId is null)
         {
             Log.Error($"Could not store new data object for buildplate {buildplateId} in object store");
@@ -326,7 +333,7 @@ public sealed class BuildplateInstanceRequestHandler
         string? previewObjectId;
         if (preview is not null)
         {
-            previewObjectId = (await _objectStoreClient.Store(Encoding.ASCII.GetBytes(preview)).Task) as string;
+            previewObjectId = await _objectStoreClient.StoreAsync(Encoding.ASCII.GetBytes(preview));
             if (previewObjectId is null)
             {
                 Log.Warning($"Could not store new preview object for buildplate {buildplateId} in object store");
@@ -362,6 +369,9 @@ public sealed class BuildplateInstanceRequestHandler
                             oldPreviewObjectId = "";
                         }
 
+                        buildplates.RemoveBuildplate(buildplateId);
+                        buildplates.AddBuildplate(buildplateId, buildplate);
+
                         return new EarthDB.Query(true)
                             .Update("buildplates", playerId, buildplates)
                             .Extra("exists", true)
@@ -380,11 +390,13 @@ public sealed class BuildplateInstanceRequestHandler
             if (exists)
             {
                 string oldServerDataObjectId = (string)results1.GetExtra("oldServerDataObjectId");
-                _objectStoreClient.Delete(oldServerDataObjectId);
+                await _objectStoreClient.DeleteAsync(oldServerDataObjectId);
 
                 string oldPreviewObjectId = (string)results1.GetExtra("oldPreviewObjectId");
                 if (!string.IsNullOrEmpty(oldPreviewObjectId))
-                    _objectStoreClient.Delete(oldPreviewObjectId);
+                {
+                    await _objectStoreClient.DeleteAsync(oldPreviewObjectId);
+                }
 
                 Log.Information($"Stored new snapshot for buildplate {buildplateId}");
 
@@ -392,10 +404,10 @@ public sealed class BuildplateInstanceRequestHandler
             }
             else
             {
-                _objectStoreClient.Delete(serverDataObjectId);
+                await _objectStoreClient.DeleteAsync(serverDataObjectId);
                 if (previewObjectId is not null)
                 {
-                    _objectStoreClient.Delete(previewObjectId);
+                    await _objectStoreClient.DeleteAsync(previewObjectId);
                 }
 
                 return false;
@@ -403,10 +415,10 @@ public sealed class BuildplateInstanceRequestHandler
         }
         catch (EarthDB.DatabaseException)
         {
-            _objectStoreClient.Delete(serverDataObjectId);
+            await _objectStoreClient.DeleteAsync(serverDataObjectId);
             if (previewObjectId is not null)
             {
-                _objectStoreClient.Delete(previewObjectId);
+                await _objectStoreClient.DeleteAsync(previewObjectId);
             }
 
             throw;
@@ -446,7 +458,7 @@ public sealed class BuildplateInstanceRequestHandler
                     initialInventoryContents = new InventoryResponse(
                         [.. Enumerable.Concat(
                             inventory.StackableItems
-                                .Select(item => new InventoryResponse.Item(item.Id, item.Count, null, 0)),
+                                .Select(item => new InventoryResponse.Item(item.Id, item.Count ?? 1, null, 0)),
                             inventory.NonStackableItems
                                 .SelectMany(item => item.Instances
                                     .Select(instance => new InventoryResponse.Item(item.Id, 1, instance.InstanceId, instance.Wear)))
@@ -532,7 +544,7 @@ public sealed class BuildplateInstanceRequestHandler
 
                             InventoryResponse inventoryResponse = new InventoryResponse(
                             [
-                                .. inventoryResponseStackableItems.Select(entry => new InventoryResponse.Item(entry.Key, entry.Value, null, 0)),
+                                .. inventoryResponseStackableItems.Select(entry => new InventoryResponse.Item(entry.Key, entry.Value ?? 1, null, 0)),
                                     .. inventoryResponseNonStackableItems
                             ],
                             inventoryResponseHotbar
@@ -607,10 +619,9 @@ public sealed class BuildplateInstanceRequestHandler
                             continue;
                         }
 
-                        Debug.Assert(item.Count is not null);
                         if (catalogItem.Stackable)
                         {
-                            inventory.AddItems(item.Id, item.Count.Value);
+                            inventory.AddItems(item.Id, item.Count);
                         }
                         else
                         {
@@ -619,7 +630,7 @@ public sealed class BuildplateInstanceRequestHandler
                             inventory.AddItems(item.Id, [new NonStackableItemInstance(item.InstanceId, item.Wear)]);
                         }
 
-                        if (journal.AddCollectedItem(item.Id, timestamp, item.Count.Value) == 0)
+                        if (journal.AddCollectedItem(item.Id, timestamp, item.Count) == 0)
                         {
                             if (catalogItem.JournalEntry is not null)
                             {
@@ -746,7 +757,7 @@ public sealed class BuildplateInstanceRequestHandler
         return new InventoryResponse(
             [.. Enumerable.Concat(
                 inventory.StackableItems
-                    .Select(item => new InventoryResponse.Item(item.Id, item.Count, null, 0)),
+                    .Select(item => new InventoryResponse.Item(item.Id, item.Count ?? 1, null, 0)),
                 inventory.NonStackableItems
                     .SelectMany(item => item.Instances
                     .Select(instance => new InventoryResponse.Item(item.Id, 1, instance.InstanceId, instance.Wear)))

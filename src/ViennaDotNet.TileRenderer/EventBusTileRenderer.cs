@@ -5,7 +5,7 @@ using ViennaDotNet.EventBus.Client;
 
 namespace ViennaDotNet.TileRenderer;
 
-internal sealed class EventBusTileRenderer : IDisposable
+internal sealed class EventBusTileRenderer : IAsyncDisposable
 {
     private readonly ITileDataSource _dataSource;
     private readonly EventBusClient _eventBus;
@@ -18,9 +18,9 @@ internal sealed class EventBusTileRenderer : IDisposable
         _renderer = TileRenderer.Create(dataSource.GetTagMapJson(staticData.TileRenderer), Log.Logger);
     }
 
-    public void Run()
+    public async Task RunAsync()
     {
-        _eventBus.AddRequestHandler("tile", new RequestHandler.Handler(async request =>
+        await _eventBus.AddRequestHandlerAsync("tile", new RequestHandlerLister(async request =>
         {
             if (request.Type == "renderTile")
             {
@@ -57,10 +57,10 @@ internal sealed class EventBusTileRenderer : IDisposable
             {
                 return null;
             }
-        }, () =>
+        }, async () =>
         {
             Log.Error("Event bus subscriber error");
-            Dispose();
+            await DisposeAsync();
             Log.CloseAndFlush();
             Environment.Exit(1);
         }));
@@ -69,10 +69,10 @@ internal sealed class EventBusTileRenderer : IDisposable
 
         while (true)
         {
-            Thread.Sleep(1000);
+            await Task.Delay(1000);
         }
     }
 
-    public void Dispose()
-        => _eventBus.Close();
+    public async ValueTask DisposeAsync()
+        => await _eventBus.DisposeAsync();
 }

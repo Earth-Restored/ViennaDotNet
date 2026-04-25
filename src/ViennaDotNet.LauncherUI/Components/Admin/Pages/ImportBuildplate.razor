@@ -1,10 +1,13 @@
 @page "/Admin/ImportBuildplate"
+@implements IDisposable
 @using Microsoft.AspNetCore.Authorization
 @using Serilog
 @using System.Buffers
+@using System.Text.Json
 @using ViennaDotNet.BuildplateImporter
 @using ViennaDotNet.DB
 @using ViennaDotNet.EventBus.Client
+@using ViennaDotNet.LauncherUI.Programs
 @using ViennaDotNet.LauncherUI.Utils
 @using ViennaDotNet.ObjectStore.Client
 @attribute [Authorize(Policy = Permissions.ManageBuildplates)]
@@ -30,7 +33,7 @@
          @ondragleave="@(() => isHovering = false)" @ondrop="@(() => isHovering = false)">
         
         <InputFile OnChange="HandleFileSelection" multiple accept=".zip,.json" class="file-input"
-                   disabled="@isUploading" />
+                   disabled="@isImporting" />
         
         <div class="drop-zone-content">
             <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" class="upload-icon"
@@ -54,7 +57,7 @@
                     <div class="file-header">
                         <span class="file-name">@file.File.Name</span>
                         <div class="file-actions">
-                            @if (file.HasError && !isUploading)
+                            @if (file.HasError && !isImporting)
                             {
                                 <button class="btn-retry" @onclick="() => RetryFile(file)" title="Retry upload">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"
@@ -68,7 +71,7 @@
                                 </button>
                             }
                             <button class="btn-remove" @onclick="() => RemoveFile(file)"
-                                    disabled="@(file.IsComplete || isUploading)" title="Remove file">
+                                    disabled="@(file.IsComplete || file.IsProcessing || isImporting)" title="Remove file">
                                 ✕
                             </button>
                         </div>
@@ -80,26 +83,34 @@
                     }
                     else if (file.IsComplete)
                     {
-                        <span class="text-success file-status">Upload Complete</span>
+                        <span class="text-success file-status">Import Complete</span>
+                    }
+                    else if (file.IsProcessing)
+                    {
+                        <span class="text-primary file-status">Importing...</span>
+                    }
+                    else if (file.IsUploadedToTemp)
+                    {
+                        <span class="text-info file-status">Ready to Import</span>
                     }
                     else
                     {
                         <div class="progress-bar-container">
                             <div class="progress-bar" style="width: @(file.ProgressPercentage)%"></div>
                         </div>
-                        <span class="file-status">@(Math.Round(file.ProgressPercentage))%</span>
+                        <span class="file-status">Uploading: @(Math.Round(file.ProgressPercentage))%</span>
                     }
                 </div>
             }
         </div>
 
         <div class="button-group">
-            <button class="btn btn-primary import-btn" @onclick="ProcessUploads"
-                    disabled="@(isUploading || !selectedFiles.Any(f => !f.IsComplete && !f.HasError))">
-                @(isUploading ? "Importing..." : "Import Buildplates")
+            <button class="btn btn-primary import-btn" @onclick="ProcessImports"
+                    disabled="@(isImporting || !selectedFiles.Any(f => f.IsUploadedToTemp && !f.HasError && !f.IsComplete))">
+                @(isImporting ? "Importing..." : "Import Buildplates")
             </button>
             
-            @if (!isUploading)
+            @if (!isImporting)
             {
                 <button class="btn btn-link" @onclick="GoBack">Cancel</button>
             }
@@ -141,7 +152,7 @@
 
 @code {
     private bool isHovering;
-    private bool isUploading;
+    private bool isImporting;
     private bool showDialog;
     private bool isSuccess;
     private string dialogMessage = string.Empty;
@@ -152,9 +163,14 @@
     private class FileUploadState
     {
         public IBrowserFile File { get; set; } = default!;
+        public string TempFilePath { get; set; } = string.Empty;
         public long UploadedBytes { get; set; }
         public double ProgressPercentage => File.Size == 0 ? 0 : ((double)UploadedBytes / File.Size) * 100;
+        
+        public bool IsUploadedToTemp { get; set; }
+        public bool IsProcessing { get; set; }
         public bool IsComplete { get; set; }
+        
         public bool HasError { get; set; }
         public string ErrorMessage { get; set; } = string.Empty;
         public CancellationTokenSource Cts { get; set; } = new();
@@ -164,8 +180,16 @@
             HasError = false;
             ErrorMessage = string.Empty;
             UploadedBytes = 0;
+            IsUploadedToTemp = false;
+            IsProcessing = false;
             IsComplete = false;
             Cts = new CancellationTokenSource();
+            
+            if (!string.IsNullOrEmpty(TempFilePath) && System.IO.File.Exists(TempFilePath))
+            {
+                System.IO.File.Delete(TempFilePath);
+            }
+            TempFilePath = string.Empty;
         }
     }
 
@@ -191,103 +215,171 @@
 
             if (!selectedFiles.Any(f => f.File.Name == file.Name))
             {
-                selectedFiles.Add(new FileUploadState { File = file });
+                var fileState = new FileUploadState { File = file };
+                selectedFiles.Add(fileState);
+                
+                _ = StreamToTempFileAsync(fileState);
             }
+        }
+    }
+
+    private async Task StreamToTempFileAsync(FileUploadState fileState)
+    {
+        try
+        {
+            fileState.TempFilePath = Path.GetTempFileName();
+            await using var fs = new FileStream(fileState.TempFilePath, FileMode.Create, FileAccess.Write, FileShare.None);
+            await using var stream = fileState.File.OpenReadStream(MaxFileSize, fileState.Cts.Token);
+            
+            var buffer = ArrayPool<byte>.Shared.Rent(81920); // 80KB
+            int bytesRead;
+            while ((bytesRead = await stream.ReadAsync(buffer, fileState.Cts.Token)) > 0)
+            {
+                await fs.WriteAsync(buffer.AsMemory(0, bytesRead), fileState.Cts.Token);
+                fileState.UploadedBytes += bytesRead;
+                await InvokeAsync(StateHasChanged);
+            }
+
+            ArrayPool<byte>.Shared.Return(buffer);
+            
+            fileState.IsUploadedToTemp = true;
+        }
+        catch (OperationCanceledException)
+        {
+            fileState.HasError = true;
+            fileState.ErrorMessage = "Upload cancelled.";
+        }
+        catch (Exception ex)
+        {
+            fileState.HasError = true;
+            fileState.ErrorMessage = $"Upload failed: {ex.Message}";
+        }
+        finally
+        {
+            await InvokeAsync(StateHasChanged);
         }
     }
 
     private void RemoveFile(FileUploadState fileState)
     {
-        if (isUploading && !fileState.IsComplete && !fileState.HasError)
+        if (!fileState.IsComplete && !fileState.HasError)
         {
             fileState.Cts.Cancel();
+        }
+
+        if (!string.IsNullOrEmpty(fileState.TempFilePath) && System.IO.File.Exists(fileState.TempFilePath))
+        {
+            System.IO.File.Delete(fileState.TempFilePath);
         }
 
         selectedFiles.Remove(fileState);
     }
 
-    private async Task RetryFile(FileUploadState fileState)
+    private void RetryFile(FileUploadState fileState)
     {
         fileState.Reset();
-        await ProcessUploads();
+        _ = StreamToTempFileAsync(fileState);
     }
 
-    private async Task ProcessUploads()
+    private async Task ProcessImports()
     {
-        if (isUploading)
+        if (isImporting)
         {
             return;
         }
 
-        var filesToUpload = selectedFiles.Where(f => !f.IsComplete && !f.HasError).ToList();
-        if (!filesToUpload.Any())
+        var filesToImport = selectedFiles.Where(f => f.IsUploadedToTemp && !f.IsComplete && !f.HasError).ToList();
+        if (!filesToImport.Any())
         {
             return;
         }
 
-        isUploading = true;
+        isImporting = true;
         StateHasChanged();
 
-        if (ServerManager.Status is not ServerStatus.Online)
+        if (!await ServerManager.EnsureComponentsOnline(EventBusServer.ExeName, ObjectStoreServer.ExeName,
+BuildplateLauncher.ExeName))
         {
             ShowDialog(false, "The server must be running to import buildplates.");
-            isUploading = false;
+            isImporting = false;
             return;
         }
 
         try
         {
-            using var importer = await Importer.CreateFromSettings(Settings.Instance, Log.Logger);
+            await using var importer = await Importer.CreateFromSettings(Settings.Instance, Log.Logger);
             int successCount = 0;
 
-            foreach (var fileState in filesToUpload)
+            foreach (var fileState in filesToImport)
             {
+                fileState.IsProcessing = true;
+                StateHasChanged();
+
                 try
                 {
                     var rawName = Path.GetFileNameWithoutExtension(fileState.File.Name);
                     var displayName = string.IsNullOrWhiteSpace(rawName) ? "imported buildplate" : rawName;
 
+                    await using var tempFileStream = new FileStream(fileState.TempFilePath, FileMode.Open, FileAccess.Read);
                     using var memoryStream = new MemoryStream();
-                    await using var inputFilesStream = fileState.File.OpenReadStream(MaxFileSize, fileState.Cts.Token);
-                    
-                    var buffer = ArrayPool<byte>.Shared.Rent(81920); // 80KB
-                    int bytesRead;
-                    while ((bytesRead = await inputFilesStream.ReadAsync(buffer, fileState.Cts.Token)) > 0)
-                    {
-                        await memoryStream.WriteAsync(buffer.AsMemory(0, bytesRead), fileState.Cts.Token);
-                        fileState.UploadedBytes += bytesRead;
-                        StateHasChanged();
-                    }
-                    ArrayPool<byte>.Shared.Return(buffer);
-
+                    await tempFileStream.CopyToAsync(memoryStream, fileState.Cts.Token);
                     memoryStream.Position = 0;
 
-                    if (Path.GetExtension(fileState.File.Name) is ".json")
+                    if (Path.GetExtension(fileState.File.Name).Equals(".json", StringComparison.OrdinalIgnoreCase))
                     {
-                        fileState.HasError = true;
-                        fileState.ErrorMessage = $"Project Earth buildplates aren't yet supported :/";
-                        continue;
+                        MCeToJava.Converter.InitRegistry(Log.Logger);
+                        var mceBuildplate = await MCeToJava.Utils.JsonUtils.DeserializeJsonAsync<MCeToJava.Models.MCE.Buildplate>(memoryStream);
+
+                        if (mceBuildplate is null)
+                        {
+                            throw new Exception("Failed to parse the buildplate JSON.");
+                        }
+
+                        var options = new MCeToJava.Converter.Options(
+                            Log.Logger,
+                            MCeToJava.Models.ConvertTarget.Vienna,
+                            "minecraft:plains",
+                            displayName
+                        );
+
+                        MCeToJava.WorldData worldData = await MCeToJava.Converter.Convert(mceBuildplate, null, options);
+
+                        using var zipStream = new MemoryStream();
+                        using (var archive = new System.IO.Compression.ZipArchive(zipStream, System.IO.Compression.ZipArchiveMode.Create, true))
+                        {
+                            foreach (var worldFile in worldData.Files)
+                            {
+                                var entry = archive.CreateEntry(worldFile.Key);
+                                using var entryStream = entry.Open();
+                                await entryStream.WriteAsync(worldFile.Value, 0, worldFile.Value.Length, fileState.Cts.Token);
+                            }
+                        }
+
+                        zipStream.Position = 0;
+                        await importer.ImportTemplateAsync(Guid.NewGuid().ToString(), displayName, zipStream);
+                    }
+                    else
+                    {
+                        await importer.ImportTemplateAsync(Guid.NewGuid().ToString(), displayName, memoryStream);
                     }
 
-                    await importer.ImportTemplateAsync(Guid.NewGuid().ToString(), displayName, memoryStream);
                     fileState.IsComplete = true;
                     successCount++;
                 }
-                catch (OperationCanceledException)
-                {
-                    fileState.HasError = true;
-                    fileState.ErrorMessage = "Upload cancelled.";
-                }
                 catch (Exception ex)
                 {
+                    Log.Error(ex, "Failed to import buildplate");
                     fileState.HasError = true;
                     fileState.ErrorMessage = $"Failed: {ex.Message}";
                 }
-
-                StateHasChanged();
+                finally
+                {
+                    fileState.IsProcessing = false;
+                    StateHasChanged();
+                }
             }
 
-            int totalAttempted = filesToUpload.Count;
+            int totalAttempted = filesToImport.Count;
             if (successCount == totalAttempted)
             {
                 ShowDialog(true, $"Successfully imported {successCount} buildplate(s).");
@@ -304,7 +396,7 @@
         }
         finally
         {
-            isUploading = false;
+            isImporting = false;
             StateHasChanged();
         }
     }
@@ -319,6 +411,30 @@
     private void CloseDialog()
     {
         showDialog = false;
-        if (isSuccess) NavManager.NavigateTo("/Buildplates");
+        
+        if (isSuccess)
+        {
+            NavManager.NavigateTo("/Buildplates");
+        }
+    }
+
+    public void Dispose()
+    {
+        foreach (var file in selectedFiles)
+        {
+            file.Cts?.Cancel();
+            file.Cts?.Dispose();
+
+            if (!string.IsNullOrEmpty(file.TempFilePath) && System.IO.File.Exists(file.TempFilePath))
+            {
+                try
+                {
+                    System.IO.File.Delete(file.TempFilePath);
+                }
+                catch
+                {
+                }
+            }
+        }
     }
 }

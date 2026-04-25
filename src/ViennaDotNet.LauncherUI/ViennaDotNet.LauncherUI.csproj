@@ -7,6 +7,7 @@
     <UserSecretsId>aspnet-ViennaDotNet_LauncherUI-157240ba-1021-45b3-9a98-e9c28d696417</UserSecretsId>
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
     <AssemblyName>Launcher</AssemblyName>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
@@ -14,10 +15,16 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="10.0.5" />
-    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.5" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.5" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.5" />
+    <PackageReference Include="Blazor3D" Version="0.210-alpha" />
+    <PackageReference Include="MCeToJava" Version="1.3.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.7" />
+    <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="10.0.7" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.7" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.7" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.7">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
     <PackageReference Include="Net.Codecrete.QrCodeGenerator" Version="2.1.0" />
     <PackageReference Include="Serilog" Version="4.3.1" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
@@ -26,6 +33,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../ViennaDotNet.BuildplateImporter/ViennaDotNet.BuildplateImporter.csproj" />
+    <ProjectReference Include="../ViennaDotNet.BuildplateRenderer/ViennaDotNet.BuildplateRenderer.csproj" />
     <ProjectReference Include="../ViennaDotNet.Common/ViennaDotNet.Common.csproj" />
     <ProjectReference Include="../ViennaDotNet.DB/ViennaDotNet.DB.csproj" />
     <ProjectReference Include="../ViennaDotNet.ObjectStore.Client/ViennaDotNet.ObjectStore.Client.csproj" />

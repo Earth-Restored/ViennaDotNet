@@ -1,7 +1,10 @@
 ﻿using Serilog;
+using System.Buffers;
+using System.IO.Pipelines;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading.Channels;
 using ViennaDotNet.Common.Utils;
 
 namespace ViennaDotNet.EventBus.Server;
@@ -10,155 +13,174 @@ public sealed class NetworkServer
 {
     private readonly Server _server;
     private readonly TcpListener _serverSocket;
+    private readonly CancellationTokenSource _cts = new();
 
     public NetworkServer(Server server, int port)
     {
         _server = server;
         _serverSocket = new TcpListener(IPAddress.Loopback, port);
-        _serverSocket.Start();
-        Log.Information($"Created server on port {port}");
     }
 
-    public void Run()
+    public async Task RunAsync()
     {
-        while (true)
+        _serverSocket.Start();
+        Log.Information($"Created server on port {((IPEndPoint)_serverSocket.LocalEndpoint).Port}");
+
+        try
         {
-            try
+            while (!_cts.Token.IsCancellationRequested)
             {
-                Socket socket = _serverSocket.AcceptSocket();
+                Socket socket = await _serverSocket.AcceptSocketAsync(_cts.Token);
                 Log.Information($"Connection from {socket.RemoteEndPoint}");
-                Connection connection = new Connection(this, socket);
-                new Thread(connection.run).Start();
-            }
-            catch (SocketException ex)
-            {
-                Log.Warning($"Exception while accepting connection: {ex}");
+
+                var connection = new Connection(this, socket, _server);
+                _ = connection.RunAsync();
             }
         }
+        catch (OperationCanceledException)
+        {
+            // Server shutting down
+        }
+        catch (SocketException ex)
+        {
+            Log.Warning($"Exception while accepting connection: {ex}");
+        }
     }
+
+    public void Stop()
+        => _cts.Cancel();
 
     private sealed class Connection
     {
         private readonly NetworkServer _networkServer;
-
         private readonly Socket _socket;
+        private readonly Server _server;
+        private readonly Channel<string> _sendChannel;
+        private readonly Dictionary<int, ChannelHandler> _channels = [];
 
-        //private readonly NetworkStream outputStream;
-#if NET9_0_OR_GREATER
-        private readonly Lock _sendLock = new();
-#else
-        private readonly object _sendLock = new();
-#endif
-
-        private readonly Dictionary<int, Channel> _channels = [];
-
-        public Connection(NetworkServer networkServer, Socket socket)
+        public Connection(NetworkServer networkServer, Socket socket, Server server)
         {
             _networkServer = networkServer;
             _socket = socket;
-            //outputStream = new NetworkStream(this.socket);
+            _server = server;
+
+            _sendChannel = Channel.CreateUnbounded<string>(new UnboundedChannelOptions
+            {
+                SingleReader = true, // Only the SendLoop reads
+                SingleWriter = false
+            });
         }
 
-        public void run()
+        public async Task RunAsync()
+        {
+            var stream = new NetworkStream(_socket, ownsSocket: true);
+            var reader = PipeReader.Create(stream);
+            var writer = PipeWriter.Create(stream);
+
+            Task sendTask = SendLoopAsync(writer);
+
+            try
+            {
+                while (true)
+                {
+                    ReadResult result = await reader.ReadAsync();
+                    ReadOnlySequence<byte> buffer = result.Buffer;
+
+                    while (TryReadLine(ref buffer, out ReadOnlySequence<byte> line))
+                    {
+                        string command = Encoding.ASCII.GetString(line);
+                        if (!HandleCommand(command))
+                        {
+                            return; // graceful exit
+                        }
+                    }
+
+                    reader.AdvanceTo(buffer.Start, buffer.End);
+
+                    if (result.IsCompleted) break;
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warning($"Connection error: {ex.Message}");
+            }
+            finally
+            {
+                HandleClose();
+                await reader.CompleteAsync();
+                _sendChannel.Writer.Complete();
+                await sendTask;
+            }
+        }
+
+        private static bool TryReadLine(ref ReadOnlySequence<byte> buffer, out ReadOnlySequence<byte> line)
+        {
+            SequencePosition? position = buffer.PositionOf((byte)'\n');
+            if (position == null)
+            {
+                line = default;
+                return false;
+            }
+
+            line = buffer.Slice(0, position.Value);
+            buffer = buffer.Slice(buffer.GetPosition(1, position.Value));
+            return true;
+        }
+
+        private async Task SendLoopAsync(PipeWriter writer)
         {
             try
             {
-                byte[] readBuffer = new byte[1024];
-                MemoryStream byteArrayOutputStream = new MemoryStream(1024);
-                bool close = false;
-                while (!close)
+                await foreach (var message in _sendChannel.Reader.ReadAllAsync())
                 {
-                    int readLength = _socket.Receive(readBuffer);
-                    if (readLength > 0)
-                    {
-                        int startOffset = 0;
-                        for (int offset = 0; offset < readLength; offset++)
-                        {
-                            if (readBuffer[offset] == '\n')
-                            {
-                                byteArrayOutputStream.Write(readBuffer, startOffset, offset - startOffset);
-                                string command = Encoding.ASCII.GetString(byteArrayOutputStream.ToArray());
-
-                                if (!HandleCommand(command))
-                                {
-                                    close = true;
-                                    break;
-                                }
-
-                                byteArrayOutputStream = new MemoryStream(1024);
-                                startOffset = offset + 1;
-                            }
-                        }
-
-                        byteArrayOutputStream.Write(readBuffer, startOffset, readLength - startOffset);
-                    }
-                    else if (readLength == 0)
-                        close = true;
-                    else
-                        throw new InvalidOperationException();
+                    byte[] bytes = Encoding.ASCII.GetBytes(message + "\n");
+                    await writer.WriteAsync(bytes);
                 }
+                await writer.CompleteAsync();
             }
-            catch (SocketException ex)
+            catch (Exception ex)
             {
-                Log.Warning($"Exception while reading socket: {ex}");
+                Log.Warning($"SendLoop exception: {ex.Message}");
             }
-
-            HandleClose();
         }
 
         internal void SendMessage(string message)
-        {
-            lock (_sendLock)
-            {
-                try
-                {
-                    _socket.Send(Encoding.ASCII.GetBytes(message + "\n"));
-                }
-                catch (SocketException ex)
-                {
-                    Log.Warning($"Exception while sending: {ex}");
-                    try
-                    {
-                        _socket.Shutdown(SocketShutdown.Both);
-                    }
-                    catch (SocketException shutdownEx)
-                    {
-                        Log.Warning($"Exception while shutting down socket: {shutdownEx}");
-                    }
-                    finally
-                    {
-                        _socket.Close();
-                    }
-                }
-            }
-        }
+            => _sendChannel.Writer.TryWrite(message);
 
         private bool HandleCommand(string command)
         {
             string[] parts = command.Split(' ', 2);
-            if (parts.Length != 2)
+            if (parts.Length is not 2)
+            {
                 return false;
+            }
 
             if (!int.TryParse(parts[0], out int channelId) || channelId <= 0)
+            {
                 return false;
+            }
 
-            Channel? channel = _channels.GetOrDefault(channelId, null);
+            ChannelHandler? channel = _channels.GetOrDefault(channelId, null);
             if (channel is not null)
             {
-                if (parts[1] == "CLOSE")
+                if (parts[1] is "CLOSE")
                 {
                     channel.HandleClose();
                     _channels.Remove(channelId);
                 }
                 else
+                {
                     channel.HandleCommand(parts[1]);
+                }
 
                 return true;
             }
             else
             {
-                if (parts[1] == "CLOSE")
+                if (parts[1] is "CLOSE")
+                {
                     return true;
+                }
                 else
                 {
                     channel = HandleChannelOpenCommand(channelId, parts[1]);
@@ -168,7 +190,9 @@ public sealed class NetworkServer
                         return true;
                     }
                     else
+                    {
                         return false;
+                    }
                 }
             }
         }
@@ -183,33 +207,39 @@ public sealed class NetworkServer
             }
         }
 
-        private Channel? HandleChannelOpenCommand(int channelId, string command)
+        private ChannelHandler? HandleChannelOpenCommand(int channelId, string command)
         {
             string[] parts = command.Split(' ');
             if (parts.Length < 1)
+            {
                 return null;
+            }
 
             switch (parts[0])
             {
                 case "PUB":
-                    PublisherChannel publisherChannel = new PublisherChannel(this, channelId, _networkServer);
+                    var publisherChannel = new PublisherChannel(this, channelId, _networkServer);
                     if (!publisherChannel.IsValid)
+                    {
                         return null;
+                    }
 
                     return publisherChannel;
                 case "SUB":
                     {
                         if (parts.Length < 2)
+                        {
                             return null;
+                        }
 
-                        SubscriberChannel subscriberChannel = new SubscriberChannel(_networkServer, this, channelId, parts[1]);
+                        var subscriberChannel = new SubscriberChannel(_networkServer, this, channelId, parts[1]);
                         return !subscriberChannel.IsValid
                             ? null
                             : subscriberChannel;
                     }
                 case "REQ":
                     {
-                        RequestSenderChannel requestSenderChannel = new RequestSenderChannel(this, channelId, _networkServer);
+                        var requestSenderChannel = new RequestSenderChannel(this, channelId, _networkServer);
                         return !requestSenderChannel.IsValid
                             ? null
                             : requestSenderChannel;
@@ -217,9 +247,11 @@ public sealed class NetworkServer
                 case "HND":
                     {
                         if (parts.Length < 2)
+                        {
                             return null;
+                        }
 
-                        RequestHandlerChannel requestHandlerChannel = new RequestHandlerChannel(this, channelId, parts[1], _networkServer);
+                        var requestHandlerChannel = new RequestHandlerChannel(this, channelId, parts[1], _networkServer);
                         return !requestHandlerChannel.IsValid
                             ? null
                             : requestHandlerChannel;
@@ -230,15 +262,15 @@ public sealed class NetworkServer
         }
     }
 
-    private abstract class Channel
+    private abstract class ChannelHandler
     {
         private readonly Connection _connection;
         private readonly int _channelId;
 
-        protected Channel(Connection connection, int channelId)
+        protected ChannelHandler(Connection connection, int channelId)
         {
-            this._connection = connection;
-            this._channelId = channelId;
+            _connection = connection;
+            _channelId = channelId;
         }
 
         public abstract bool IsValid { get; }
@@ -250,7 +282,7 @@ public sealed class NetworkServer
             => _connection.SendMessage($"{_channelId} {message}");
     }
 
-    private sealed class PublisherChannel : Channel
+    private sealed class PublisherChannel : ChannelHandler
     {
         private readonly Server.Publisher _publisher;
         private bool _error = false;
@@ -260,6 +292,7 @@ public sealed class NetworkServer
         {
             _publisher = networkServer._server.AddPublisher();
         }
+
         public override bool IsValid => true;
 
         public override void HandleCommand(string command)
@@ -271,7 +304,7 @@ public sealed class NetworkServer
             }
 
             string[] parts = command.Split(' ', 2);
-            if (parts[0] == "SEND")
+            if (parts[0] is "SEND")
             {
                 string entryString = parts[1];
                 string[] fields = entryString.Split(':', 3);
@@ -286,12 +319,18 @@ public sealed class NetworkServer
                 string type = fields[1];
                 string data = fields[2];
                 if (_publisher.Publish(queueName, timestamp, type, data))
+                {
                     SendMessage("ACK");
+                }
                 else
+                {
                     Error();
+                }
             }
             else
+            {
                 Error();
+            }
         }
 
         public override void HandleClose()
@@ -304,7 +343,7 @@ public sealed class NetworkServer
         }
     }
 
-    private sealed class SubscriberChannel : Channel
+    private sealed class SubscriberChannel : ChannelHandler
     {
         private readonly NetworkServer _netServer;
         private readonly Server.Subscriber? _subscriber;
@@ -330,7 +369,7 @@ public sealed class NetworkServer
         {
             if (message is Server.Subscriber.EntryMessage entryMessage)
             {
-                StringBuilder stringBuilder = new StringBuilder();
+                var stringBuilder = new StringBuilder();
                 stringBuilder.Append(entryMessage.Timestamp);
                 stringBuilder.Append(':');
                 stringBuilder.Append(entryMessage.Type);
@@ -339,15 +378,17 @@ public sealed class NetworkServer
                 SendMessage(stringBuilder.ToString());
             }
             else if (message is Server.Subscriber.ErrorMessage)
+            {
                 SendMessage("ERR");
+            }
         }
     }
 
-    private sealed class RequestSenderChannel : Channel
+    private sealed class RequestSenderChannel : ChannelHandler
     {
         private readonly Server.RequestSender _requestSender;
         // TODO: should they be volatile?
-        private volatile TaskCompletionSource<string?>? _currentPendingResponse = null;
+        private volatile Task<string?>? _currentPendingResponse = null;
         private volatile bool _error = false;
 
         public RequestSenderChannel(Connection connection, int channelId, NetworkServer networkServer)
@@ -388,31 +429,41 @@ public sealed class NetworkServer
                 string type = fields[1];
                 string data = fields[2];
 
-                TaskCompletionSource<string?>? completableFuture = _requestSender.Request(queueName, timestamp, type, data);
+                Task<string?>? completableFuture = _requestSender.RequestAsync(queueName, timestamp, type, data);
                 if (completableFuture is not null)
                 {
                     _currentPendingResponse = completableFuture;
                     SendMessage("ACK");
-                    completableFuture.Task.ContinueWith(task =>
+                    completableFuture.ContinueWith(task =>
                     {
                         if (_currentPendingResponse is not null)
                         {
                             if (_currentPendingResponse != completableFuture)
+                            {
                                 throw new InvalidOperationException();
+                            }
 
                             _currentPendingResponse = null;
                             if (task.Result is not null)
+                            {
                                 SendMessage("REP " + task.Result);
+                            }
                             else
+                            {
                                 SendMessage("NREP");
+                            }
                         }
                     });
                 }
                 else
+                {
                     Error();
+                }
             }
             else
+            {
                 Error();
+            }
         }
 
         public override void HandleClose()
@@ -429,7 +480,7 @@ public sealed class NetworkServer
         }
     }
 
-    private sealed class RequestHandlerChannel : Channel
+    private sealed class RequestHandlerChannel : ChannelHandler
     {
         private readonly Server.RequestHandler _requestHandler;
         private readonly Dictionary<int, TaskCompletionSource<string?>> _pendingResponses = [];
@@ -453,7 +504,7 @@ public sealed class NetworkServer
             }
 
             string[] parts = command.Split(' ', 2);
-            if (parts[0] == "REP")
+            if (parts[0] is "REP")
             {
                 string entryString = parts[1];
                 string[] fields = entryString.Split(':', 2);
@@ -477,13 +528,17 @@ public sealed class NetworkServer
                 string data = fields[1];
 
                 if (_pendingResponses.TryGetValue(requestId, out TaskCompletionSource<string?>? responseCompletableFuture))
+                {
                     responseCompletableFuture.SetResult(data);
+                }
                 else
+                {
                     Error();
+                }
 
                 _pendingResponses.Remove(requestId);
             }
-            else if (parts[0] == "NREP")
+            else if (parts[0] is "NREP")
             {
                 int requestId;
                 try
@@ -498,12 +553,18 @@ public sealed class NetworkServer
 
                 TaskCompletionSource<string?>? responseCompletableFuture = _pendingResponses.JavaRemove(requestId);
                 if (responseCompletableFuture is not null)
+                {
                     responseCompletableFuture.SetResult(null);
+                }
                 else
+                {
                     Error();
+                }
             }
             else
+            {
                 Error();
+            }
         }
 
         public override void HandleClose()
@@ -523,7 +584,7 @@ public sealed class NetworkServer
             TaskCompletionSource<string?> responseCompletableFuture = new();
             _pendingResponses[requestId] = responseCompletableFuture;
 
-            StringBuilder stringBuilder = new StringBuilder();
+            var stringBuilder = new StringBuilder();
             stringBuilder.Append(requestId);
             stringBuilder.Append(':');
             stringBuilder.Append(request.Timestamp);

@@ -1,4 +1,4 @@
-﻿using ViennaDotNet.Common.Buildplate.Connector.Model;
+﻿using ViennaDotNet.Buildplate.Connector.Model;
 
 namespace ViennaDotNet.Buildplate.Connector.Model;
 

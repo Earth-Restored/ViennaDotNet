@@ -85,7 +85,7 @@ internal static class Program
         EventBusClient eventBusClient;
         try
         {
-            eventBusClient = EventBusClient.Create(options.EventBusConnectionString);
+            eventBusClient = await EventBusClient.ConnectAsync(options.EventBusConnectionString);
         }
         catch (EventBusClientException ex)
         {
@@ -99,7 +99,7 @@ internal static class Program
         TappableGenerator tappableGenerator = new TappableGenerator(staticData);
         EncounterGenerator encounterGenerator = new EncounterGenerator(staticData);
         Spawner[] spawner = new Spawner[1];
-        ActiveTiles activeTiles = new ActiveTiles(eventBusClient, new ActiveTiles.ActiveTileListener(
+        ActiveTiles activeTiles = await ActiveTiles.CreateAsync(eventBusClient, new ActiveTiles.ActiveTileListener(
             async activeTiles =>
             {
                 await spawner[0].SpawnTiles(activeTiles);
@@ -109,7 +109,7 @@ internal static class Program
                 // empty
             }
         ));
-        spawner[0] = new Spawner(eventBusClient, activeTiles, tappableGenerator, encounterGenerator);
+        spawner[0] = await Spawner.CreateAsync(eventBusClient, activeTiles, tappableGenerator, encounterGenerator);
         await spawner[0].Run();
 
         return 0;

@@ -2,17 +2,15 @@
 
 namespace ViennaDotNet.EventBus.Client;
 
-public sealed partial class RequestSender
+public sealed class RequestSender
 {
     private readonly EventBusClient _client;
     private readonly int _channelId;
-
-    private readonly object _lock = new();
-
+    private readonly SemaphoreSlim _lock = new(1, 1);
+    
     private bool _closed = false;
-
-    private readonly LinkedList<string> _queuedRequests = new();
-    private readonly LinkedList<TaskCompletionSource<string?>> _queuedRequestResponses = new();
+    private readonly Queue<string> _queuedRequests = new();
+    private readonly Queue<TaskCompletionSource<string?>> _queuedRequestResponses = new();
     private TaskCompletionSource<string?>? _currentPendingResponse = null;
 
     internal RequestSender(EventBusClient client, int channelId)
@@ -21,159 +19,174 @@ public sealed partial class RequestSender
         _channelId = channelId;
     }
 
-    public void Close()
+    public async Task CloseAsync()
     {
         _client.RemoveRequestSender(_channelId);
-        _client.SendMessage(_channelId, "CLOSE");
-        Closed();
+        await _client.SendMessageAsync(_channelId, "CLOSE");
+        await ClosedAsync();
     }
 
-    public TaskCompletionSource<string?> Request(string queueName, string type, string data)
+    public async Task<string?> RequestAsync(string queueName, string type, string data)
     {
-        if (!ValidateQueueName(queueName))
-            throw new ArgumentException("Queue name contains invalid characters");
+        if (!ValidateQueueName(queueName)) throw new ArgumentException("Queue name contains invalid characters");
+        if (!ValidateType(type)) throw new ArgumentException("Type contains invalid characters");
+        if (!ValidateData(data)) throw new ArgumentException("Data contains invalid characters");
 
-        if (!ValidateType(type))
-            throw new ArgumentException("Type contains invalid characters");
+        string requestMessage = $"REQ {queueName}:{type}:{data}";
+        var tcs = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        if (!ValidateData(data))
-            throw new ArgumentException("Data contains invalid characters");
-
-        string requestMessage = "REQ " + queueName + ":" + type + ":" + data;
-
-        TaskCompletionSource<string?> completableFuture = new();
-
-        Monitor.Enter(_lock);
-        if (_closed)
-            completableFuture.SetResult(null);
-        else
+        await _lock.WaitAsync();
+        try
         {
-            _queuedRequests.AddLast(requestMessage);
-            _queuedRequestResponses.AddLast(completableFuture);
-            if (_currentPendingResponse is null)
-                SendNextRequest();
+            if (_closed)
+            {
+                tcs.SetResult(null);
+            }
+            else
+            {
+                _queuedRequests.Enqueue(requestMessage);
+                _queuedRequestResponses.Enqueue(tcs);
+
+                if (_currentPendingResponse == null)
+                {
+                    await SendNextRequestAsync();
+                }
+            }
+        }
+        finally
+        {
+            _lock.Release();
         }
 
-        Monitor.Exit(_lock);
-
-        return completableFuture;
+        return await tcs.Task;
     }
 
-    public void Flush()
+    public async Task FlushAsync()
     {
-        Monitor.Enter(_lock);
-        var task = _queuedRequestResponses.Count == 0 ? _currentPendingResponse : _queuedRequestResponses.Last!.Value;
-        Monitor.Exit(_lock);
+        Task<string?>? taskToAwait = null;
 
-        task?.Task.Wait();
+        await _lock.WaitAsync();
+        try
+        {
+            taskToAwait = _queuedRequestResponses.Count == 0 
+                ? _currentPendingResponse?.Task 
+                : _queuedRequestResponses.Last().Task; // Extension method or Peek for simple queue
+        }
+        finally
+        {
+            _lock.Release();
+        }
+
+        if (taskToAwait != null)
+        {
+            await taskToAwait;
+        }
     }
 
-    internal Task<bool> HandleMessage(string message)
+    internal async Task<bool> HandleMessageAsync(string message)
     {
         if (message == "ERR")
         {
-            Close();
-            return Task.FromResult(true);
+            await CloseAsync();
+            return true;
         }
-        else if (message == "ACK")
-            return Task.FromResult(true);
+
+        if (message == "ACK")
+        {
+            return true;
+        }
+
+        string? response;
+        string[] parts = message.Split(' ', 2);
+        
+        if (parts[0] == "NREP")
+        {
+            if (parts.Length != 1) return false;
+            response = null;
+        }
+        else if (parts[0] == "REP")
+        {
+            if (parts.Length != 2) return false;
+            response = parts[1];
+        }
         else
         {
-            string? response;
+            return false;
+        }
 
-            string[] parts = message.Split(' ', 2);
-            if (parts[0] == "NREP")
+        await _lock.WaitAsync();
+        try
+        {
+            if (_currentPendingResponse != null)
             {
-                if (parts.Length != 1)
-                    return Task.FromResult(false);
+                _currentPendingResponse.SetResult(response);
+                _currentPendingResponse = null;
 
-                response = null;
-            }
-            else if (parts[0] == "REP")
-            {
-                if (parts.Length != 2)
-                    return Task.FromResult(false);
-
-                response = parts[1];
-            }
-            else
-                return Task.FromResult(false);
-
-            try
-            {
-                Monitor.Enter(_lock);
-                if (_currentPendingResponse is not null)
+                if (_queuedRequests.Count > 0)
                 {
-                    _currentPendingResponse.SetResult(response);
-                    _currentPendingResponse = null;
-                    if (_queuedRequests.Count != 0)
-                        SendNextRequest();
-
-                    return Task.FromResult(true);
+                    await SendNextRequestAsync();
                 }
-                else
-                    return Task.FromResult(false);
+                return true;
             }
-            finally
+            return false;
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    private async Task SendNextRequestAsync()
+    {
+        string message = _queuedRequests.Dequeue();
+        await _client.SendMessageAsync(_channelId, message);
+        _currentPendingResponse = _queuedRequestResponses.Dequeue();
+    }
+
+    internal async Task ClosedAsync()
+    {
+        await _lock.WaitAsync();
+        try
+        {
+            _closed = true;
+
+            if (_currentPendingResponse != null)
             {
-                Monitor.Exit(_lock);
+                _currentPendingResponse.TrySetResult(null);
+                _currentPendingResponse = null;
             }
+
+            while (_queuedRequestResponses.Count > 0)
+            {
+                _queuedRequestResponses.Dequeue().TrySetResult(null);
+            }
+
+            _queuedRequests.Clear();
         }
-    }
-
-    private void SendNextRequest()
-    {
-        string message = _queuedRequests.First!.Value;
-        _queuedRequests.RemoveFirst();
-        _client.SendMessage(_channelId, message);
-        _currentPendingResponse = _queuedRequestResponses.First!.Value;
-        _queuedRequestResponses.RemoveFirst();
-    }
-
-    internal void Closed()
-    {
-        Monitor.Enter(_lock);
-
-        _closed = true;
-
-        if (_currentPendingResponse is not null)
+        finally
         {
-            _currentPendingResponse.TrySetResult(null);
-            _currentPendingResponse = null;
+            _lock.Release();
         }
-
-        foreach (var completableFuture in _queuedRequestResponses)
-        {
-            completableFuture.TrySetResult(null);
-        }
-
-        _queuedRequestResponses.Clear();
-        _queuedRequests.Clear();
-        Monitor.Exit(_lock);
     }
 
     private static bool ValidateQueueName(string queueName)
-        => !string.IsNullOrWhiteSpace(queueName) && queueName.Length != 0 && !GetRegex1().IsMatch(queueName) && !GetRegex2().IsMatch(queueName);
-
-    private static bool ValidateType(string type)
-        => !string.IsNullOrWhiteSpace(type) && type.Length != 0 && !GetRegex1().IsMatch(type) && !GetRegex2().IsMatch(type);
-
-    private static bool ValidateData(string str)
     {
-        for (int i = 0; i < str.Length; i++)
-        {
-            if (str[i] < 32 || str[i] >= 127)
-            {
-                return false;
-            }
-        }
-
-        return true;
+        return !string.IsNullOrEmpty(queueName) && 
+               !queueName.Any(c => c < 32 || c >= 127) && 
+               !Regex.IsMatch(queueName, "^[^A-Za-z0-9_\\-]$") && 
+               !Regex.IsMatch(queueName, "^[^A-Za-z0-9]$");
     }
 
-    [GeneratedRegex("[^A-Za-z0-9_\\-]")]
-    private static partial Regex GetRegex1();
+    private static bool ValidateType(string type)
+    {
+        return !string.IsNullOrEmpty(type) && 
+               !type.Any(c => c < 32 || c >= 127) && 
+               !Regex.IsMatch(type, "^[^A-Za-z0-9_\\-]$") && 
+               !Regex.IsMatch(type, "^[^A-Za-z0-9]$");
+    }
 
-    [GeneratedRegex("^[^A-Za-z0-9]")]
-    private static partial Regex GetRegex2();
+    private static bool ValidateData(string data)
+    {
+        return !data.Any(c => c < 32 || c >= 127);
+    }
 }

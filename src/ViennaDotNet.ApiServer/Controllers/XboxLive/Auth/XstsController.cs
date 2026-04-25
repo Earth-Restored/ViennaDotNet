@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using ViennaDotNet.ApiServer.Models;
 using ViennaDotNet.ApiServer.Utils;
 
@@ -32,11 +33,11 @@ public class XstsController : ViennaControllerBase
     );
 
     [HttpPost]
-    public IActionResult Authenticate([FromBody] AuthenticateRequest request)
+    public Results<ContentHttpResult, UnauthorizedHttpResult, BadRequest> Authenticate([FromBody] AuthenticateRequest request)
     {
         if (request.Properties.UserTokens.Length is not 1)
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         var deviceTokenAuth = JwtUtils.Verify<Tokens.Xbox.AuthToken>(request.Properties.DeviceToken, config.XboxLive.AuthTokenSecretBytes)?.Data;
@@ -45,7 +46,7 @@ public class XstsController : ViennaControllerBase
 
         if (deviceTokenAuth is not Tokens.Xbox.DeviceToken deviceToken || titleTokenAuth is not Tokens.Xbox.TitleToken titleToken || userTokenAuth is not Tokens.Xbox.UserToken userToken)
         {
-            return Unauthorized();
+            return TypedResults.Unauthorized();
         }
 
         switch (request.RelyingParty)
@@ -121,7 +122,7 @@ public class XstsController : ViennaControllerBase
                 }
 
             default:
-                return BadRequest();
+                return TypedResults.BadRequest();
         }
     }
 }

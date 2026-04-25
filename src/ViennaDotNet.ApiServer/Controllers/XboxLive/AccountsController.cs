@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace ViennaDotNet.ApiServer.Controllers.XboxLive;
@@ -43,14 +44,14 @@ public class AccountsController : ViennaControllerBase
     );
 
     [HttpGet("users/current/profile")]
-    public async Task<IActionResult> GetProfile()
+    public async Task<Results<ContentHttpResult, NotFound, UnauthorizedHttpResult, BadRequest>> GetProfile()
     {
         var cancellationToken = Request.HttpContext.RequestAborted;
 
         var authUnion = XboxLiveAuth();
         if (authUnion.IsB)
         {
-            return authUnion.B;
+            return authUnion.B.Result is UnauthorizedHttpResult unauthorized ? unauthorized : (BadRequest)authUnion.B.Result;
         }
 
         var token = authUnion.A;
@@ -60,7 +61,7 @@ public class AccountsController : ViennaControllerBase
 
         if (account is null)
         {
-            return NotFound();
+            return TypedResults.NotFound();
         }
 
         return JsonCamelCase(new ProfileResponse(

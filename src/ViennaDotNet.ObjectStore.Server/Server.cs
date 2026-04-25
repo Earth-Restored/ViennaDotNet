@@ -11,11 +11,11 @@ public class Server
         _dataStore = dataStore;
     }
 
-    public string? Store(byte[] data)
+    public async Task<string?> StoreAsync(byte[] data)
     {
         try
         {
-            string id = _dataStore.Store(data);
+            string id = await _dataStore.StoreAsync(data);
             Log.Information($"Stored new object {id}");
             return id;
         }
@@ -26,14 +26,16 @@ public class Server
         }
     }
 
-    public byte[]? Load(string id)
+    public async Task<byte[]?> LoadAsync(string id)
     {
         Log.Information($"Request for object {id}");
         try
         {
-            byte[]? data = _dataStore.Load(id);
+            byte[]? data = await _dataStore.LoadAsync(id);
             if (data is null)
+            {
                 Log.Information($"Requested object {id} does not exist");
+            }
 
             return data;
         }
@@ -44,10 +46,10 @@ public class Server
         }
     }
 
-    public bool Delete(string id)
+    public async Task<bool> DeleteAsync(string id)
     {
         Log.Information($"Request to delete object {id}");
-        _dataStore.Delete(id);
+        await _dataStore.DeleteAsync(id);
         return true;
     }
 }

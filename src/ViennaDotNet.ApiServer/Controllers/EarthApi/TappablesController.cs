@@ -1,5 +1,6 @@
 ﻿using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using ViennaDotNet.ApiServer.Exceptions;
@@ -23,15 +24,17 @@ public class TappablesController : ViennaControllerBase
     private static StaticData.StaticData staticData => Program.staticData;
 
     [HttpGet("locations/{lat}/{lon}")]
-    public async Task<IActionResult> GetTappables(double lat, double lon, CancellationToken cancellationToken)
+    public async Task<Results<ContentHttpResult, BadRequest>> GetTappables(double lat, double lon, CancellationToken cancellationToken)
     {
         string? playerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(playerId))
-            return BadRequest();
+        {
+            return TypedResults.BadRequest();
+        }
 
         long requestStartedOn = HttpContext.GetTimestamp();
 
-        tappablesManager.NotifyTileActive(playerId, lat, lon);
+        await tappablesManager.NotifyTileActiveAsync(playerId, lat, lon);
 
         TappablesManager.Tappable[] tappables = tappablesManager.GetTappablesAround(lat, lon, 5.0);    // TODO: radius
         TappablesManager.Encounter[] encounters = tappablesManager.GetEncountersAround(lat, lon, 5.0);    // TODO: radius
@@ -96,15 +99,19 @@ public class TappablesController : ViennaControllerBase
     }
 
     [HttpPost("tappables/{tileId}")]
-    public async Task<IActionResult> RedeemTappable(string tileId, CancellationToken cancellationToken)
+    public async Task<Results<ContentHttpResult, BadRequest>> RedeemTappable(string tileId, CancellationToken cancellationToken)
     {
         string? playerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(playerId))
-            return BadRequest();
+        {
+            return TypedResults.BadRequest();
+        }
 
         TappableRequest? tappableRequest = await Request.Body.AsJsonAsync<TappableRequest>(cancellationToken);
         if (tappableRequest is null)
-            return BadRequest();
+        {
+            return TypedResults.BadRequest();
+        }
 
         // request.timestamp
         long requestStartedOn = HttpContext.GetTimestamp();
@@ -112,7 +119,7 @@ public class TappablesController : ViennaControllerBase
         TappablesManager.Tappable? tappable = tappablesManager.GetTappableWithId(tappableRequest.Id, tileId);
         if (tappable is null || !tappablesManager.IsTappableValidFor(tappable, requestStartedOn, tappableRequest.PlayerCoordinate.Latitude, tappableRequest.PlayerCoordinate.Longitude))
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         try
@@ -197,7 +204,7 @@ public class TappablesController : ViennaControllerBase
             }
             else
             {
-                return BadRequest();
+                return TypedResults.BadRequest();
             }
         }
         catch (EarthDB.DatabaseException ex)
@@ -207,20 +214,20 @@ public class TappablesController : ViennaControllerBase
     }
 
     [HttpPost("multiplayer/encounters/state")]
-    public async Task<IActionResult> EncountersState(CancellationToken cancellationToken)
+    public async Task<Results<ContentHttpResult, BadRequest>> EncountersState(CancellationToken cancellationToken)
     {
         var requestedIds = await Request.Body.AsJsonAsync<Dictionary<string, object>>(cancellationToken);
 
         if (requestedIds is null)
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         foreach (var entry in requestedIds)
         {
             if (entry.Value is not string)
             {
-                return BadRequest();
+                return TypedResults.BadRequest();
             }
         }
 

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.OData.Edm;
 using Microsoft.OData.ModelBuilder;
 using OData2Linq;
@@ -22,7 +23,7 @@ public class CatalogController : ViennaControllerBase
         Converters = { new UtcDateTimeConverter() },
     };
 
-    private static StaticData.StaticData staticData => Program.staticData;
+    private static StaticData.StaticData StaticData => Program.staticData;
 
     private static readonly Item[] itemData;
 
@@ -77,7 +78,7 @@ public class CatalogController : ViennaControllerBase
                     "persona_feet"
                 )
             ),
-            .. staticData.Playfab.Items.Select(item => CIItemToItem(item.Value)),
+            .. StaticData.Playfab.Items.Select(item => CIItemToItem(item.Value)),
         ];
     }
 
@@ -92,7 +93,7 @@ public class CatalogController : ViennaControllerBase
     );
 
     [HttpPost("Search")]
-    public async Task<IActionResult> SearchAsync()
+    public async Task<Results<ContentHttpResult, BadRequest>> SearchAsync()
     {
         var cancellationToken = Request.HttpContext.RequestAborted;
 
@@ -100,7 +101,7 @@ public class CatalogController : ViennaControllerBase
 
         if (request is null)
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         IEnumerable<Item> items;
@@ -157,7 +158,7 @@ public class CatalogController : ViennaControllerBase
         Response.Headers.Append("access-control-allow-methods", "GET, POST");
         Response.Headers.Append("access-control-allow-origin", "*");
 
-        return Content(JsonSerializer.Serialize(new PlayfabOkResponse(
+        return TypedResults.Content(JsonSerializer.Serialize(new PlayfabOkResponse(
             200,
             "OK",
             response
@@ -165,7 +166,7 @@ public class CatalogController : ViennaControllerBase
     }
 
     [HttpPost("SearchStores")]
-    public IActionResult SearchStores()
+    public ContentHttpResult SearchStores()
     {
         return JsonPascalCase(new PlayfabOkResponse(
             200,
@@ -188,7 +189,7 @@ public class CatalogController : ViennaControllerBase
     );
 
     [HttpPost("GetPublishedItem")]
-    public async Task<IActionResult> GetPublishedItem()
+    public async Task<Results<ContentHttpResult, NotFound, BadRequest>> GetPublishedItem()
     {
         var cancellationToken = Request.HttpContext.RequestAborted;
 
@@ -196,7 +197,7 @@ public class CatalogController : ViennaControllerBase
 
         if (request is null)
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         if (!Guid.TryParse(request.ItemId, out var itemId))
@@ -214,15 +215,15 @@ public class CatalogController : ViennaControllerBase
             ));
         }
 
-        if (!staticData.Playfab.Items.TryGetValue(itemId, out var cItem))
+        if (!StaticData.Playfab.Items.TryGetValue(itemId, out var cItem))
         {
             // TODO: fake not found
-            return NotFound();
+            return TypedResults.NotFound();
         }
 
         var item = CIItemToItem(cItem);
 
-        return Content(JsonSerializer.Serialize(new PlayfabOkResponse(
+        return TypedResults.Content(JsonSerializer.Serialize(new PlayfabOkResponse(
             200,
             "OK",
             new GetPublishedItemResponse(
@@ -333,9 +334,9 @@ public class CatalogController : ViennaControllerBase
                     data.Tabs.Select(tab => new Item.DisplayPropertiesR.Tab(
                         tab.ScreenLayoutQueries.Select(layoutQuery => new Item.DisplayPropertiesR.Tab.ScreenLayoutQuery(
                             // TODO: haven't seen it yet, but it's possible these can have properties
-                            layoutQuery.ColumnType is StaticData.Playfab.Tab.ColumnType.Rectangle ? new object() : null,
-                            layoutQuery.ColumnType is StaticData.Playfab.Tab.ColumnType.Square ? new object() : null,
-                            layoutQuery.ColumnType is StaticData.Playfab.Tab.ColumnType.Grid ? new object() : null,
+                            layoutQuery.ColumnType is ViennaDotNet.StaticData.Playfab.Tab.ColumnType.Rectangle ? new object() : null,
+                            layoutQuery.ColumnType is ViennaDotNet.StaticData.Playfab.Tab.ColumnType.Square ? new object() : null,
+                            layoutQuery.ColumnType is ViennaDotNet.StaticData.Playfab.Tab.ColumnType.Grid ? new object() : null,
                             layoutQuery.Queries.Select(query => new Item.DisplayPropertiesR.Tab.ScreenLayoutQuery.Query(
                                 query.ProductIds,
                                 query.QueryContentTypes.Select(type => type.ToString()),

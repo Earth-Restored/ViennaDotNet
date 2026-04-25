@@ -1,5 +1,6 @@
 ﻿using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using ViennaDotNet.ApiServer.Exceptions;
@@ -21,11 +22,13 @@ public class TokensController : ViennaControllerBase
     private static StaticData.StaticData staticData => Program.staticData;
 
     [HttpGet]
-    public async Task<IActionResult> Get(CancellationToken cancellationToken)
+    public async Task<Results<ContentHttpResult, BadRequest>> Get(CancellationToken cancellationToken)
     {
         string? playerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(playerId))
-            return BadRequest();
+        {
+            return TypedResults.BadRequest();
+        }
 
         Tokens tokens = (await new EarthDB.Query(false)
             .Get("tokens", playerId, typeof(Tokens))
@@ -45,11 +48,13 @@ public class TokensController : ViennaControllerBase
     }
 
     [HttpPost("{tokenId}/redeem")]
-    public async Task<IActionResult> Redeem(string tokenId, CancellationToken cancellationToken)
+    public async Task<Results<ContentHttpResult, BadRequest>> Redeem(string tokenId, CancellationToken cancellationToken)
     {
         string? playerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(playerId))
-            return BadRequest();
+        {
+            return TypedResults.BadRequest();
+        }
 
         // request.timestamp
         long requestStartedOn = HttpContext.GetTimestamp();
@@ -91,7 +96,7 @@ public class TokensController : ViennaControllerBase
         }
         else
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
     }
 

@@ -36,11 +36,40 @@
         <div class="card-body text-center">
             <h6 class="text-muted text-uppercase fw-bold mb-2" style="font-size: 0.8rem;">System Status</h6>
             <div class="d-flex align-items-center justify-content-center">
-                <div class="status-indicator @GetStatusClass() me-3"></div>
+                <div class="status-indicator @GetStatusClass(_currentStatus) me-3"></div>
                 <h2 class="mb-0 fw-bold">@_currentStatus.ToString().ToUpper()</h2>
             </div>
             <small class="text-muted mt-2 d-block">Last updated: @DateTime.Now.ToString("t")</small>
         </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        @foreach (var comp in ServerManager.Components)
+        {
+            <div class="col-12 col-sm-6 col-lg-4">
+            <div class="card border border-light-subtle shadow-sm h-100">
+                <div class="card-body d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center">
+                        <div class="status-indicator @GetStatusClass(comp.Status) me-3"></div>
+                        <div>
+                            <h6 class="mb-0 fw-bold">@comp.Name</h6>
+                            <small class="text-muted">@comp.Status.ToString()</small>
+                        </div>
+                    </div>
+
+                    @if (comp.Status is LauncherUI.ServerStatus.Offline)
+                    {
+                        <button class="btn btn-sm btn-outline-success border-0" 
+                                title="Start Component"
+                                disabled="@(IsButtonDisabled(Permissions.StartServer) || _currentStatus is LauncherUI.ServerStatus.Starting or LauncherUI.ServerStatus.Stopping)"
+                                @onclick="() => StartComponent(comp.ExeName)">
+                            <i class="bi bi-play-fill fs-5"></i>
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+        }
     </div>
 
     @if (!IsButtonDisabled(Permissions.StartServer) || !IsButtonDisabled(Permissions.RestartServer) ||
@@ -49,15 +78,15 @@
         <div class="row g-2 mb-4">
             <div class="col-12 col-md-4">
                 <button class="btn btn-lg btn-success w-100 py-3 d-flex flex-column align-items-center"
-                        disabled="@(IsButtonDisabled(Permissions.StartServer) || _currentStatus is LauncherUI.ServerStatus.Starting or LauncherUI.ServerStatus.Online or LauncherUI.ServerStatus.Stopping)"
+                        disabled="@(IsButtonDisabled(Permissions.StartServer) || _currentStatus is LauncherUI.ServerStatus.Starting or LauncherUI.ServerStatus.Stopping)"
                         @onclick="() => StartServer()">
                     <i class="bi bi-play-fill fs-2"></i>
-                    <span style="font-size: 0.9rem;">Start</span>
+                    <span style="font-size: 0.9rem;">Start All</span>
                 </button>
             </div>
             <div class="col-6 col-md-4">
                 <button class="btn btn-lg btn-warning w-100 py-3 d-flex flex-column align-items-center"
-                        disabled="@(IsButtonDisabled(Permissions.RestartServer) || _currentStatus is LauncherUI.ServerStatus.Offline or LauncherUI.ServerStatus.Stopping)"
+                        disabled="@(IsButtonDisabled(Permissions.RestartServer) || (_currentStatus is LauncherUI.ServerStatus.Offline && !ServerManager.AnyOnline) || _currentStatus is LauncherUI.ServerStatus.Stopping)"
                         @onclick="() => RestartServer()">
                     <i class="bi bi-arrow-clockwise fs-2"></i>
                     <span style="font-size: 0.9rem;">Restart</span>
@@ -65,7 +94,7 @@
             </div>
             <div class="col-6 col-md-4">
                 <button class="btn btn-lg btn-danger w-100 py-3 d-flex flex-column align-items-center"
-                        disabled="@(IsButtonDisabled(Permissions.StopServer) || _currentStatus is LauncherUI.ServerStatus.Offline or LauncherUI.ServerStatus.Stopping)"
+                        disabled="@(IsButtonDisabled(Permissions.StopServer) || (_currentStatus is LauncherUI.ServerStatus.Offline && !ServerManager.AnyOnline) || _currentStatus is LauncherUI.ServerStatus.Stopping)"
                         @onclick="() => StopServer()">
                     <i class="bi bi-stop-fill fs-2"></i>
                     <span style="font-size: 0.9rem;">Stop</span>
@@ -166,30 +195,37 @@
 
     private async Task StartServer()
         => await ServerManager.Start();
+
     private async Task StopServer()
         => await ServerManager.Stop();
+
     private async Task RestartServer()
         => await ServerManager.Restart();
 
     private async Task KillAll()
     {
         bool confirmed = await JS.InvokeAsync<bool>("confirm", "Are you sure you want to force kill all server processes?");
-        
+
         if (confirmed)
         {
             await ServerManager.KillAll();
         }
     }
 
+    private async Task StartComponent(string exeName)
+        => await ServerManager.EnsureComponentsOnline(exeName);
+
     private bool HasPermission(string permission)
-        => _user?.HasPermission(permission) ?? false;
+    => _user?.HasPermission(permission) ?? false;
     private bool IsButtonDisabled(string permission)
         => !HasPermission(permission);
 
-    private string GetStatusClass() => _currentStatus switch
-    {
-        ViennaDotNet.LauncherUI.ServerStatus.Online => "status-online",
-        ViennaDotNet.LauncherUI.ServerStatus.Starting => "status-starting",
-        _ => "status-offline"
-    };
+    private string GetStatusClass(ViennaDotNet.LauncherUI.ServerStatus status)
+        => status switch
+        {
+            ViennaDotNet.LauncherUI.ServerStatus.Online => "status-online",
+            ViennaDotNet.LauncherUI.ServerStatus.Starting => "status-starting",
+            ViennaDotNet.LauncherUI.ServerStatus.Stopping => "status-stopping",
+            _ => "status-offline"
+        };
 }

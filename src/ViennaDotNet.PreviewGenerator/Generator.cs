@@ -60,7 +60,9 @@ public static class Generator
                                             string? name = BedrockBlocks.GetName(blockId) ?? throw new InvalidOperationException();
                                             int data = 0;
                                             while (blockId - data - 1 >= 0 && name == BedrockBlocks.GetName(blockId - data - 1))
+                                            {
                                                 data++;
+                                            }
 
                                             return new PreviewModel.SubChunk.PaletteEntry(name, data);
                                         })],
@@ -73,37 +75,40 @@ public static class Generator
             .ToArray()!;
 
         // block entities seem to not be used by the client when rendering the preview anyway?
-        PreviewModel.BlockEntity[] blockEntities = [.. chunks
-            .SelectMany(chunk => chunk.BlockEntities)
-            .Where(blockEntity => blockEntity is not null)
-            .Select(blockEntity =>
-            {
-                int type;
-                switch (blockEntity!.GetString("id"))
-                {
-                    case "Bed":
-                        type = 27;
-                        break;
-                    case "PistonArm":
-                        type = 18;
-                        break;
-                    default:
-                        {
-                            Log.Warning($"No block entity type code mapping for {blockEntity.GetString("id")}");
-                            type = -1;
-                        }
+        // TODO: fix data being empty - client crashes
+        PreviewModel.BlockEntity[] blockEntities = [
+            // .. chunks
+            // .SelectMany(chunk => chunk.BlockEntities)
+            // .Where(blockEntity => blockEntity is not null)
+            // .Select(blockEntity =>
+            // {
+            //     int type;
+            //     switch (blockEntity!.GetString("id"))
+            //     {
+            //         case "Bed":
+            //             type = 27;
+            //             break;
+            //         case "PistonArm":
+            //             type = 18;
+            //             break;
+            //         default:
+            //             {
+            //                 Log.Warning($"No block entity type code mapping for {blockEntity.GetString("id")}");
+            //                 type = -1;
+            //             }
 
-                        break;
-                }
+            //             break;
+            //     }
 
-                return new PreviewModel.BlockEntity(
-                    type,
-                    new PreviewModel.Position(blockEntity.GetInt("x"), blockEntity.GetInt("y"), blockEntity.GetInt("z")),
-                    JsonNbtConverter.Convert(blockEntity)
-                );
+            //     return new PreviewModel.BlockEntity(
+            //         type,
+            //         new PreviewModel.Position(blockEntity.GetInt("x"), blockEntity.GetInt("y"), blockEntity.GetInt("z")),
+            //         JsonNbtConverter.Convert(blockEntity)
+            //     );
 
-            })
-            .Where(blockEntity => blockEntity.Type != -1)];
+            // })
+            // .Where(blockEntity => blockEntity.Type != -1)
+            ];
 
         // TODO: entities
         PreviewModel previewModel = new PreviewModel(

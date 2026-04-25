@@ -1,5 +1,7 @@
 using System.Net;
+using System.Net.Sockets;
 using System.Security.Claims;
+using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Hosting.Server;
@@ -9,9 +11,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Serilog;
 using Serilog.Events;
+using ViennaDotNet.DB;
 using ViennaDotNet.LauncherUI.Components;
 using ViennaDotNet.LauncherUI.Components.Account;
 using ViennaDotNet.LauncherUI.Data;
+using ViennaDotNet.ObjectStore.Client;
 
 namespace ViennaDotNet.LauncherUI;
 
@@ -70,6 +74,9 @@ public partial class Program
         builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();
 
         var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+
+        builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
+            options.UseSqlite(connectionString));
         builder.Services.AddDbContext<ApplicationDbContext>(options =>
             options.UseSqlite(connectionString));
         builder.Services.AddDatabaseDeveloperPageExceptionFilter();
@@ -150,6 +157,30 @@ public partial class Program
             var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
             await EnsureBuiltInRolesAsync(roleManager);
         }
+
+        // extract buildplates from db/objectstore
+        // var sm = app.Services.GetService<ServerManager>()!;
+        // await sm.EnsureComponentsOnline(Programs.ObjectStoreServer.ExeName);
+
+        // using var earthDB = EarthDB.Open(Settings.Instance.EarthDatabaseConnectionString ?? "");
+        // await using var objectStore = await ObjectStoreClient.ConnectAsync("localhost:" + Settings.Instance.ObjectStorePort);
+
+        // var results = await new EarthDB.ObjectQuery(false)
+        //     .SearchBuildplates(out var searchArguments, true, true)
+        //     .ExecuteAsync(earthDB, default);
+
+        // var (buildplates, buildplatesCount, totalCount) = results.GetBuildplates(searchArguments);
+
+        // Directory.CreateDirectory("bps");
+
+        // foreach (var (buildplateId, dbBuildplate) in buildplates)
+        // {
+        //     var preview64 = await objectStore.GetAsync(dbBuildplate!.PreviewObjectId);
+
+        //     var preview = Convert.FromBase64String(Encoding.UTF8.GetString(preview64!));
+
+        //     File.WriteAllBytes(Path.Combine("bps", dbBuildplate.Name[7..]), preview);
+        // }
 
         app.Run();
     }

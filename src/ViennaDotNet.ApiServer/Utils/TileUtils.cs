@@ -9,7 +9,6 @@ namespace ViennaDotNet.ApiServer.Utils;
 internal static class TileUtils
 {
     private static EarthDB db => Program.DB;
-    private static ObjectStoreClient objectStore => Program.objectStore;
 
     private static RequestSender? _requestSender;
 
@@ -23,14 +22,16 @@ internal static class TileUtils
 
         string? tileObjectId = results.GetTile(dbPos);
 
+        await using var objectStoreClient = await Program.GetObjectStoreClient();
+
         if (!string.IsNullOrEmpty(tileObjectId))
         {
-            return await TryWriteTileFromObject(tileObjectId, dest, cancellationToken);
+            return await TryWriteTileFromObject(tileObjectId, dest, objectStoreClient, cancellationToken);
         }
 
         Log.Information("Rendering tile");
-        _requestSender ??= Program.eventBus.AddRequestSender();
-        string? tilePng64 = await _requestSender.Request("tile", "renderTile", Json.Serialize(new RenderTileRequest(tileX, tileY, 16))).Task;
+        _requestSender ??= await Program.eventBus.AddRequestSenderAsync();
+        string? tilePng64 = await _requestSender.RequestAsync("tile", "renderTile", Json.Serialize(new RenderTileRequest(tileX, tileY, 16)));
 
         if (tilePng64 is null)
         {
@@ -40,7 +41,7 @@ internal static class TileUtils
 
         byte[] tilePng = Convert.FromBase64String(tilePng64);
 
-        tileObjectId = (await objectStore.Store(tilePng).Task) as string;
+        tileObjectId = await objectStoreClient.StoreAsync(tilePng);
 
         if (string.IsNullOrEmpty(tileObjectId))
         {
@@ -59,9 +60,9 @@ internal static class TileUtils
         return true;
     }
 
-    private static async Task<bool> TryWriteTileFromObject(string tileObjectId, Stream dest, CancellationToken cancellationToken)
+    private static async Task<bool> TryWriteTileFromObject(string tileObjectId, Stream dest, ObjectStoreClient objectStoreClient, CancellationToken cancellationToken)
     {
-        byte[]? tilePng = (await objectStore.Get(tileObjectId).Task) as byte[];
+        byte[]? tilePng = await objectStoreClient.GetAsync(tileObjectId);
 
         if (tilePng is null)
         {

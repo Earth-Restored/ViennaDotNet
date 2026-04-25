@@ -1,96 +1,96 @@
 ﻿namespace ViennaDotNet.EventBus.Client;
 
+public sealed class SubscriberListener : ISubscriberListener
+{
+    public Func<SubscriberEvent, Task>? OnEvent;
+    public Func<Task>? OnError;
+
+    public SubscriberListener()
+    {
+    }
+    public SubscriberListener(Func<SubscriberEvent, Task>? onEvent = null, Func<Task>? onError = null)
+    {
+        OnEvent = onEvent;
+        OnError = onError;
+    }
+
+    public Task OnEventAsync(SubscriberEvent _event)
+        => OnEvent?.Invoke(_event) ?? Task.CompletedTask;
+
+    public Task OnErrorAsync()
+        => OnError?.Invoke() ?? Task.CompletedTask;
+}
+
+public interface ISubscriberListener
+{
+    Task OnEventAsync(SubscriberEvent @event);
+    
+    Task OnErrorAsync();
+}
+
+public sealed class SubscriberEvent
+{
+    public long Timestamp { get; }
+    public string Type { get; }
+    public string Data { get; }
+
+    internal SubscriberEvent(long timestamp, string type, string data)
+    {
+        Timestamp = timestamp;
+        Type = type;
+        Data = data;
+    }
+}
+
 public sealed class Subscriber
 {
     private readonly EventBusClient _client;
-    private readonly int _channelId;
-
-    private readonly string _queueName;
-
     private readonly ISubscriberListener _listener;
+
+    internal int ChannelId { get; }
+    internal string QueueName { get; }
 
     internal Subscriber(EventBusClient client, int channelId, string queueName, ISubscriberListener listener)
     {
         _client = client;
-        _channelId = channelId;
-        _queueName = queueName;
+        ChannelId = channelId;
+        QueueName = queueName;
         _listener = listener;
     }
 
-    public void Close()
+    public async Task CloseAsync()
     {
-        _client.RemoveSubscriber(_channelId);
-        _client.SendMessage(_channelId, "CLOSE");
+        _client.RemoveSubscriber(ChannelId);
+        await _client.SendMessageAsync(ChannelId, "CLOSE");
     }
 
-    internal async Task<bool> HandleMessage(string message)
+    internal async Task<bool> HandleMessageAsync(string message)
     {
         if (message == "ERR")
         {
-            Close();
-            _listener.Error();
+            await CloseAsync();
+            await _listener.OnErrorAsync();
             return true;
         }
-        else
+
+        string[] fields = message.Split(':', 3);
+        if (fields.Length != 3)
         {
-            string[] fields = message.Split(':', 3);
-            if (fields.Length != 3)
-                return false;
-
-            if (!long.TryParse(fields[0], out long timestamp) || timestamp < 0)
-                return false;
-
-            string type = fields[1];
-            string data = fields[2];
-
-            await _listener.Event(new Event(timestamp, type, data));
-
-            return true;
-        }
-    }
-
-    internal void Error()
-        => _listener.Error();
-
-    public interface ISubscriberListener
-    {
-        Task Event(Event _event);
-
-        void Error();
-    }
-
-    public class SubscriberListener : ISubscriberListener
-    {
-        public Func<Event, Task>? OnEvent;
-        public Action? OnError;
-
-        public SubscriberListener()
-        {
-        }
-        public SubscriberListener(Func<Event, Task>? onEvent = null, Action? onError = null)
-        {
-            OnEvent = onEvent;
-            OnError = onError;
+            return false;
         }
 
-        public void Error()
-            => OnError?.Invoke();
-
-        public Task Event(Event _event)
-            => OnEvent?.Invoke(_event) ?? Task.CompletedTask;
-    }
-
-    public sealed class Event
-    {
-        public long Timestamp;
-        public string Type;
-        public string Data;
-
-        internal Event(long timestamp, string type, string data)
+        if (!long.TryParse(fields[0], out long timestamp) || timestamp < 0)
         {
-            Timestamp = timestamp;
-            Type = type;
-            Data = data;
+            return false;
         }
+
+        string type = fields[1];
+        string data = fields[2];
+
+        await _listener.OnEventAsync(new SubscriberEvent(timestamp, type, data));
+        return true;
     }
+
+    internal async Task ErrorAsync()
+        => await _listener.OnErrorAsync();
 }

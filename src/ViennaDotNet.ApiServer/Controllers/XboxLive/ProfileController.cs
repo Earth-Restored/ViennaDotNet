@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
 using ViennaDotNet.ApiServer.Models;
@@ -34,7 +35,7 @@ public partial class ProfileController : ViennaControllerBase
     );
 
     [HttpPost("batch/profile/settings")]
-    public async Task<IActionResult> GetBatchProfileSettings()
+    public async Task<Results<ContentHttpResult, NotFound, UnauthorizedHttpResult, BadRequest>> GetBatchProfileSettings()
     {
         var cancellationToken = Request.HttpContext.RequestAborted;
 
@@ -42,13 +43,13 @@ public partial class ProfileController : ViennaControllerBase
 
         if (request is null)
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         var authUnion = XboxLiveAuth();
         if (authUnion.IsB)
         {
-            return authUnion.B;
+            return authUnion.B.Result is UnauthorizedHttpResult unauthorized ? unauthorized : (BadRequest)authUnion.B.Result;
         }
 
         var token = authUnion.A;
@@ -57,7 +58,7 @@ public partial class ProfileController : ViennaControllerBase
         {
             if (userId != token.UserId)
             {
-                return Unauthorized();
+                return TypedResults.Unauthorized();
             }
         }
 
@@ -66,7 +67,7 @@ public partial class ProfileController : ViennaControllerBase
 
         if (account is null)
         {
-            return NotFound();
+            return TypedResults.NotFound();
         }
 
         return JsonCamelCase(new ProfileSettingsResponse(
@@ -82,14 +83,14 @@ public partial class ProfileController : ViennaControllerBase
     }
 
     [HttpGet("{gtParam}/profile/settings")]
-    public async Task<IActionResult> GetProfileSettings(string gtParam)
+    public async Task<Results<ContentHttpResult, NotFound, UnauthorizedHttpResult, BadRequest>> GetProfileSettings(string gtParam)
     {
         var cancellationToken = Request.HttpContext.RequestAborted;
 
         var authUnion = XboxLiveAuth();
         if (authUnion.IsB)
         {
-            return authUnion.B;
+            return authUnion.B.Result is UnauthorizedHttpResult unauthorized ? unauthorized : (BadRequest)authUnion.B.Result;
         }
 
         var token = authUnion.A;
@@ -108,12 +109,12 @@ public partial class ProfileController : ViennaControllerBase
 
         if (gt != token.Username)
         {
-            return Unauthorized();
+            return TypedResults.Unauthorized();
         }
 
         if (!Request.Query.TryGetValue("settings", out var settings))
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         var account = await _dbContext.Accounts
@@ -121,7 +122,7 @@ public partial class ProfileController : ViennaControllerBase
 
         if (account is null)
         {
-            return NotFound();
+            return TypedResults.NotFound();
         }
 
         return JsonCamelCase(new ProfileSettingsResponse([

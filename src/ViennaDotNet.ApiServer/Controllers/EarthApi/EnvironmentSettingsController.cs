@@ -1,5 +1,6 @@
 ﻿using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -14,7 +15,7 @@ namespace ViennaDotNet.ApiServer.Controllers.EarthApi;
 public class EnvironmentSettingsController : ControllerBase
 {
     [HttpGet("features")]
-    public IActionResult Features()
+    public ContentHttpResult Features()
     {
         var resp = new EarthApiResponse(new Dictionary<string, object>
         {
@@ -63,11 +64,11 @@ public class EnvironmentSettingsController : ControllerBase
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         });
-        return Content(sResp, "application/json");
+        return TypedResults.Content(sResp, "application/json");
     }
 
     [HttpGet("settings")]
-    public IActionResult Settings()
+    public ContentHttpResult Settings()
     {
         var resp = new EarthApiResponse(new Dictionary<string, object>
         {
@@ -105,6 +106,6 @@ public class EnvironmentSettingsController : ControllerBase
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         });
-        return Content(sResp, "application/json");
+        return TypedResults.Content(sResp, "application/json");
     }
 }

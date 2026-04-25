@@ -6,16 +6,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Platforms>AnyCPU;x64;x86;ARM32;ARM64</Platforms>
-	<AssemblyName>BuildplateLauncher</AssemblyName>
+	  <AssemblyName>BuildplateLauncher</AssemblyName>
     <TrimMode>partial</TrimMode>
     <RuntimeIdentifiers>win-x64;win-x86</RuntimeIdentifiers>
   </PropertyGroup>
-
-  <ItemGroup>
-    <Compile Remove="Models\**" />
-    <EmbeddedResource Remove="Models\**" />
-    <None Remove="Models\**" />
-  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="CommandLineParser" Version="2.9.1" />
@@ -23,6 +17,7 @@
     <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageReference Include="Serilog.Sinks.Http" Version="9.2.1" />
+    <PackageReference Include="ReentrantAsyncLock" Version="0.3.2" />
   </ItemGroup>
 
   <ItemGroup>

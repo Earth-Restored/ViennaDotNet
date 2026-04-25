@@ -20,18 +20,25 @@ public class Spawner
     private int _spawnCycleIndex;
     private readonly Dictionary<int, int> _lastSpawnCycleForTile = [];
 
-    public Spawner(EventBusClient eventBusClient, ActiveTiles activeTiles, TappableGenerator tappableGenerator, EncounterGenerator encounterGenerator)
+    public Spawner(ActiveTiles activeTiles, TappableGenerator tappableGenerator, EncounterGenerator encounterGenerator, Publisher publisher)
     {
         _activeTiles = activeTiles;
 
         _tappableGenerator = tappableGenerator;
         _encounterGenerator = encounterGenerator;
-        _publisher = eventBusClient.AddPublisher();
+        _publisher = publisher;
 
         _maxTappableLifetimeIntervals = (int)(long.Max(_tappableGenerator.GetMaxTappableLifetime(), _encounterGenerator.GetMaxEncounterLifetime()) / SPAWN_INTERVAL + 1);
 
         _spawnCycleTime = U.CurrentTimeMillis();
         _spawnCycleIndex = _maxTappableLifetimeIntervals;
+    }
+
+    public static async Task<Spawner> CreateAsync(EventBusClient eventBusClient, ActiveTiles activeTiles, TappableGenerator tappableGenerator, EncounterGenerator encounterGenerator)
+    {
+        var publisher = await eventBusClient.AddPublisherAsync();
+
+        return new Spawner(activeTiles, tappableGenerator, encounterGenerator, publisher);
     }
 
     public async Task Run()
@@ -149,12 +156,12 @@ public class Spawner
 
     private async Task SendSpawnedTappables(List<Tappable> tappables, List<Encounter> encounters)
     {
-        if (!await _publisher.Publish("tappables", "tappableSpawn", Json.Serialize(tappables)))
+        if (!await _publisher.PublishAsync("tappables", "tappableSpawn", Json.Serialize(tappables)))
         {
             Log.Error("Event bus server rejected tappable spawn event");
         }
 
-        if (!await _publisher.Publish("tappables", "encounterSpawn", Json.Serialize(encounters)))
+        if (!await _publisher.PublishAsync("tappables", "encounterSpawn", Json.Serialize(encounters)))
         {
             Log.Error("Event bus server rejected encounter spawn event");
         }

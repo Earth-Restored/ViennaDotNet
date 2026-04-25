@@ -9,26 +9,35 @@ namespace ViennaDotNet.ApiServer.Utils;
 public sealed class BuildplateInstancesManager
 {
     private readonly EventBusClient _eventBusClient;
-    private readonly Subscriber _subscriber;
-    private readonly RequestSender _requestSender;
+    private Subscriber _subscriber = null!;
+    private RequestSender _requestSender = null!;
 
     private readonly Dictionary<string, TaskCompletionSource<bool>?> _pendingInstances = [];
     private readonly Dictionary<string, InstanceInfo> _instances = [];
     private readonly Dictionary<string, HashSet<string>> _instancesByBuildplateId = [];
 
-    public BuildplateInstancesManager(EventBusClient eventBusClient)
+    private BuildplateInstancesManager(EventBusClient eventBusClient)
     {
         _eventBusClient = eventBusClient;
-        _subscriber = _eventBusClient.AddSubscriber("buildplates", new Subscriber.SubscriberListener(
-            HandleEvent,
-            () =>
-            {
-                Log.Fatal("Buildplates event bus subscriber error");
-                Log.CloseAndFlush();
-                Environment.Exit(1);
-            }
-        ));
-        _requestSender = _eventBusClient.AddRequestSender();
+    }
+
+    public static async Task<BuildplateInstancesManager> CreateAsync(EventBusClient eventBusClient)
+    {
+        var buildplateInstancesManager = new BuildplateInstancesManager(eventBusClient);
+
+        buildplateInstancesManager._subscriber = await eventBusClient.AddSubscriberAsync("buildplates", new SubscriberListener(
+           buildplateInstancesManager.HandleEvent,
+           async () =>
+           {
+               Log.Fatal("Buildplates event bus subscriber error");
+               Log.CloseAndFlush();
+               Environment.Exit(1);
+           }
+       ));
+
+        buildplateInstancesManager._requestSender = await eventBusClient.AddRequestSenderAsync();
+
+        return buildplateInstancesManager;
     }
 
     public async Task<string?> RequestBuildplateInstance(string? playerId, string? encounterId, string buildplateId, InstanceType type, long shutdownTime, bool night)
@@ -84,7 +93,7 @@ public sealed class BuildplateInstancesManager
         }
 
         Log.Information("Did not find existing instance, starting new instance");
-        string? instanceId = await _requestSender.Request("buildplates", "start", Json.Serialize(new StartRequest(playerId, encounterId, buildplateId, night, type, shutdownTime))).Task;
+        string? instanceId = await _requestSender.RequestAsync("buildplates", "start", Json.Serialize(new StartRequest(playerId, encounterId, buildplateId, night, type, shutdownTime)));
         if (instanceId is null)
         {
             Log.Error("Buildplate start request was rejected/ignored");
@@ -124,18 +133,20 @@ public sealed class BuildplateInstancesManager
         }
     }
 
-    public string? GetBuildplatePreview(byte[] serverData, bool night)
+    public async Task<string?> GetBuildplatePreviewAsync(byte[] serverData, bool night)
     {
         Log.Information("Requesting buildplate preview");
 
-        string? preview = _requestSender.Request("buildplates", "preview", Json.Serialize(new PreviewRequest(Convert.ToBase64String(serverData), night))).Task.Result;
+        string? preview = await _requestSender.RequestAsync("buildplates", "preview", Json.Serialize(new PreviewRequest(Convert.ToBase64String(serverData), night)));
         if (preview is null)
+        {
             Log.Error("Preview request was rejected/ignored");
+        }
 
         return preview;
     }
 
-    private Task HandleEvent(Subscriber.Event @event)
+    private Task HandleEvent(SubscriberEvent @event)
     {
         switch (@event.Type)
         {
@@ -250,7 +261,6 @@ public sealed class BuildplateInstancesManager
 
                 break;
             default:
-                Log.Warning($"Unknown event in BuildplateInstancesManager: '{@event.Type}'");
                 break;
         }
 

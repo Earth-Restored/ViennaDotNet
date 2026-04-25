@@ -241,6 +241,32 @@ namespace ViennaDotNet.LauncherUI.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("ViennaDotNet.LauncherUI.Models.Db.DbBuildplatePreview", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("BuildplateId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PlayerId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<byte[]>("PreviewData")
+                        .IsRequired()
+                        .HasColumnType("BLOB");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PlayerId", "BuildplateId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Player_Buildplate");
+
+                    b.ToTable("BuildplatePreviews");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("ViennaDotNet.LauncherUI.ApplicationRole", null)

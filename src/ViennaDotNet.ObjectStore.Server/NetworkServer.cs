@@ -1,4 +1,6 @@
 ﻿using Serilog;
+using System.Buffers;
+using System.IO.Pipelines;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -10,265 +12,162 @@ public sealed partial class NetworkServer
 {
     private readonly Server _server;
     private readonly TcpListener _serverSocket;
+    private readonly CancellationTokenSource _cts = new();
 
     public NetworkServer(Server server, int port)
     {
         _server = server;
         _serverSocket = new TcpListener(IPAddress.Loopback, port);
-        _serverSocket.Start();
-        Log.Information($"Created server on port {port}");
     }
 
-    public void Run()
+    public async Task RunAsync()
+    {
+        _serverSocket.Start();
+        Log.Information("Server started on port {Port}", ((IPEndPoint)_serverSocket.LocalEndpoint).Port);
+
+        try
+        {
+            while (!_cts.Token.IsCancellationRequested)
+            {
+                TcpClient client = await _serverSocket.AcceptTcpClientAsync(_cts.Token);
+                Log.Information("Connection from {RemoteEndPoint}", client.Client.RemoteEndPoint);
+
+                _ = HandleConnectionAsync(client);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        finally
+        {
+            _serverSocket.Stop();
+        }
+    }
+
+    private async Task HandleConnectionAsync(TcpClient client)
+    {
+        using (client)
+        {
+            var stream = client.GetStream();
+            var reader = PipeReader.Create(stream);
+            var writer = PipeWriter.Create(stream);
+
+            try
+            {
+                await ProcessLinesAsync(reader, writer);
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Error processing connection");
+            }
+        }
+
+        Log.Information("Connection closed");
+    }
+
+    private async Task ProcessLinesAsync(PipeReader reader, PipeWriter writer)
     {
         while (true)
         {
-            try
+            ReadResult result = await reader.ReadAsync();
+            ReadOnlySequence<byte> buffer = result.Buffer;
+
+            while (TryReadLine(ref buffer, out ReadOnlySequence<byte> line))
             {
-                Socket socket = _serverSocket.AcceptSocket();
-                Log.Information($"Connection from {socket.RemoteEndPoint}");
-                Connection connection = new Connection(this, socket);
-                new Thread(connection.Run).Start();
+                string commandLine = Encoding.ASCII.GetString(line);
+                string[] parts = commandLine.Split(' ', 2);
+
+                if (parts.Length < 2)
+                {
+                    await WriteMessageAsync(writer, "ERR");
+                    continue;
+                }
+
+                string cmd = parts[0].ToUpperInvariant();
+                string arg = parts[1];
+
+                switch (cmd)
+                {
+                    case "STORE":
+                        if (int.TryParse(arg, out int length) && length >= 0)
+                        {
+                            reader.AdvanceTo(buffer.Start);
+
+                            var payloadResult = await reader.ReadAtLeastAsync(length);
+                            var payload = payloadResult.Buffer.Slice(0, length);
+
+                            string? id = await _server.StoreAsync(payload.ToArray());
+                            await WriteMessageAsync(writer, id != null ? $"OK {id}" : "ERR");
+
+                            buffer = payloadResult.Buffer.Slice(length);
+                        }
+
+                        break;
+                    case "GET":
+                        if (ValidateObjectId(arg))
+                        {
+                            byte[]? data = await _server.LoadAsync(arg);
+                            if (data != null)
+                            {
+                                await WriteMessageAsync(writer, $"OK {data.Length}");
+                                await writer.WriteAsync(data);
+                            }
+                            else
+                            {
+                                await WriteMessageAsync(writer, "ERR");
+                            }
+                        }
+
+                        break;
+                    case "DEL":
+                        bool deleted = await _server.DeleteAsync(arg);
+                        await WriteMessageAsync(writer, deleted ? "OK" : "ERR");
+                        break;
+                    default:
+                        await WriteMessageAsync(writer, "ERR");
+                        break;
+                }
             }
-            catch (SocketException ex)
+
+            reader.AdvanceTo(buffer.Start, buffer.End);
+
+            if (result.IsCompleted)
             {
-                Log.Warning($"Exception while accepting connection: {ex}");
+                break;
             }
         }
+
+        await reader.CompleteAsync();
+        await writer.CompleteAsync();
     }
 
-    private sealed class Connection
+    private static bool TryReadLine(ref ReadOnlySequence<byte> buffer, out ReadOnlySequence<byte> line)
     {
-        private readonly NetworkServer _networkServer;
+        SequencePosition? position = buffer.PositionOf((byte)'\n');
 
-        private readonly Socket _socket;
-
-        public Connection(NetworkServer networkServer, Socket socket)
+        if (position is null)
         {
-            _networkServer = networkServer;
-            _socket = socket;
+            line = default;
+            return false;
         }
 
-        public void Run()
-        {
-            try
-            {
-                byte[] readBuffer = new byte[65536];
-                MemoryStream byteArrayOutputStream = new MemoryStream(128);
-                bool close = false;
-                string? lastCommand = null;
-                int binaryReadLength = 0;
-                while (!close)
-                {
-                    int readLength = _socket.Receive(readBuffer);
-                    if (readLength > 0)
-                    {
-                        int startOffset = 0;
-                        while (startOffset < readLength && !close)
-                        {
-                            if (binaryReadLength > 0)
-                            {
-                                if (startOffset + binaryReadLength > readLength)
-                                {
-                                    byteArrayOutputStream.Write(readBuffer, startOffset, readLength - startOffset);
-                                    binaryReadLength -= readLength - startOffset;
-                                    startOffset += readLength - startOffset;
-                                }
-                                else
-                                {
-                                    byteArrayOutputStream.Write(readBuffer, startOffset, binaryReadLength);
-                                    if (!HandleBinaryData(lastCommand, byteArrayOutputStream.ToArray()))
-                                    {
-                                        close = true;
-                                        break;
-                                    }
+        line = buffer.Slice(0, position.Value);
+        buffer = buffer.Slice(buffer.GetPosition(1, position.Value));
+        return true;
+    }
 
-                                    lastCommand = null;
-                                    byteArrayOutputStream = new MemoryStream(128);
-                                    startOffset += binaryReadLength;
-                                    binaryReadLength = 0;
-                                }
-                            }
-                            else
-                            {
-                                for (int offset = startOffset; offset < readLength; offset++)
-                                {
-                                    if (readBuffer[offset] == '\n')
-                                    {
-                                        byteArrayOutputStream.Write(readBuffer, startOffset, offset - startOffset);
-                                        lastCommand = Encoding.ASCII.GetString(byteArrayOutputStream.ToArray());
-                                        binaryReadLength = HandleCommand(lastCommand);
-                                        if (binaryReadLength == -1)
-                                        {
-                                            close = true;
-                                            break;
-                                        }
-
-                                        byteArrayOutputStream = new MemoryStream(128);
-                                        startOffset = offset + 1;
-                                        break;
-                                    }
-                                    else if (offset == readLength - 1)
-                                    {
-                                        byteArrayOutputStream.Write(readBuffer, startOffset, readLength - startOffset);
-                                        startOffset = readLength;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    else if (readLength == 0)
-                        close = true;
-                    else
-                        throw new InvalidOperationException();
-                }
-            }
-            catch (SocketException ex)
-            {
-                Log.Warning($"Exception while reading socket: {ex}");
-            }
-
-            Log.Information("Connection closed");
-        }
-
-        private void SendMessage(string message)
-        {
-            try
-            {
-                _socket.Send(Encoding.ASCII.GetBytes(message + "\n"));
-            }
-            catch (SocketException ex)
-            {
-                Log.Warning($"Exception while sending: {ex}");
-                try
-                {
-                    _socket.Shutdown(SocketShutdown.Both);
-                }
-                catch (SocketException shutdownEx)
-                {
-                    Log.Warning($"Exception while shutting down socket: {shutdownEx}");
-                }
-                finally
-                {
-                    _socket.Close();
-                }
-            }
-        }
-
-        private void SendData(byte[] data)
-        {
-            try
-            {
-                _socket.Send(data);
-            }
-            catch (SocketException ex)
-            {
-                Log.Warning($"Exception while sending: {ex}");
-                try
-                {
-                    _socket.Shutdown(SocketShutdown.Both);
-                }
-                catch (SocketException shutdownEx)
-                {
-                    Log.Warning($"Exception while shutting down socket: {shutdownEx}");
-                }
-                finally
-                {
-                    _socket.Close();
-                }
-            }
-        }
-
-        private int HandleCommand(string command)
-        {
-            string[] parts = command.Split(' ', 2);
-            if (parts.Length != 2)
-                return -1;
-
-            switch (parts[0])
-            {
-                case "STORE":
-                    {
-                        if (!int.TryParse(parts[1], out int length) || length < 0)
-                            return -1;
-
-                        if (length == 0)
-                        {
-                            string? id = _networkServer._server.Store([]);
-                            if (id is not null)
-                                SendMessage("OK " + id);
-                            else
-                                SendMessage("ERR");
-                        }
-
-                        return length;
-                    }
-                case "GET":
-                    {
-                        string id = parts[1];
-                        if (!ValidateObjectId(id))
-                            return -1;
-
-                        byte[]? data = _networkServer._server.Load(id);
-                        if (data is not null)
-                        {
-                            SendMessage("OK " + data.Length.ToString());
-                            SendData(data);
-                        }
-                        else
-                            SendMessage("ERR");
-
-                        return 0;
-                    }
-                case "DEL":
-                    {
-                        string id = parts[1];
-                        if (!ValidateObjectId(id))
-                            return -1;
-
-                        if (_networkServer._server.Delete(id))
-                            SendMessage("OK");
-                        else
-                            SendMessage("ERR");
-
-                        return 0;
-                    }
-                default:
-                    return -1;
-            }
-        }
-
-        private bool HandleBinaryData(string? command, byte[] data)
-        {
-            if (command is null)
-                throw new InvalidOperationException();
-
-            string[] parts = command.Split(' ', 2);
-            if (parts.Length != 2)
-                throw new InvalidOperationException();
-
-            switch (parts[0])
-            {
-                case "STORE":
-                    {
-                        string? id = _networkServer._server.Store(data);
-                        if (id is not null)
-                            SendMessage("OK " + id);
-                        else
-                            SendMessage("ERR");
-
-                        return true;
-                    }
-                default:
-                    throw new InvalidOperationException();
-            }
-        }
+    private static async Task WriteMessageAsync(PipeWriter writer, string message)
+    {
+        byte[] bytes = Encoding.ASCII.GetBytes(message + "\n");
+        await writer.WriteAsync(bytes);
     }
 
     private static bool ValidateObjectId(string id)
     {
         if (!GetRegex1().IsMatch(id))
+        {
             return false;
+        }
 
         return true;
     }

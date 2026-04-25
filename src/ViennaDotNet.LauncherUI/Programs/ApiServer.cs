@@ -38,7 +38,7 @@ internal static class ApiServer
         {
             WorkingDirectory = Path.GetFullPath(Program.ProgramsDir),
             CreateNoWindow = false,
-            UseShellExecute = true
+            UseShellExecute = true,
         });
     }
 }

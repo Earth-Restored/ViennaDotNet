@@ -2,17 +2,54 @@
 
 namespace ViennaDotNet.EventBus.Client;
 
+public sealed class RequestHandlerLister : IRequestHandlerLister
+{
+    public Func<RequestHandlerRequest, Task<string?>>? OnRequest;
+    public Func<Task>? OnError;
+
+    public RequestHandlerLister(Func<RequestHandlerRequest, Task<string?>>? onRequest, Func<Task>? onError)
+    {
+        OnRequest = onRequest;
+        OnError = onError;
+    }
+
+    public Task<string?> OnRequestAsync(RequestHandlerRequest request)
+        => OnRequest?.Invoke(request) ?? Task.FromResult<string?>(null);
+
+    public Task OnErrorAsync()
+        => OnError?.Invoke() ?? Task.CompletedTask;
+}
+
+public interface IRequestHandlerLister
+{
+    Task<string?> OnRequestAsync(RequestHandlerRequest request);
+
+    Task OnErrorAsync();
+}
+
+public sealed class RequestHandlerRequest
+{
+    public long Timestamp { get; }
+    public string Type { get; }
+    public string Data { get; }
+
+    internal RequestHandlerRequest(long timestamp, string type, string data)
+    {
+        Timestamp = timestamp;
+        Type = type;
+        Data = data;
+    }
+}
+
 public sealed class RequestHandler
 {
     private readonly EventBusClient _client;
     private readonly int _channelId;
     private readonly string _queueName;
-
-    private readonly IHandler _handler;
-
+    private readonly IRequestHandlerLister _handler;
     private volatile bool _closed = false;
 
-    internal RequestHandler(EventBusClient client, int channelId, string queueName, IHandler handler)
+    internal RequestHandler(EventBusClient client, int channelId, string queueName, IRequestHandlerLister handler)
     {
         _client = client;
         _channelId = channelId;
@@ -20,133 +57,76 @@ public sealed class RequestHandler
         _handler = handler;
     }
 
-    public void Close()
+    public async Task CloseAsync()
     {
         _closed = true;
-        _client.RemoveSubscriber(_channelId);
-        _client.SendMessage(_channelId, "CLOSE");
+        _client.RemoveRequestHandler(_channelId);
+        await _client.SendMessageAsync(_channelId, "CLOSE");
     }
 
-    internal async Task<bool> HandleMessage(string message)
+    internal async Task<bool> HandleMessageAsync(string message)
     {
         if (message == "ERR")
         {
-            Close();
-            _handler.Error();
+            await ErrorAsync();
+            await _handler.OnErrorAsync();
             return true;
         }
-        else
+
+        string[] fields = message.Split(':', 4);
+        if (fields.Length != 4)
         {
-            string[] fields = message.Split(':', 4);
-            if (fields.Length != 4)
-            {
-                return false;
-            }
+            return false;
+        }
 
-            string requestIdString = fields[0];
-            int requestId;
-            try
-            {
-                requestId = int.Parse(requestIdString);
-            }
-            catch (FormatException)
-            {
-                return false;
-            }
+        if (!int.TryParse(fields[0], out int requestId) || requestId <= 0)
+        {
+            return false;
+        }
 
-            if (requestId <= 0)
-            {
-                return false;
-            }
+        if (!long.TryParse(fields[1], out long timestamp) || timestamp < 0)
+        {
+            return false;
+        }
 
-            string timestampString = fields[1];
-            long timestamp;
-            try
-            {
-                timestamp = long.Parse(timestampString);
-            }
-            catch (FormatException)
-            {
-                return false;
-            }
+        string type = fields[2];
+        string data = fields[3];
 
-            if (timestamp < 0)
-            {
-                return false;
-            }
+        _ = ProcessRequestAsync(requestId, timestamp, type, data);
 
-            string type = fields[2];
-            string data = fields[3];
+        return true;
+    }
 
-            // TODO: remove requestAsync, beware awating it causes problems
-            TaskCompletionSource<string?> responseCompletableFuture = _handler.RequestAsync(new Request(timestamp, type, data));
-            responseCompletableFuture.Task.ContinueWith(task =>
+    private async Task ProcessRequestAsync(int requestId, long timestamp, string type, string data)
+    {
+        try
+        {
+            string? response = await _handler.OnRequestAsync(new RequestHandlerRequest(timestamp, type, data));
+
+            if (!_closed)
             {
-                if (!_closed)
+                if (response != null)
                 {
-                    if (task.Result is not null)
-                        _client.SendMessage(_channelId, "REP " + requestId + ":" + task.Result);
-                    else
-                        _client.SendMessage(_channelId, "NREP " + requestId);
+                    await _client.SendMessageAsync(_channelId, $"REP {requestId}:{response}");
                 }
-            }).Forget();
-
-            return true;
+                else
+                {
+                    await _client.SendMessageAsync(_channelId, $"NREP {requestId}");
+                }
+            }
+        }
+        catch
+        {
+            if (!_closed)
+            {
+                await _client.SendMessageAsync(_channelId, $"NREP {requestId}");
+            }
         }
     }
 
-    internal void Error()
+    internal async Task ErrorAsync()
     {
         _closed = true;
-        _handler.Error();
-    }
-
-    public interface IHandler
-    {
-        TaskCompletionSource<string?> RequestAsync(Request request)
-        {
-            TaskCompletionSource<string?> completableFuture = new();
-            new Thread(() =>
-            {
-                completableFuture.SetResult(Request(request).Result);
-            }).Start();
-            return completableFuture;
-        }
-
-        Task<string?> Request(Request request);
-
-        void Error();
-    }
-
-    public class Handler : IHandler
-    {
-        public Func<Request, Task<string?>>? OnRequest;
-        public Action? OnError;
-
-        public Handler(Func<Request, Task<string?>>? onRequest, Action? onError)
-        {
-            OnRequest = onRequest;
-            OnError = onError;
-        }
-
-        public Task<string?> Request(Request request)
-            => OnRequest?.Invoke(request) ?? Task.FromResult<string?>(null);
-
-        public void Error()
-            => OnError?.Invoke();
-    }
-
-    public sealed class Request
-    {
-        public readonly long Timestamp;
-        public readonly string Type;
-        public readonly string Data;
-
-        public Request(long timestamp, string type, string data)
-        {
-            Timestamp = timestamp;
-            Type = type;
-            Data = data;
-        }
+        await _handler.OnErrorAsync();
     }
 }

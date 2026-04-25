@@ -1,22 +1,22 @@
-﻿using Serilog;
-using System.Diagnostics;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
+using Serilog;
 using ViennaDotNet.Buildplate.Connector.Model;
+using ViennaDotNet.Buildplate.Model;
 using ViennaDotNet.Common;
 using ViennaDotNet.Common.Utils;
 using ViennaDotNet.EventBus.Client;
 
 namespace ViennaDotNet.Buildplate.Launcher;
 
-public class InstanceManager
+public sealed class InstanceManager
 {
     private readonly Starter _starter;
 
     private readonly Publisher _publisher;
-    private readonly RequestHandler _requestHandler;
+    private RequestHandler _requestHandler = null!;
     private int _runningInstanceCount = 0;
     private bool _shuttingDown = false;
-    private readonly Lock _lock = new();
+    private readonly Lock _lock = new Lock();
 
     [JsonConverter(typeof(JsonStringEnumConverter))]
     private enum InstanceType
@@ -47,54 +47,110 @@ public class InstanceManager
         InstanceType Type
     );
 
-    private sealed record PreviewRequest(
-        string ServerDataBase64,
-        bool Night
-    );
-
-    public InstanceManager(EventBusClient eventBusClient, Starter starter)
+    public InstanceManager(Starter starter, Publisher publisher)
     {
         _starter = starter;
 
-        _publisher = eventBusClient.AddPublisher();
+        _publisher = publisher;
+    }
 
-        _requestHandler = eventBusClient.AddRequestHandler("buildplates", new RequestHandler.Handler(
-           async request =>
+    public static async Task<InstanceManager> CreateAsync(EventBusClient eventBusClient, Starter starter)
+    {
+        var publisher = await eventBusClient.AddPublisherAsync();
+
+        var instanceManager = new InstanceManager(starter, publisher);
+
+        instanceManager._requestHandler = await eventBusClient.AddRequestHandlerAsync("buildplates", new RequestHandlerLister(
+            async request =>
             {
                 if (request.Type is "start")
                 {
-                    _lock.Enter();
-                    if (_shuttingDown)
+                    instanceManager._lock.Enter();
+                    if (instanceManager._shuttingDown)
                     {
-                        _lock.Exit();
+                        instanceManager._lock.Exit();
                         return null;
                     }
 
-                    _runningInstanceCount += 1;
-                    _lock.Exit();
+                    instanceManager._runningInstanceCount += 1;
+                    instanceManager._lock.Exit();
 
                     StartRequest startRequest;
                     try
                     {
                         startRequest = Json.Deserialize<StartRequest>(request.Data)!;
                     }
-                    catch (Exception ex)
+                    catch (Exception exception)
                     {
-                        Log.Warning($"Bad start request: {ex}");
+                        Log.Warning(exception, "Bad start request");
                         return null;
                     }
 
-                    var (survival, saveEnabled, inventoryType, buildplateSource, shutdownTime) = startRequest.Type switch
+                    bool survival;
+                    bool saveEnabled;
+                    InventoryType inventoryType;
+                    Instance.BuildplateSource buildplateSource;
+                    long? shutdownTime;
+                    switch (startRequest.Type)
                     {
-                        InstanceType.BUILD => (false, true, InventoryType.SYNCED, Instance.BuildplateSource.PLAYER, (long?)null),
-                        InstanceType.PLAY => (true, false, InventoryType.DISCARD, Instance.BuildplateSource.PLAYER, null),
-                        InstanceType.SHARED_BUILD => (false, false, InventoryType.DISCARD, Instance.BuildplateSource.SHARED, null),
-                        InstanceType.SHARED_PLAY => (true, false, InventoryType.DISCARD, Instance.BuildplateSource.SHARED, null),
-                        InstanceType.ENCOUNTER => (true, false, InventoryType.BACKPACK, Instance.BuildplateSource.ENCOUNTER, startRequest.ShutdownTime),
-                        _ => throw new UnreachableException(),
-                    };
+                        case InstanceType.BUILD:
+                            {
+                                survival = false;
+                                saveEnabled = true;
+                                inventoryType = InventoryType.SYNCED;
+                                buildplateSource = Instance.BuildplateSource.PLAYER;
+                                shutdownTime = null;
+                            }
 
-                    if (buildplateSource is Instance.BuildplateSource.PLAYER && startRequest.PlayerId is null)
+                            break;
+                        case InstanceType.PLAY:
+                            {
+                                survival = true;
+                                saveEnabled = false;
+                                inventoryType = InventoryType.DISCARD;
+                                buildplateSource = Instance.BuildplateSource.PLAYER;
+                                shutdownTime = null;
+                            }
+
+                            break;
+                        case InstanceType.SHARED_BUILD:
+                            {
+                                survival = false;
+                                saveEnabled = false;
+                                inventoryType = InventoryType.DISCARD;
+                                buildplateSource = Instance.BuildplateSource.SHARED;
+                                shutdownTime = null;
+                            }
+
+                            break;
+                        case InstanceType.SHARED_PLAY:
+                            {
+                                survival = true;
+                                saveEnabled = false;
+                                inventoryType = InventoryType.DISCARD;
+                                buildplateSource = Instance.BuildplateSource.SHARED;
+                                shutdownTime = null;
+                            }
+
+                            break;
+                        case InstanceType.ENCOUNTER:
+                            {
+                                survival = true;
+                                saveEnabled = false;
+                                inventoryType = InventoryType.BACKPACK;
+                                buildplateSource = Instance.BuildplateSource.ENCOUNTER;
+                                shutdownTime = startRequest.ShutdownTime;
+                            }
+
+                            break;
+                        default:
+                            {
+                                Log.Warning("Bad start request");
+                                return null;
+                            }
+                    }
+
+                    if (buildplateSource == Instance.BuildplateSource.PLAYER && startRequest.PlayerId is null)
                     {
                         Log.Warning("Bad start request");
                         return null;
@@ -104,14 +160,14 @@ public class InstanceManager
 
                     Log.Information($"Starting buildplate instance {instanceId}");
 
-                    Instance? instance = starter.StartInstance(instanceId, startRequest.PlayerId, startRequest.BuildplateId, buildplateSource, survival, startRequest.Night, saveEnabled, inventoryType, shutdownTime);
+                    Instance? instance = instanceManager._starter.StartInstance(instanceId, startRequest.PlayerId, startRequest.BuildplateId, buildplateSource, survival, startRequest.Night, saveEnabled, inventoryType, shutdownTime);
                     if (instance is null)
                     {
                         Log.Error($"Error starting buildplate instance {instanceId}");
                         return null;
                     }
 
-                    SendEventBusMessage("started", Json.Serialize(new StartNotification(
+                    instanceManager.SendEventBusMessage("started", Json.Serialize(new StartNotification(
                         instanceId,
                         startRequest.PlayerId,
                         startRequest.EncounterId,
@@ -121,16 +177,23 @@ public class InstanceManager
                         startRequest.Type
                     )));
 
-                    new Thread(() =>
+                    Task.Run(async () =>
                     {
-                        instance.WaitForShutdown();
+                        try
+                        {
+                            await instance.WaitForShutdownAsync();
 
-                        SendEventBusMessage("stopped", instance.InstanceId);
+                            instanceManager.SendEventBusMessage("stopped", instance.InstanceId);
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.Error(ex, "Failed to send stopped message");
+                        }
 
-                        _lock.Enter();
-                        _runningInstanceCount -= 1;
-                        _lock.Exit();
-                    }).Start();
+                        instanceManager._lock.Enter();
+                        instanceManager._runningInstanceCount -= 1;
+                        instanceManager._lock.Exit();
+                    }).Forget();
 
                     return instanceId;
                 }
@@ -161,19 +224,20 @@ public class InstanceManager
                 }
                 else
                 {
-                    Log.Warning($"Unknown InstanceManager request: '{request.Type}'");
                     return null;
                 }
             },
-            () =>
+            async () =>
             {
                 Log.Error("Event bus request handler error");
             }
         ));
+
+        return instanceManager;
     }
 
     private void SendEventBusMessage(string type, string message)
-        => _publisher.Publish("buildplates", type, message).ContinueWith(task =>
+        => _publisher.PublishAsync("buildplates", type, message).ContinueWith(task =>
         {
             if (!task.Result)
             {
@@ -181,16 +245,11 @@ public class InstanceManager
             }
         });
 
-    public void Shutdown()
+    public async Task ShutdownAsync()
     {
-        _requestHandler.Close();
+        await _requestHandler.CloseAsync();
 
         _lock.Enter();
-        if (_shuttingDown)
-        {
-            return;
-        }
-
         _shuttingDown = true;
         Log.Information($"Shutdown signal received, no new buildplate instances will be started, waiting for {_runningInstanceCount} instances to finish");
         while (_runningInstanceCount > 0)
@@ -198,25 +257,18 @@ public class InstanceManager
             int runningInstanceCount = _runningInstanceCount;
             _lock.Exit();
 
-            try
-            {
-                Thread.Sleep(1000);
-            }
-            catch (ThreadInterruptedException)
-            {
-                // empty
-            }
+            await Task.Delay(1000);
 
             _lock.Enter();
             if (_runningInstanceCount != runningInstanceCount)
             {
-                Log.Information($"Waiting for {_runningInstanceCount} instances to finish");
+                Log.Information($"Waiting for {runningInstanceCount} instances to finish");
             }
         }
 
         _lock.Exit();
 
-        _publisher.Flush();
-        _publisher.Close();
+        await _publisher.FlushAsync();
+        await _publisher.CloseAsync();
     }
 }

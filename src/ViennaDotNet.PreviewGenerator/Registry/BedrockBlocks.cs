@@ -158,17 +158,15 @@ public static class BedrockBlocks
 
         public override int GetHashCode()
         {
-            unchecked // Overflow is fine, just wrap
+            var hash = new HashCode();
+            hash.Add(Name, StringComparer.Ordinal);
+            foreach (var kvp in State)
             {
-                int hash = 17 * Name.GetHashCode(StringComparison.Ordinal);
-                foreach (var kvp in State)
-                {
-                    hash = hash * 23 + kvp.Key.GetHashCode(StringComparison.Ordinal);
-                    hash = hash * 23 + (kvp.Value?.GetHashCode() ?? 0);
-                }
-
-                return hash;
+                hash.Add(kvp.Key, StringComparer.Ordinal);
+                hash.Add(kvp.Value);
             }
+            
+            return hash.ToHashCode();
         }
 
         public override bool Equals(object? obj)

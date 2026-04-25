@@ -1,7 +1,7 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace ViennaDotNet.BuildplateImporter.Models;
+namespace ViennaDotNet.Buildplate.Model;
 
-internal sealed record BuildplateMetadataVersion(
+public sealed record BuildplateMetadataVersion(
     [property: JsonPropertyName("version")] int Version
 );

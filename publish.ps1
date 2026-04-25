@@ -51,6 +51,19 @@ foreach ($buildProfile in $profiles) {
         -Configuration $configuration `
         -BuildProfile $buildProfile
 
+    if ($buildProfile -like "*win*"){
+        Invoke-ProjectPublish `
+            -ProjectPath "./src/ViennaDotNet.KillHelper/ViennaDotNet.KillHelper.csproj" `
+            -OutDir "$publishDir/components" `
+            -Configuration $configuration `
+            -BuildProfile $buildProfile
+        Invoke-ProjectPublish `
+            -ProjectPath "./src/ViennaDotNet.KillHelper/ViennaDotNet.KillHelper.csproj" `
+            -OutDir "$publishDir/launcher" `
+            -Configuration $configuration `
+            -BuildProfile $buildProfile
+    }
+
     Copy-Item -Path "staticdata" -Destination "$publishDir/staticdata" -Recurse -Force
 
     $startScriptContent = @'

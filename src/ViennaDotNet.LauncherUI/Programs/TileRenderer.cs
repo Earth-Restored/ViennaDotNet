@@ -22,10 +22,10 @@ internal static class TileRenderer
         return true;
     }
 
-    public static void Run(Settings settings, ILogger logger)
+    public static Process? Run(Settings settings, ILogger logger)
     {
         logger.Information($"Running {DispName}");
-        Process.Start(new ProcessStartInfo(Path.GetFullPath(Path.Combine(Program.ProgramsDir, ExeName)),
+        return Process.Start(new ProcessStartInfo(Path.GetFullPath(Path.Combine(Program.ProgramsDir, ExeName)),
         [
             settings.TileDataSource switch{
                 Settings.TileDataSourceEnum.MapTiler => $"--maptiler_key={settings.MapTilerApiKey}",
@@ -39,7 +39,7 @@ internal static class TileRenderer
         {
             WorkingDirectory = Path.GetFullPath(Program.ProgramsDir),
             CreateNoWindow = false,
-            UseShellExecute = true
+            UseShellExecute = true,
         });
     }
 }

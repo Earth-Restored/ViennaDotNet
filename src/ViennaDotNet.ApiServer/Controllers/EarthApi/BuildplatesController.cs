@@ -1,5 +1,6 @@
 ﻿using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Serilog;
 using System.Diagnostics;
@@ -27,17 +28,18 @@ namespace ViennaDotNet.ApiServer.Controllers.EarthApi;
 public class BuildplatesController : ViennaControllerBase
 {
     private static EarthDB earthDB => Program.DB;
-    private static ObjectStoreClient objectStoreClient => Program.objectStore;
     private static BuildplateInstancesManager buildplateInstancesManager => Program.buildplateInstancesManager;
     private static Catalog catalog => Program.staticData.Catalog;
     private static TappablesManager tappablesManager => Program.tappablesManager;
 
     [HttpGet("buildplates")]
-    public async Task<IActionResult> GetBuildplates(CancellationToken cancellationToken)
+    public async Task<Results<ContentHttpResult, BadRequest>> GetBuildplates(CancellationToken cancellationToken)
     {
         string? playerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(playerId))
-            return BadRequest();
+        {
+            return TypedResults.BadRequest();
+        }
 
         Buildplates buildplatesModel;
         try
@@ -52,9 +54,11 @@ public class BuildplatesController : ViennaControllerBase
             throw new ServerErrorException(ex);
         }
 
-        OwnedBuildplate[] ownedBuildplates = [.. buildplatesModel.GetBuildplates().Select(async buildplateEntry =>
+        await using var objectStoreClient = await Program.GetObjectStoreClient();
+
+        OwnedBuildplate[] ownedBuildplates = await Task.WhenAll(buildplatesModel.GetBuildplates().Select(async buildplateEntry =>
         {
-            byte[]? previewData = await objectStoreClient.Get(buildplateEntry.Buildplate.PreviewObjectId).Task as byte[];
+            byte[]? previewData = await objectStoreClient.GetAsync(buildplateEntry.Buildplate.PreviewObjectId);
             if (previewData is null)
             {
                 Log.Error($"Preview object {buildplateEntry.Buildplate.PreviewObjectId} for buildplate {buildplateEntry.Id} could not be loaded from object store");
@@ -79,41 +83,40 @@ public class BuildplatesController : ViennaControllerBase
                 0,    // TODO
                 ""
             );
-        }).Where(ownedBuildplate => ownedBuildplate is not null)
-        .Select(task => task.Result)];
+        }).Where(ownedBuildplate => ownedBuildplate is not null));
 
         return EarthJson(ownedBuildplates);
     }
 
     [HttpPost("multiplayer/buildplate/{buildplateId}/instances")]
-    public Task<IActionResult> CreateBuildInstance(string buildplateId, CancellationToken cancellationToken)
+    public async Task<Results<ContentHttpResult, InternalServerError, NotFound, BadRequest>> CreateBuildInstance(string buildplateId, CancellationToken cancellationToken)
     {
         // TODO: coordinates etc.
 
         string? playerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         return string.IsNullOrEmpty(playerId)
-            ? Task.FromResult<IActionResult>(BadRequest())
-            : GetNewBuildplateInstanceResponse(playerId, buildplateId, BuildplateInstancesManager.InstanceType.BUILD, cancellationToken);
+            ? TypedResults.BadRequest()
+            : await GetNewBuildplateInstanceResponse(playerId, buildplateId, BuildplateInstancesManager.InstanceType.BUILD, cancellationToken);
     }
 
     [HttpPost("multiplayer/buildplate/{buildplateId}/play/instances")]
-    public Task<IActionResult> CreatePlayInstance(string buildplateId, CancellationToken cancellationToken)
+    public async Task<Results<ContentHttpResult, InternalServerError, NotFound, BadRequest>> CreatePlayInstance(string buildplateId, CancellationToken cancellationToken)
     {
         // TODO: coordinates etc.
 
         string? playerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         return string.IsNullOrEmpty(playerId)
-            ? Task.FromResult((IActionResult)BadRequest())
-            : GetNewBuildplateInstanceResponse(playerId, buildplateId, BuildplateInstancesManager.InstanceType.PLAY, cancellationToken);
+            ? TypedResults.BadRequest()
+            : await GetNewBuildplateInstanceResponse(playerId, buildplateId, BuildplateInstancesManager.InstanceType.PLAY, cancellationToken);
     }
 
     [HttpPost("buildplates/{buildplateId}/share")]
-    public async Task<IActionResult> ShareBuildplate(string buildplateId, CancellationToken cancellationToken)
+    public async Task<Results<ContentHttpResult, BadRequest, NotFound, InternalServerError>> ShareBuildplate(string buildplateId, CancellationToken cancellationToken)
     {
         string? playerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(playerId))
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         long requestStartedOn = HttpContext.GetTimestamp();
@@ -140,21 +143,23 @@ public class BuildplatesController : ViennaControllerBase
 
         if (buildplate is null)
         {
-            return NotFound();
+            return TypedResults.NotFound();
         }
 
-        byte[]? serverData = (await objectStoreClient.Get(buildplate.ServerDataObjectId).Task) as byte[];
+        await using var objectStoreClient = await Program.GetObjectStoreClient();
+
+        byte[]? serverData = await objectStoreClient.GetAsync(buildplate.ServerDataObjectId);
         if (serverData is null)
         {
             Log.Error($"Data object {buildplate.ServerDataObjectId} for buildplate {buildplateId} could not be loaded from object store");
-            return StatusCode(StatusCodes.Status500InternalServerError);
+            return TypedResults.InternalServerError();
         }
 
-        string? sharedBuildplateServerDataObjectId = (await objectStoreClient.Store(serverData).Task) as string;
+        string? sharedBuildplateServerDataObjectId = await objectStoreClient.StoreAsync(serverData);
         if (sharedBuildplateServerDataObjectId is null)
         {
             Log.Error("Could not store data object for shared buildplate in object store");
-            return StatusCode(StatusCodes.Status500InternalServerError);
+            return TypedResults.InternalServerError();
         }
 
         string sharedBuildplateId = U.RandomUuid().ToString();
@@ -206,7 +211,7 @@ public class BuildplatesController : ViennaControllerBase
         }
         catch (EarthDB.DatabaseException exception)
         {
-            objectStoreClient.Delete(sharedBuildplateServerDataObjectId);
+            await objectStoreClient.DeleteAsync(sharedBuildplateServerDataObjectId);
             throw new ServerErrorException(exception);
         }
 
@@ -214,12 +219,12 @@ public class BuildplatesController : ViennaControllerBase
     }
 
     [HttpGet("buildplates/shared/{sharedBuildplateId}")]
-    public async Task<IActionResult> GetSharedBuildplate(string sharedBuildplateId, CancellationToken cancellationToken)
+    public async Task<Results<ContentHttpResult, BadRequest, NotFound, InternalServerError>> GetSharedBuildplate(string sharedBuildplateId, CancellationToken cancellationToken)
     {
         string? playerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(playerId))
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         SharedBuildplates.SharedBuildplate? sharedBuildplate;
@@ -238,21 +243,23 @@ public class BuildplatesController : ViennaControllerBase
 
         if (sharedBuildplate is null)
         {
-            return NotFound();
+            return TypedResults.NotFound();
         }
+        
+        await using var objectStoreClient = await Program.GetObjectStoreClient();
 
-        byte[]? serverData = await objectStoreClient.Get(sharedBuildplate.ServerDataObjectId).Task as byte[];
+        byte[]? serverData = await objectStoreClient.GetAsync(sharedBuildplate.ServerDataObjectId);
         if (serverData is null)
         {
             Log.Error($"Data object {sharedBuildplate.ServerDataObjectId} for shared buildplate {sharedBuildplateId} could not be loaded from object store");
-            return StatusCode(StatusCodes.Status500InternalServerError);
+            return TypedResults.InternalServerError();
         }
 
-        string? preview = buildplateInstancesManager.GetBuildplatePreview(serverData, sharedBuildplate.Night);
+        string? preview = await buildplateInstancesManager.GetBuildplatePreviewAsync(serverData, sharedBuildplate.Night);
         if (preview is null)
         {
             Log.Error("Could not get preview for buildplate");
-            return StatusCode(StatusCodes.Status500InternalServerError);
+            return TypedResults.InternalServerError();
         }
 
         return EarthJson(new SharedBuildplate(
@@ -303,11 +310,13 @@ public class BuildplatesController : ViennaControllerBase
     }
 
     [HttpPost("multiplayer/buildplate/shared/{sharedBuildplateId}/play/instances")]
-    public async Task<IActionResult> GetSharedBuildplateInstance(string sharedBuildplateId, CancellationToken cancellationToken)
+    public async Task<Results<ContentHttpResult, NotFound, BadRequest, InternalServerError>> GetSharedBuildplateInstance(string sharedBuildplateId, CancellationToken cancellationToken)
     {
         string? playerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(playerId))
-            return BadRequest();
+        {
+            return TypedResults.BadRequest();
+        }
 
         // TODO: coordinates etc.
 
@@ -321,33 +330,35 @@ public class BuildplatesController : ViennaControllerBase
     );
 
     [HttpPost("multiplayer/encounters/{encounterId}/instances")]
-    public async Task<IActionResult> CreateEncounterInstance(string encounterId, CancellationToken cancellationToken)
+    public async Task<Results<ContentHttpResult, NotFound, BadRequest, InternalServerError>> CreateEncounterInstance(string encounterId, CancellationToken cancellationToken)
     {
         string? playerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(playerId))
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         var encounterInstanceRequest = await Request.Body.AsJsonAsync<EncounterInstanceRequest>(cancellationToken);
 
         return encounterInstanceRequest is null
-            ? BadRequest()
+            ? TypedResults.BadRequest()
             : await GetNewEncounterBuildplateInstanceResponse(encounterId, encounterInstanceRequest.TileId, tappablesManager, cancellationToken);
     }
 
     // TODO: should we restrict this to matching player ID?
     [HttpGet("multiplayer/partitions/{partitionId}/instances/{instanceId}")]
-    public async Task<IActionResult> GetInstanceStatus(string partitionId, string instanceId, CancellationToken cancellationToken)
+    public async Task<Results<ContentHttpResult, BadRequest, NotFound>> GetInstanceStatus(string partitionId, string instanceId, CancellationToken cancellationToken)
     {
         string? playerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(playerId))
-            return BadRequest();
+        {
+            return TypedResults.BadRequest();
+        }
 
         BuildplateInstancesManager.InstanceInfo? instanceInfo = buildplateInstancesManager.GetInstanceInfo(instanceId);
         if (instanceInfo is null || instanceInfo.ShuttingDown)
         {
-            return NotFound();
+            return TypedResults.NotFound();
         }
 
         Buildplates.Buildplate? buildplate;
@@ -365,7 +376,7 @@ public class BuildplatesController : ViennaControllerBase
 
         if (buildplate is null)
         {
-            return NotFound();
+            return TypedResults.NotFound();
         }
 
         // TODO: the client is supposed to poll until the buildplate server is ready, but instead it just crashes if we tell it that the buildplate server is not ready yet
@@ -379,7 +390,7 @@ public class BuildplatesController : ViennaControllerBase
             instanceInfo1 = buildplateInstancesManager.GetInstanceInfo(instanceId);
             if (instanceInfo1 is null || instanceInfo1.ShuttingDown)
             {
-                return NotFound();
+                return TypedResults.NotFound();
             }
 
             if (!instanceInfo1.Ready)
@@ -394,17 +405,17 @@ public class BuildplatesController : ViennaControllerBase
 
         if (buildplateInstance is null)
         {
-            return NotFound();
+            return TypedResults.NotFound();
         }
 
         return EarthJson(buildplateInstance);
     }
 
-    private async Task<IActionResult> GetNewBuildplateInstanceResponse(string playerId, string buildplateId, BuildplateInstancesManager.InstanceType type, CancellationToken cancellationToken)
+    private async Task<Results<ContentHttpResult, InternalServerError, NotFound, BadRequest>> GetNewBuildplateInstanceResponse(string playerId, string buildplateId, BuildplateInstancesManager.InstanceType type, CancellationToken cancellationToken)
     {
         Buildplates.Buildplate? buildplate;
+        
         try
-
         {
             EarthDB.Results results = await new EarthDB.Query(false)
                 .Get("buildplates", playerId, typeof(Buildplates))
@@ -419,32 +430,32 @@ public class BuildplatesController : ViennaControllerBase
 
         if (buildplate is null)
         {
-            return NotFound();
+            return TypedResults.NotFound();
         }
 
         string? instanceId = await buildplateInstancesManager.RequestBuildplateInstance(playerId, null, buildplateId, type, 0, buildplate.Night);
         if (instanceId is null)
         {
-            return StatusCode(StatusCodes.Status500InternalServerError);
+            return TypedResults.InternalServerError();
         }
 
         BuildplateInstancesManager.InstanceInfo? instanceInfo = buildplateInstancesManager.GetInstanceInfo(instanceId);
         if (instanceInfo is null)
         {
-            return StatusCode(StatusCodes.Status500InternalServerError);
+            return TypedResults.InternalServerError();
         }
 
         BuildplateInstance? buildplateInstance = await InstanceInfoToApiResponse(instanceInfo, cancellationToken);
 
         if (buildplateInstance is null)
         {
-            return NotFound();
+            return TypedResults.NotFound();
         }
 
         return EarthJson(buildplateInstance);
     }
 
-    private async Task<IActionResult> GetNewSharedBuildplateInstanceResponse(string playerId, string sharedBuildplateId, BuildplateInstancesManager.InstanceType type, CancellationToken cancellationToken)
+    private async Task<Results<ContentHttpResult, NotFound, BadRequest, InternalServerError>> GetNewSharedBuildplateInstanceResponse(string playerId, string sharedBuildplateId, BuildplateInstancesManager.InstanceType type, CancellationToken cancellationToken)
     {
         SharedBuildplates.SharedBuildplate? sharedBuildplate;
         try
@@ -461,55 +472,55 @@ public class BuildplatesController : ViennaControllerBase
 
         if (sharedBuildplate is null)
         {
-            return NotFound();
+            return TypedResults.NotFound();
         }
 
         string? instanceId = await buildplateInstancesManager.RequestBuildplateInstance(playerId, null, sharedBuildplateId, type, 0, sharedBuildplate.Night);
         if (instanceId is null)
         {
-            return StatusCode(StatusCodes.Status500InternalServerError);
+            return TypedResults.InternalServerError();
         }
 
         BuildplateInstancesManager.InstanceInfo? instanceInfo = buildplateInstancesManager.GetInstanceInfo(instanceId);
         if (instanceInfo is null)
         {
-            return StatusCode(StatusCodes.Status500InternalServerError);
+            return TypedResults.InternalServerError();
         }
 
         BuildplateInstance? buildplateInstance = await InstanceInfoToApiResponse(instanceInfo, cancellationToken);
         if (buildplateInstance is null)
         {
-            return StatusCode(StatusCodes.Status500InternalServerError);
+            return TypedResults.InternalServerError();
         }
 
         return EarthJson(buildplateInstance);
     }
 
-    private async Task<IActionResult> GetNewEncounterBuildplateInstanceResponse(string encounterId, string tileId, TappablesManager tappablesManager, CancellationToken cancellationToken)
+    private async Task<Results<ContentHttpResult, NotFound, BadRequest, InternalServerError>> GetNewEncounterBuildplateInstanceResponse(string encounterId, string tileId, TappablesManager tappablesManager, CancellationToken cancellationToken)
     {
         TappablesManager.Encounter? encounter = tappablesManager.GetEncounterWithId(encounterId, tileId);
         if (encounter is null)
         {
-            return NotFound();
+            return TypedResults.NotFound();
         }
 
         string? instanceId = await buildplateInstancesManager.RequestBuildplateInstance(null, encounterId, encounter.EncounterBuildplateId, BuildplateInstancesManager.InstanceType.ENCOUNTER, encounter.SpawnTime + encounter.ValidFor, false);
 
         if (instanceId is null)
         {
-            return StatusCode(StatusCodes.Status500InternalServerError);
+            return TypedResults.InternalServerError();
         }
 
         BuildplateInstancesManager.InstanceInfo? instanceInfo = buildplateInstancesManager.GetInstanceInfo(instanceId);
         if (instanceInfo is null)
         {
-            return StatusCode(StatusCodes.Status500InternalServerError);
+            return TypedResults.InternalServerError();
         }
 
         BuildplateInstance? buildplateInstance = await InstanceInfoToApiResponse(instanceInfo, cancellationToken);
         if (buildplateInstance is null)
         {
-            return StatusCode(StatusCodes.Status500InternalServerError);
+            return TypedResults.InternalServerError();
         }
 
         return EarthJson(buildplateInstance);

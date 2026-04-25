@@ -1,4 +1,5 @@
-﻿using Serilog;
+﻿using System.Globalization;
+using Serilog;
 using SharpNBT;
 using ViennaDotNet.PreviewGenerator.BlockEntity;
 using ViennaDotNet.PreviewGenerator.NBT;
@@ -132,13 +133,17 @@ internal sealed class Chunk
         if (paletteEntryTag.ContainsKey("Properties"))
         {
             foreach (Tag propertyTag in paletteEntryTag.Get<CompoundTag>("Properties"))
-                properties.Add(propertyTag.Name + "=" + propertyTag.Stringify(false)/*without name should probably maybe be just value ...*/);
+            {
+                properties.Add(propertyTag.Name + "=" + TagValueToString(propertyTag));
+            }
         }
 
         properties.Sort(string.Compare);
 
         if (properties.Count > 0)
+        {
             name = name + "[" + string.Join(",", properties.ToArray()) + "]";
+        }
 
         return name;
     }
@@ -183,4 +188,17 @@ internal sealed class Chunk
 
     private static int GetChunkBlockOffset(int pos)
         => pos >= 0 ? pos % 16 : 15 - ((-pos - 1) % 16);
+
+    private static string TagValueToString(Tag tag)
+        => tag switch
+        {
+            ByteTag @byte => @byte.IsBool ? @byte.Bool.ToString(CultureInfo.InvariantCulture) : @byte.Value.ToString(CultureInfo.InvariantCulture),
+            DoubleTag @double => @double.Value.ToString(CultureInfo.InvariantCulture),
+            FloatTag @float => @float.Value.ToString(CultureInfo.InvariantCulture),
+            IntTag @int => @int.Value.ToString(CultureInfo.InvariantCulture),
+            LongTag @long => @long.Value.ToString(CultureInfo.InvariantCulture),
+            ShortTag @short => @short.Value.ToString(CultureInfo.InvariantCulture),
+            StringTag @string => @string.Value,
+            _ => throw new ArgumentException($"Unsuported tag type '{tag?.GetType().ToString() ?? "null"}'", nameof(tag)),
+        };
 }

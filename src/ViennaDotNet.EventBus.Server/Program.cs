@@ -15,7 +15,7 @@ internal static class Program
         public string? LoggerUrl { get; set; }
     }
 
-    static int Main(string[] args)
+    static async Task<int> Main(string[] args)
     {
         if (!Debugger.IsAttached)
         {
@@ -71,7 +71,7 @@ internal static class Program
             return 1;
         }
 
-        server.Run();
+        await server.RunAsync();
 
         return 0;
     }

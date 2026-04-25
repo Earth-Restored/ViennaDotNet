@@ -16,24 +16,21 @@ public class DataStore
         }
     }
 
-    public string Store(byte[] data)
+    public async Task<string> StoreAsync(byte[] data)
     {
         string id = U.RandomUuid().ToString();
 
-        DirectoryInfo dir = new DirectoryInfo(Path.Combine(_rootDirectory.FullName, id[..2]));
+        var dir = new DirectoryInfo(Path.Combine(_rootDirectory.FullName, id[..2]));
         if (!dir.Exists)
         {
             dir.Create();
         }
 
-        FileInfo file = new FileInfo(Path.Combine(dir.FullName, id));
+        var file = new FileInfo(Path.Combine(dir.FullName, id));
 
         try
         {
-            using (FileStream fileOutputStream = file.OpenWrite())
-            {
-                fileOutputStream.Write(data);
-            }
+            await File.WriteAllBytesAsync(file.FullName, data);
         }
         catch (IOException ex)
         {
@@ -44,43 +41,27 @@ public class DataStore
         return id;
     }
 
-    public byte[]? Load(string id)
+    public async Task<byte[]?> LoadAsync(string id)
     {
-        FileInfo file = new FileInfo(Path.Combine(_rootDirectory.FullName, id[..2], id));
+        var file = new FileInfo(Path.Combine(_rootDirectory.FullName, id[..2], id));
         if (!file.Exists)
         {
             return null;
         }
 
-        MemoryStream byteArrayOutputStream;
         try
         {
-            byteArrayOutputStream = new MemoryStream((int)file.Length);
+            return await File.ReadAllBytesAsync(file.FullName);
         }
         catch (IOException ex)
         {
             throw new DataStoreException(ex);
         }
-
-        try
-        {
-            using (FileStream fileInputStream = file.OpenRead())
-                fileInputStream.CopyTo(byteArrayOutputStream);
-        }
-
-        catch (IOException ex)
-        {
-            throw new DataStoreException(ex);
-        }
-
-        byte[] data = byteArrayOutputStream.ToArray();
-
-        return data;
     }
 
-    public void Delete(string id)
+    public async Task DeleteAsync(string id)
     {
-        FileInfo file = new FileInfo(Path.Combine(_rootDirectory.FullName, id.Substring(0, 2), id));
+        var file = new FileInfo(Path.Combine(_rootDirectory.FullName, id[..2], id));
         file.Delete();
     }
 

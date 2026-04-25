@@ -17,7 +17,7 @@ internal sealed class ServerDataZip
 
         foreach (var entry in archive.Entries)
         {
-            if (entry.IsDirectory()) continue;
+            if (entry.IsDirectory) continue;
 
             using (Stream entryStream = entry.Open())
             using (MemoryStream ms = new MemoryStream())

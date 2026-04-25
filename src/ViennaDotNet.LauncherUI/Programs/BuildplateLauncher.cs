@@ -41,7 +41,7 @@ internal static class BuildplateLauncher
         {
             WorkingDirectory = Path.GetFullPath(Program.ProgramsDir),
             CreateNoWindow = false,
-            UseShellExecute = true
+            UseShellExecute = true,
         });
     }
 }

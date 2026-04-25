@@ -105,7 +105,7 @@ public static class CraftingCalculator
     );
 
     // TODO: make this configurable
-    public static int calculateUnlockPrice(int slotIndex)
+    public static int CalculateUnlockPrice(int slotIndex)
         => slotIndex < 1 || slotIndex > 3
         ? throw new ArgumentOutOfRangeException(nameof(slotIndex))
         : slotIndex * 5;

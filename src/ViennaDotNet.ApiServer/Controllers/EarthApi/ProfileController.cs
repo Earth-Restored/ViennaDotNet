@@ -1,5 +1,6 @@
 ﻿using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Serilog;
 using System.Security.Claims;
@@ -21,7 +22,7 @@ public class ProfileController : ControllerBase
     private static StaticData.StaticData staticData => Program.staticData;
 
     [HttpGet("profile/{userId}")]
-    public async Task<IActionResult> GetProfile(string userId, CancellationToken cancellationToken)
+    public async Task<ContentHttpResult> GetProfile(string userId, CancellationToken cancellationToken)
     {
         // TODO: decide if we should allow requests for profiles of other players
         userId = userId.ToLowerInvariant();
@@ -60,17 +61,17 @@ public class ProfileController : ControllerBase
             profile.Health,
             profile.Health / (float)maxPlayerHealth * 100.0f)));
 
-        return Content(resp, "application/json");
+        return TypedResults.Content(resp, "application/json");
     }
 
     [ResponseCache(Duration = 11200)]
     [HttpGet("rubies")]
-    public async Task<IActionResult> GetRubies(CancellationToken cancellationToken)
+    public async Task<Results<ContentHttpResult, BadRequest, InternalServerError>> GetRubies(CancellationToken cancellationToken)
     {
         string? playerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(playerId))
         {
-            return BadRequest();
+            return TypedResults.BadRequest();
         }
 
         try
@@ -81,22 +82,24 @@ public class ProfileController : ControllerBase
                 .Get<Profile>("profile");
 
             string resp = Json.Serialize(new EarthApiResponse(profile.Rubies.Purchased + profile.Rubies.Earned));
-            return Content(resp, "application/json");
+            return TypedResults.Content(resp, "application/json");
         }
         catch (EarthDB.DatabaseException ex)
         {
-            Log.Error("Exception in GetRubies", ex);
-            return StatusCode(500);
+            Log.Error(ex, "Exception in GetRubies");
+            return TypedResults.InternalServerError();
         }
     }
 
     [ResponseCache(Duration = 11200)]
     [HttpGet("splitRubies")]
-    public async Task<IActionResult> GetSplitRubies(CancellationToken cancellationToken)
+    public async Task<Results<ContentHttpResult, BadRequest, InternalServerError>> GetSplitRubies(CancellationToken cancellationToken)
     {
         string? playerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(playerId))
-            return BadRequest();
+        {
+            return TypedResults.BadRequest();
+        }
 
         try
         {
@@ -106,17 +109,17 @@ public class ProfileController : ControllerBase
                 .Get<Profile>("profile");
 
             string resp = Json.Serialize(new EarthApiResponse(new Types.Profile.SplitRubies(profile.Rubies.Purchased, profile.Rubies.Earned)));
-            return Content(resp, "application/json");
+            return TypedResults.Content(resp, "application/json");
         }
         catch (EarthDB.DatabaseException ex)
         {
-            Log.Error("Exception in GetRubies", ex);
-            return StatusCode(500);
+            Log.Error(ex, "Exception in GetRubies");
+            return TypedResults.InternalServerError();
         }
     }
 
     // required for the language selection option in the client to work
     [HttpPost("profile/language")]
-    public IActionResult ChangeLanguage()
-        => Ok();
+    public Ok ChangeLanguage()
+        => TypedResults.Ok();
 }

@@ -1,457 +1,352 @@
 ﻿using Serilog;
+using System.Buffers;
 using System.Collections.Concurrent;
+using System.IO.Pipelines;
 using System.Net.Sockets;
 using System.Text;
-using ViennaDotNet.Common.Utils;
+using System.Threading.Channels;
 
 namespace ViennaDotNet.EventBus.Client;
 
-public sealed class EventBusClient : IDisposable
+public class EventBusClient : IAsyncDisposable
 {
-    public static EventBusClient Create(string connectionString)
+    private readonly TcpClient _tcpClient;
+    private readonly NetworkStream _networkStream;
+
+    private readonly Channel<string> _outgoingMessageQueue;
+    private readonly Task _outgoingTask;
+    private readonly Task _incomingTask;
+    private readonly CancellationTokenSource _cts = new();
+
+    private int _isClosed = 0;
+    private int _hasError = 0;
+
+    private readonly ConcurrentDictionary<int, Publisher> _publishers = new();
+    private readonly ConcurrentDictionary<int, Subscriber> _subscribers = new();
+    private readonly ConcurrentDictionary<int, RequestSender> _requestSenders = new();
+    private readonly ConcurrentDictionary<int, RequestHandler> _requestHandlers = new();
+
+    private int _nextChannelId = 1;
+
+    private EventBusClient(TcpClient tcpClient)
+    {
+        _tcpClient = tcpClient;
+        _networkStream = _tcpClient.GetStream();
+        _outgoingMessageQueue = Channel.CreateUnbounded<string>(new UnboundedChannelOptions
+        {
+            SingleReader = true,
+            SingleWriter = false
+        });
+
+        _outgoingTask = Task.Run(ProcessOutgoingMessagesAsync);
+        _incomingTask = Task.Run(ProcessIncomingMessagesAsync);
+    }
+
+    public static async Task<EventBusClient> ConnectAsync(string connectionString)
     {
         string[] parts = connectionString.Split(':', 2);
         string host = parts[0];
-        int port;
+
+        if (parts.Length <= 1 || !int.TryParse(parts[1], out int port))
+        {
+            port = 5532;
+        }
+
+        if (port is <= 0 or > 65535)
+        {
+            throw new ArgumentException("Port number out of range");
+        }
+
+        TcpClient tcpClient = new TcpClient();
         try
         {
-            port = parts.Length > 1 ? int.Parse(parts[1]) : 5532;
+            await tcpClient.ConnectAsync(host, port);
         }
-        catch (Exception)
+        catch (Exception exception) when (exception is SocketException or IOException)
         {
-            throw new ArgumentException($"Invalid port number \"{parts[1]}\"", nameof(connectionString));
+            tcpClient.Dispose();
+            throw new ConnectException("Could not create socket", exception);
         }
 
-        if (port <= 0 || port > 65535)
-        {
-            throw new ArgumentException("Port number out of range", nameof(connectionString));
-        }
-
-        Socket socket;
-        try
-        {
-            socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
-            socket.Connect(host, port);
-        }
-        catch (SocketException ex)
-        {
-            throw new ConnectException($"Could not create socket: {ex}");
-        }
-
-        return new EventBusClient(socket);
+        return new EventBusClient(tcpClient);
     }
 
-    public sealed class ConnectException : EventBusClientException
+    public sealed class ConnectException : Exception
     {
-        public ConnectException(string? message)
-            : base(message)
-        {
-        }
-
-        public ConnectException(string? message, Exception? innerException)
-            : base(message, innerException)
-        {
-        }
+        public ConnectException(string message) : base(message) { }
+        public ConnectException(string message, Exception innerException) : base(message, innerException) { }
     }
 
-    private readonly Socket _socket;
-    private readonly BlockingCollection<string> _outgoingMessageQueue = [];
-    private readonly CancellationTokenSource _tokenSource = new();
-    private readonly Task _outgoingThread;
-    private readonly Task _incomingThread;
-    private readonly ReaderWriterLockSlim _lock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
-
-    private bool _closed = false;
-    private bool _error = false;
-
-    private readonly Dictionary<int, Publisher> _publishers = [];
-    private readonly Dictionary<int, Subscriber> _subscribers = [];
-    private readonly Dictionary<int, RequestSender> _requestSenders = [];
-    private readonly Dictionary<int, RequestHandler> _requestHandlers = [];
-    private int _nextChannelId = 1;
-
-    private EventBusClient(Socket socket)
+    public async ValueTask DisposeAsync()
     {
-        _socket = socket;
-
-        _outgoingThread = Task.Factory.StartNew(() => HandleSendLoop(_tokenSource.Token), _tokenSource.Token/*, TaskCreationOptions.LongRunning, TaskScheduler.Default*/).Unwrap();
-
-        _incomingThread = Task.Factory.StartNew(() => HandleReceiveLoop(_tokenSource.Token), _tokenSource.Token/*, TaskCreationOptions.LongRunning, TaskScheduler.Default*/).Unwrap();
-    }
-
-    private async Task HandleSendLoop(CancellationToken cancellationToken)
-    {
-        try
-        {
-            foreach (var message in _outgoingMessageQueue.GetConsumingEnumerable(cancellationToken))
-            {
-                byte[] bytes = Encoding.ASCII.GetBytes(message);
-                await _socket.SendAsync(bytes, cancellationToken);
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            // empty
-        }
-        catch (SocketException)
-        {
-            _lock.EnterWriteLock();
-            _error = true;
-            _lock.ExitWriteLock();
-        }
-
-        InitiateClose();
-
-        _publishers.ForEach((channelId, publisher) =>
-        {
-            publisher.Closed();
-        });
-        _publishers.Clear();
-        _requestSenders.ForEach((channelId, requestSender) =>
-        {
-            requestSender.Closed();
-        });
-        _requestSenders.Clear();
-    }
-
-    private async Task HandleReceiveLoop(CancellationToken cancellationToken)
-    {
-        int sleepCounter = 0;
-        try
-        {
-            byte[] readBuffer = new byte[1024];
-            MemoryStream byteArrayOutputStream = new MemoryStream(1024);
-            while (true)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                int readLength = await _socket.ReceiveAsync(readBuffer, cancellationToken);
-                if (readLength > 0)
-                {
-                    int startOffset = 0;
-                    for (int offset = 0; offset < readLength; offset++)
-                    {
-                        if (readBuffer[offset] == '\n')
-                        {
-                            byteArrayOutputStream.Write(readBuffer, startOffset, offset - startOffset);
-                            string message = Encoding.ASCII.GetString(byteArrayOutputStream.ToArray());
-
-                            _lock.EnterReadLock();
-                            bool suppress = _closed || _error;
-                            _lock.ExitReadLock();
-
-                            if (!suppress)
-                            {
-                                if (!await DispatchReceivedMessage(message))
-                                {
-                                    _lock.EnterWriteLock();
-                                    _error = true;
-                                    _lock.ExitWriteLock();
-                                    InitiateClose();
-                                }
-                            }
-
-                            byteArrayOutputStream = new MemoryStream(1024);
-                            startOffset = offset + 1;
-                        }
-                    }
-
-                    byteArrayOutputStream.Write(readBuffer, startOffset, readLength - startOffset);
-                }
-                else if (readLength == 0)
-                {
-                    // because we are using async, Socket.Blocking isn't used and the Receive method returns even when it is connected and no data has been received
-                    if (!_socket.Connected)
-                    {
-                        break;
-                    }
-                }
-                else
-                {
-                    throw new InvalidOperationException();
-                }
-
-                // reduce CPU usage
-                if (sleepCounter >= 2500)
-                {
-                    sleepCounter = 0;
-                    await Task.Delay(1, cancellationToken);
-                }
-                else
-                {
-                    await Task.Yield();
-                }
-
-                sleepCounter++;
-            }
-        }
-        catch (SocketException)
-        {
-            _lock.EnterWriteLock();
-            _error = true;
-            _lock.ExitWriteLock();
-        }
-
-        InitiateClose();
-
-        _subscribers.ForEach((channelId, subscriber) =>
-        {
-            subscriber.Error();
-        });
-        _subscribers.Clear();
-
-        _requestHandlers.ForEach((channelId, requestHandler) =>
-        {
-            requestHandler.Error();
-        });
-        _requestHandlers.Clear();
-    }
-
-    public void Close()
-    {
-        InitiateClose();
+        await InitiateCloseAsync();
 
         try
         {
-            _incomingThread.Wait();
+            await Task.WhenAll(_incomingTask, _outgoingTask);
         }
-        catch (AggregateException ex) when (ex.InnerException is OperationCanceledException)
+        catch
         {
-            // empty
-        }
-        catch (Exception ex)
-        {
-            Log.Error($"Exception in incoming thread: {ex}");
-        }
-
-        try
-        {
-            _outgoingThread.Wait();
-        }
-        catch (AggregateException ex) when (ex.InnerException is OperationCanceledException)
-        {
-            // empty
-        }
-        catch (Exception ex)
-        {
-            Log.Error($"Exception in outgoing thread: {ex}");
+            // Suppress exceptions from cancelled background tasks
         }
     }
 
-    public void Dispose()
-        => Close();
-
-    private void InitiateClose()
+    private async Task InitiateCloseAsync()
     {
-        _lock.EnterWriteLock();
-        if (!_error)
+        if (Interlocked.Exchange(ref _isClosed, 1) == 0)
         {
-            _closed = true;
-        }
+            _cts.Cancel();
+            _outgoingMessageQueue.Writer.TryComplete();
 
-        _lock.ExitWriteLock();
-
-        try
-        {
-            _socket.Shutdown(SocketShutdown.Both);
-        }
-        catch (SocketException)
-        {
-            // empty
-        }
-        catch (ObjectDisposedException)
-        {
-            // empty
-        }
-        finally
-        {
-            _socket.Close();
-        }
-
-        _tokenSource.Cancel();
-    }
-
-    public Publisher AddPublisher()
-    {
-        _lock.EnterWriteLock();
-        int channelId = GetUnusedChannelId();
-        Publisher publisher = new Publisher(this, channelId);
-        if (SendMessage(channelId, "PUB"))
-        {
-            _publishers[channelId] = publisher;
-        }
-        else
-        {
-            publisher.Closed();
-        }
-
-        _lock.ExitWriteLock();
-
-        return publisher;
-    }
-
-    public Subscriber AddSubscriber(string queueName, Subscriber.ISubscriberListener listener)
-    {
-        _lock.EnterWriteLock();
-        int channelId = GetUnusedChannelId();
-        Subscriber subscriber = new Subscriber(this, channelId, queueName, listener);
-        if (SendMessage(channelId, "SUB " + queueName))
-        {
-            _subscribers[channelId] = subscriber;
-        }
-        else
-        {
-            subscriber.Error();
-        }
-
-        _lock.ExitWriteLock();
-
-        return subscriber;
-    }
-
-    public RequestSender AddRequestSender()
-    {
-        _lock.EnterWriteLock();
-        int channelId = GetUnusedChannelId();
-        RequestSender requestSender = new RequestSender(this, channelId);
-        if (SendMessage(channelId, "REQ"))
-        {
-            _requestSenders[channelId] = requestSender;
-        }
-        else
-        {
-            requestSender.Closed();
-        }
-
-        _lock.ExitWriteLock();
-        return requestSender;
-    }
-
-    public RequestHandler AddRequestHandler(string queueName, RequestHandler.IHandler handler)
-    {
-        _lock.EnterWriteLock();
-        int channelId = GetUnusedChannelId();
-        RequestHandler requestHandler = new RequestHandler(this, channelId, queueName, handler);
-        if (SendMessage(channelId, "HND " + queueName))
-        {
-            _requestHandlers[channelId] = requestHandler;
-        }
-        else
-        {
-            requestHandler.Error();
-        }
-
-        _lock.ExitWriteLock();
-        return requestHandler;
-    }
-
-    internal void RemovePublisher(int channelId)
-    {
-        _lock.EnterWriteLock();
-        _publishers.Remove(channelId);
-        _lock.ExitWriteLock();
-    }
-
-    internal void RemoveSubscriber(int channelId)
-    {
-        _lock.EnterWriteLock();
-        _subscribers.Remove(channelId);
-        _lock.ExitWriteLock();
-    }
-
-    internal void RemoveRequestSender(int channelId)
-    {
-        _lock.EnterWriteLock();
-        _requestSenders.Remove(channelId);
-        _lock.ExitWriteLock();
-    }
-
-    internal void RemoveRequestHandler(int channelId)
-    {
-        _lock.EnterWriteLock();
-        _requestHandlers.Remove(channelId);
-        _lock.ExitWriteLock();
-    }
-
-    private int GetUnusedChannelId()
-        => _nextChannelId++;
-
-    private async Task<bool> DispatchReceivedMessage(string message)
-    {
-        string[] parts = message.Split(' ', 2);
-        if (parts.Length != 2)
-            return false;
-
-        if (!int.TryParse(parts[0], out int channelId) || channelId <= 0)
-            return false;
-
-        Publisher? publisher = _publishers.GetOrDefault(channelId, null);
-        if (publisher is not null)
-        {
-            if (await publisher.HandleMessage(parts[1]))
-            {
-                return true;
-            }
-        }
-
-        Subscriber? subscriber = _subscribers.GetOrDefault(channelId, null);
-        if (subscriber is not null)
-        {
-            if (await subscriber.HandleMessage(parts[1]))
-            {
-                return true;
-            }
-        }
-
-        RequestSender? requestSender = _requestSenders.GetOrDefault(channelId, null);
-        if (requestSender is not null)
-        {
-            if (await requestSender.HandleMessage(parts[1]))
-            {
-                return true;
-            }
-        }
-
-        RequestHandler? requestHandler = _requestHandlers.GetOrDefault(channelId, null);
-        if (requestHandler is not null)
-        {
-            if (await requestHandler.HandleMessage(parts[1]))
-            {
-                return true;
-            }
-        }
-
-        return channelId < _nextChannelId;
-    }
-
-    internal bool SendMessage(int channelId, string message)
-    {
-        try
-        {
-            _lock.EnterReadLock();
-            if (_closed || _error)
-            {
-                return false;
-            }
-        }
-        finally
-        {
-            _lock.ExitReadLock();
-        }
-
-        while (true)
-        {
             try
             {
-                _outgoingMessageQueue.Add(channelId + " " + message + "\n");
-                break;
+                _tcpClient.Dispose(); // Closes underlying stream and socket
             }
-            catch (ThreadInterruptedException)
+            catch
             {
                 // empty
             }
         }
+        await Task.CompletedTask;
+    }
 
+    private void SetError()
+    {
+        Interlocked.Exchange(ref _hasError, 1);
+        _ = InitiateCloseAsync(); // Fire and forget closure on error
+    }
+
+    private async Task ProcessOutgoingMessagesAsync()
+    {
+        try
+        {
+            await foreach (var message in _outgoingMessageQueue.Reader.ReadAllAsync(_cts.Token))
+            {
+                byte[] buffer = Encoding.ASCII.GetBytes(message);
+                await _networkStream.WriteAsync(buffer, _cts.Token);
+                await _networkStream.FlushAsync(_cts.Token);
+            }
+        }
+        catch (Exception ex) when (ex is OperationCanceledException or IOException or SocketException)
+        {
+            SetError();
+        }
+
+        await InitiateCloseAsync();
+
+        foreach (var kvp in _publishers)
+        {
+            await kvp.Value.ClosedAsync();
+        }
+        _publishers.Clear();
+
+        foreach (var kvp in _requestSenders)
+        {
+            await kvp.Value.ClosedAsync();
+        }
+        _requestSenders.Clear();
+    }
+
+    private async Task ProcessIncomingMessagesAsync()
+    {
+        var reader = PipeReader.Create(_networkStream);
+
+        try
+        {
+            while (true)
+            {
+                ReadResult result = await reader.ReadAsync(_cts.Token);
+                ReadOnlySequence<byte> buffer = result.Buffer;
+
+                while (TryReadLine(ref buffer, out ReadOnlySequence<byte> line))
+                {
+                    string message = Encoding.ASCII.GetString(line.IsSingleSegment ? line.FirstSpan : line.ToArray());
+
+                    bool suppress = Volatile.Read(ref _isClosed) == 1 || Volatile.Read(ref _hasError) == 1;
+                    if (!suppress)
+                    {
+                        if (!await DispatchReceivedMessageAsync(message))
+                        {
+                            SetError();
+                        }
+                    }
+                }
+
+                reader.AdvanceTo(buffer.Start, buffer.End);
+
+                if (result.IsCompleted)
+                {
+                    break;
+                }
+            }
+        }
+        catch (Exception ex) when (ex is OperationCanceledException or IOException or SocketException)
+        {
+            SetError();
+        }
+
+        await reader.CompleteAsync();
+        await InitiateCloseAsync();
+
+        foreach (var kvp in _subscribers)
+        {
+            await kvp.Value.ErrorAsync();
+        }
+        _subscribers.Clear();
+
+        foreach (var kvp in _requestHandlers)
+        {
+            await kvp.Value.ErrorAsync();
+        }
+
+        _requestHandlers.Clear();
+    }
+
+    private static bool TryReadLine(ref ReadOnlySequence<byte> buffer, out ReadOnlySequence<byte> line)
+    {
+        SequencePosition? position = buffer.PositionOf((byte)'\n');
+        if (position == null)
+        {
+            line = default;
+            return false;
+        }
+
+        line = buffer.Slice(0, position.Value);
+        buffer = buffer.Slice(buffer.GetPosition(1, position.Value));
         return true;
+    }
+
+    public async Task<Publisher> AddPublisherAsync()
+    {
+        int channelId = GetUnusedChannelId();
+        var publisher = new Publisher(this, channelId);
+
+        if (await SendMessageAsync(channelId, "PUB"))
+        {
+            _publishers.TryAdd(channelId, publisher);
+        }
+        else
+        {
+            await publisher.ClosedAsync();
+        }
+
+        return publisher;
+    }
+
+    public async Task<Subscriber> AddSubscriberAsync(string queueName, ISubscriberListener listener)
+    {
+        int channelId = GetUnusedChannelId();
+        var subscriber = new Subscriber(this, channelId, queueName, listener);
+
+        if (await SendMessageAsync(channelId, $"SUB {queueName}"))
+        {
+            _subscribers.TryAdd(channelId, subscriber);
+        }
+        else
+        {
+            await subscriber.ErrorAsync();
+        }
+
+        return subscriber;
+    }
+
+    public async Task<RequestSender> AddRequestSenderAsync()
+    {
+        int channelId = GetUnusedChannelId();
+        var requestSender = new RequestSender(this, channelId);
+
+        if (await SendMessageAsync(channelId, "REQ"))
+        {
+            _requestSenders.TryAdd(channelId, requestSender);
+        }
+        else
+        {
+            await requestSender.ClosedAsync();
+        }
+
+        return requestSender;
+    }
+
+    public async Task<RequestHandler> AddRequestHandlerAsync(string queueName, IRequestHandlerLister handler)
+    {
+        int channelId = GetUnusedChannelId();
+        var requestHandler = new RequestHandler(this, channelId, queueName, handler);
+
+        if (await SendMessageAsync(channelId, $"HND {queueName}"))
+        {
+            _requestHandlers.TryAdd(channelId, requestHandler);
+        }
+        else
+        {
+            await requestHandler.ErrorAsync();
+        }
+
+        return requestHandler;
+    }
+
+    internal void RemovePublisher(int channelId) => _publishers.TryRemove(channelId, out _);
+    internal void RemoveSubscriber(int channelId) => _subscribers.TryRemove(channelId, out _);
+    internal void RemoveRequestSender(int channelId) => _requestSenders.TryRemove(channelId, out _);
+    internal void RemoveRequestHandler(int channelId) => _requestHandlers.TryRemove(channelId, out _);
+
+    private int GetUnusedChannelId()
+        => Interlocked.Increment(ref _nextChannelId) - 1;
+
+    private async Task<bool> DispatchReceivedMessageAsync(string message)
+    {
+        string[] parts = message.Split(' ', 2);
+        if (parts.Length != 2)
+        {
+            return false;
+        }
+
+        if (!int.TryParse(parts[0], out int channelId) || channelId <= 0)
+        {
+            return false;
+        }
+
+        if (_publishers.TryGetValue(channelId, out var publisher))
+        {
+            return await publisher.HandleMessageAsync(parts[1]);
+        }
+
+        if (_subscribers.TryGetValue(channelId, out var subscriber))
+        {
+            return await subscriber.HandleMessageAsync(parts[1]);
+        }
+
+        if (_requestSenders.TryGetValue(channelId, out var requestSender))
+        {
+            return await requestSender.HandleMessageAsync(parts[1]);
+        }
+
+        if (_requestHandlers.TryGetValue(channelId, out var requestHandler))
+        {
+            return await requestHandler.HandleMessageAsync(parts[1]);
+        }
+
+        return channelId < Volatile.Read(ref _nextChannelId);
+    }
+
+    internal async ValueTask<bool> SendMessageAsync(int channelId, string message)
+    {
+        if (Volatile.Read(ref _isClosed) == 1 || Volatile.Read(ref _hasError) == 1)
+        {
+            return false;
+        }
+
+        try
+        {
+            await _outgoingMessageQueue.Writer.WriteAsync($"{channelId} {message}\n", _cts.Token);
+            return true;
+        }
+        catch (ChannelClosedException)
+        {
+            return false;
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
     }
 }

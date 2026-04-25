@@ -2,6 +2,18 @@
 
 public static class Files
 {
+    extension(File)
+    {
+        public static FileStream OpenWriteNew(string path)
+            => File.Open(path, FileMode.Create, FileAccess.Write, FileShare.Read);
+    }
+
+    extension(FileInfo file)
+    {
+        public FileStream OpenWriteNew()
+           => File.Open(file.FullName, FileMode.Create, FileAccess.Write, FileShare.Read);
+    }
+
     public static void WalkFileTree(string startPath, FileVisitor visitor)
         => WalkFileTree(startPath, visitor, 0);
 

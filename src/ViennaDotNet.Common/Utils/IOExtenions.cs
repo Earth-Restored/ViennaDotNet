@@ -35,8 +35,10 @@ public static class IOExtenions
         }
     }
 
-    public static bool IsDirectory(this ZipArchiveEntry entry)
-        => entry.FullName.EndsWith('/') || entry.FullName.EndsWith('\\') || entry.Name == string.Empty;
+    extension (ZipArchiveEntry entry)
+    {
+        public bool IsDirectory => entry.FullName.EndsWith('/') || entry.FullName.EndsWith('\\') || entry.Name == string.Empty;
+    }
 
     public static bool CanExecute(this FileInfo info)
     {
