@@ -1,0 +1,57 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    strategy:
+      matrix:
+        include:
+          - os: win
+            arch: x64
+          - os: linux
+            arch: x64
+          - os: linux
+            arch: arm64
+          - os: win
+            arch: arm64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Build
+        shell: pwsh
+        run: |
+          cd ViennaDotNet
+          ./publish.ps1 -profiles framework-dependent-${{ matrix.os }}-${{ matrix.arch }}
+
+      - name: Download resourcepack
+        shell: pwsh
+        run: |
+          $path = "ViennaDotNet/build/Release/framework-dependent-${{ matrix.os }}-${{ matrix.arch }}/staticdata/resourcepacks/vanilla.zip"
+          Invoke-WebRequest `
+            -Uri "https://web.archive.org/web/20210624200250if_/https://cdn.mceserv.net/availableresourcepack/resourcepacks/dba38e59-091a-4826-b76a-a08d7de5a9e2-1301b0c257a311678123b9e7325d0d6c61db3c35" `
+            -OutFile $path
+
+      - name: Zip
+        shell: pwsh
+        run: |
+          Compress-Archive `
+            -Path "ViennaDotNet/build/Release/framework-dependent-${{ matrix.os }}-${{ matrix.arch }}/*" `
+            -DestinationPath "ViennaDotNet-${{ matrix.os }}-${{ matrix.arch }}.zip"
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: ViennaDotNet-${{ matrix.os }}-${{ matrix.arch }}.zip
