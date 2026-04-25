@@ -67,15 +67,4 @@ jobs:
       - name: Upload release
         uses: softprops/action-gh-release@v2
         with:
-          files: ViennaDotNet-${{ matrix.os }}-${{ matrix.arch }}.zip    steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: release_files
-
-      - name: Publish GitHub release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: release_files/**/*.tar.gz
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          files: ViennaDotNet-${{ matrix.os }}-${{ matrix.arch }}.zip
