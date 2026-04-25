@@ -1,32 +1,35 @@
-name: Build Release
+name: Build and Release
 
 on:
-  workflow_dispatch:
   push:
     tags:
-      - "v*"
+      - 'v*'
+
+permissions:
+  contents: write
 
 jobs:
   build:
+    runs-on: windows-latest
+
     strategy:
-      fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
-            rid: linux-x64
-          - os: ubuntu-latest
-            rid: linux-arm64
-          - os: windows-latest
-            rid: win-x64
-          - os: macos-latest
-            rid: osx-x64
-          - os: macos-latest
-            rid: osx-arm64
-
-    runs-on: ${{ matrix.os }}
+          - os: win
+            arch: x64
+          - os: win
+            arch: arm64
+          - os: linux
+            arch: x64
+          - os: linux
+            arch: arm64
+          - os: osx
+            arch: x64
+          - os: osx
+            arch: arm64
 
     steps:
-      - name: Checkout source
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup .NET 10
@@ -34,41 +37,37 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      - name: Restore dependencies
-        run: dotnet restore ViennaDotNet.slnx
-
-      - name: Publish build
-        shell: bash
+      - name: Build
+        shell: pwsh
         run: |
-          dotnet publish src/launcher/launcher.csproj \
-            -c Release \
-            -r ${{ matrix.rid }} \
-            --self-contained false \
-            -o build/${{ matrix.rid }}
+          ./publish.ps1 -profiles framework-dependent-${{ matrix.os }}-${{ matrix.arch }}
 
-      - name: Create server EULA
-        shell: bash
+      - name: Force EULA accept
+        shell: pwsh
         run: |
-          mkdir -p build/${{ matrix.rid }}/staticdata/server_template_dir
-          echo "eula=true" > build/${{ matrix.rid }}/staticdata/server_template_dir/eula.txt
+          $eulaPath = "build/Release/framework-dependent-${{ matrix.os }}-${{ matrix.arch }}/staticdata/server_template_dir/eula.txt"
+          New-Item -ItemType Directory -Force -Path (Split-Path $eulaPath) | Out-Null
+          "eula=true" | Set-Content -Path $eulaPath -Encoding ASCII
 
-      - name: Package release
-        shell: bash
+      - name: Download resource pack
+        shell: pwsh
         run: |
-          cd build
-          tar -czf ViennaDotNet-${{ matrix.rid }}.tar.gz ${{ matrix.rid }}
+          $file = "build/Release/framework-dependent-${{ matrix.os }}-${{ matrix.arch }}/staticdata/resourcepacks/vanilla.zip"
+          Invoke-WebRequest `
+            -Uri "https://web.archive.org/web/20210624200250if_/https://cdn.mceserv.net/availableresourcepack/resourcepacks/dba38e59-091a-4826-b76a-a08d7de5a9e2-1301b0c257a311678123b9e7325d0d6c61db3c35" `
+            -OutFile $file
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - name: Zip build
+        shell: pwsh
+        run: |
+          Compress-Archive `
+            -Path "build/Release/framework-dependent-${{ matrix.os }}-${{ matrix.arch }}/*" `
+            -DestinationPath "ViennaDotNet-${{ matrix.os }}-${{ matrix.arch }}.zip"
+
+      - name: Upload release
+        uses: softprops/action-gh-release@v2
         with:
-          name: ViennaDotNet-${{ matrix.rid }}
-          path: build/ViennaDotNet-${{ matrix.rid }}.tar.gz
-
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
+          files: ViennaDotNet-${{ matrix.os }}-${{ matrix.arch }}.zip    steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
