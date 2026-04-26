@@ -3,6 +3,8 @@
 REMOTE_URL="https://raw.githubusercontent.com/FroquaCubez/ViennaDotNet-PreCompiled/refs/heads/main/TermuxVienna.sh"
 SELF_PATH="$(realpath "$0")"
 
+echo "Checking for updates..."
+
 update_self() {
     command -v curl >/dev/null 2>&1 || return
 
