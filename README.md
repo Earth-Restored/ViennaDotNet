@@ -1,5 +1,5 @@
 ![Banner](src/ViennaDotNet.LauncherUI/wwwroot/banner.png)
-
+# ViennaDotNet
 An unofficial port of [Project Vienna](https://github.com/Project-Genoa/Vienna) to .NET
 
 > [!WARNING]
