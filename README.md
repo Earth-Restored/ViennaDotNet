@@ -55,7 +55,7 @@ git clone https://github.com/Earth-Restored/ViennaDotNet.git
 - Under "Server Status", click "Start"
 - Accept the Minecraft Server's EULA when prompted in the Launcher's logs
 - Open server.properties
-- In server.properties find the line "vienna-event-bus-address=" and add 5532 right after it (unless you changed the eventbus port"
+- In server.properties find the line "vienna-event-bus-address=" and add "YOURPCIPHERE:5532" right after it (unless you changed the eventbus port"
 - Now find the line "vienna-event-bus-queue-name=" and set it to literally anything (serious)
 - Save and close the file
 - Download and move the "resourcepack" file as described in the Launcher's logs
