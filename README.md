@@ -1,4 +1,4 @@
-![Banner](https://raw.githubusercontent.com/LNLenost/ViennaDotNet/refs/heads/main/src/ViennaDotNet.LauncherUI/wwwroot/banner.png)
+![Banner](src/ViennaDotNet.LauncherUI/wwwroot/banner.png)
 
 An unofficial port of [Project Vienna](https://github.com/Project-Genoa/Vienna) to .NET
 
