@@ -77,7 +77,7 @@ git clone https://github.com/Earth-Restored/ViennaDotNet.git
 - Install the patcher on your device
 - Make sure you have a LEGAL copy of Minecraft Earth installed on that same device
 - Open the patcher, press on the 3 dots then go to Settings
-- Under Locator Server, set the following: `http://{ip}:8080`, replace `{ip}` with your PC's ip or hostnamr, **make sure you have http:// instead of https://**
+- Under Locator Server, set the following: `http://{ip}:8080`, replace `{ip}` with your PC's ip or hostname, **make sure you have http:// instead of https://**
 - Now go back and start patching
 - Once that's done, congratulations! You can now open the newly installed app and play Minecraft Earth!
 
@@ -88,7 +88,7 @@ git clone https://github.com/Earth-Restored/ViennaDotNet.git
 - Run the patcher.
 - Select the downloaded APK file.
 - Change locator Hostname/IP to `http://{ip}:8080`, replace `{ip}` with your PC's ip or hostname
-- If you want to use non microsoft login, change the options like so (use the same ip/hostname as the locator):
+- If you want to use non-Microsoft login, change the options like so (use the same ip/hostname as the locator):
 ![Correct options for replacement server](https://github.com/Earth-Restored/ViennaDotNet/blob/main/images/patcher-login-server-options.png?raw=true)
 - Click patch
 - Move the patched apk to your phone and install it
