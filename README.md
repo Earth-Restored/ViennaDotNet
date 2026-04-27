@@ -44,7 +44,7 @@ In addition to the original Vienna feature set, this port adds:
 ## Semi-automatic (Linux, macOS, Termux only)
 - Open your terminal and run the following command:
 ```
-curl -Ssl https://raw.githubusercontent.com/Earth-Restored/ViennaDotNet/main/install.sh | bash
+curl -sSl https://raw.githubusercontent.com/Earth-Restored/ViennaDotNet/main/install.sh | bash
 ```
 - Wait until the command finishes
 - Continue following the guide from the 4th point of the "Server" part in the Manual instructions
