@@ -1,5 +1,5 @@
+![Banner](src/ViennaDotNet.LauncherUI/wwwroot/banner.png)
 # ViennaDotNet
-
 An unofficial port of [Project Vienna](https://github.com/Project-Genoa/Vienna) to .NET
 
 > [!WARNING]
@@ -33,8 +33,6 @@ In addition to the original Vienna feature set, this port adds:
 ### Instructions
 
 - Before you start, you'll need to know the IP address of your PC
-- Windows:
-   - Open Terminal or Command Prompt
    - Type `ipconfig` and press enter
    - Look for either `Wireless LAN adapter Wi-Fi` if you use WiFi or `Ethernet adapter Ethernet` if you use ethernet
    - Under it, there should be `IPv4 Address`
