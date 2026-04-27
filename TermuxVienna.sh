@@ -244,8 +244,7 @@ update_viennadotnet() {
         fi
 
         echo "Current Version: $CURRENT_VERSION"
-        echo ""
-        echo "Checking latest version..."
+        echo ""        
 
         RELEASE_JSON=$(curl -s https://api.github.com/repos/FroquaCubez/ViennaDotNet-PreCompiled/releases)
 
