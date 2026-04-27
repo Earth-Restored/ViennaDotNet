@@ -116,7 +116,6 @@ echo "[INFO] Downloading..."
 
 curl -L --progress-bar -o ViennaDotNet-linux-arm64.zip "$URL"
 
-wget -q "$URL"
 unzip -o ViennaDotNet-linux-arm64.zip
 rm -rf ~/Vienna/*
 
