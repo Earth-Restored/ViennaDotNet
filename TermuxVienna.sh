@@ -238,7 +238,6 @@ update_viennadotnet() {
         echo "This will:"
         echo "- Replace updated files ONLY"
         echo "- Keep your databases untouched"
-        echo "- NOT delete extra local files"
         echo ""
         echo "======================================="
 
@@ -318,8 +317,8 @@ echo "- Create an API key at: https://cloud.maptiler.com/account/keys/"
 echo "- Add the API key inside the server admin panel settings"
 echo
 echo "APK:"
-echo "Patch your own LEGALLY obtained minecraft earth app"
-echo "and set the IP to 127.0.0.1 if you're using it on the same device"
+echo "- Patch your own LEGALLY obtained minecraft earth app"
+echo "- and set the IP to 127.0.0.1 if you're using it on the same device"
 echo
 echo "Notes:"
 echo "- This setup is intended for local device use only"
