@@ -208,11 +208,11 @@ pkg_update() {
 
 install_java() {
     case $PKG_MANAGER in
-        apt)    pkg_install openjdk-21-jre ;;
-        dnf)    pkg_install java-21-openjdk ;;
-        pacman) pkg_install jre21-openjdk ;;
-        zypper) pkg_install java-21-openjdk ;;
-        brew)   pkg_install openjdk@21 ;;
+        apt)    pkg_install openjdk-17-jre ;;
+        dnf)    pkg_install java-17-openjdk ;;
+        pacman) pkg_install jre17-openjdk ;;
+        zypper) pkg_install java-17-openjdk ;;
+        brew)   pkg_install openjdk@17 ;;
     esac
 }
 
@@ -333,7 +333,7 @@ stop_service() {
 }
 
 if [ "$OS" != "Darwin" ] && [ "$EUID" -ne 0 ]; then
-    err "Please run as root: sudo bash vienna-install.sh"
+    err "Please run the script as root!"
 fi
 
 detect_pkg_manager
@@ -423,11 +423,9 @@ if [ "$OS" = "Darwin" ]; then
     echo "  tail -f $BUILD_DIR/logs/vienna.log   → live logs"
     echo "  launchctl stop com.vienna.server      → stop"
     echo "  launchctl start com.vienna.server     → start"
-    echo "  sudo bash vienna-install.sh           → update & rebuild"
 else
     echo "Useful commands:"
     echo "  sudo journalctl -u vienna.service -f     → live logs"
     echo "  sudo systemctl status vienna.service     → status"
     echo "  sudo systemctl restart vienna.service    → restart"
-    echo "  sudo bash vienna-install.sh              → update & rebuild"
 fi
