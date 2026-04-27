@@ -40,6 +40,15 @@ In addition to the original Vienna feature set, this port adds:
    - Use a command such as `ip address`, `hostname -I` or `ifconfig -a`
 - The address will usually (but not always) be in the format `192.168.XXX.XXX`
 
+## Semi-automatic (Linux, macOS, Termux only)
+- Open your terminal and run the following command:
+```
+curl -Ssl https://raw.githubusercontent.com/Earth-Restored/ViennaDotNet/main/install.sh | bash
+```
+- Wait until the command finishes
+- Continue following the guide from the 4th point of the "Server" part in the Manual instructions
+
+## Manual
 #### Server
 
 - Clone the repository by running the following command on your terminal:
