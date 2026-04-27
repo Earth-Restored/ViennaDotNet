@@ -1,5 +1,5 @@
+![Banner](src/ViennaDotNet.LauncherUI/wwwroot/banner.png)
 # ViennaDotNet
-
 An unofficial port of [Project Vienna](https://github.com/Project-Genoa/Vienna) to .NET
 
 > [!WARNING]
@@ -33,28 +33,36 @@ In addition to the original Vienna feature set, this port adds:
 ### Instructions
 
 - Before you start, you'll need to know the IP address of your PC
-- Windows:
-   - Open Terminal or Command Prompt
+ - Windows
    - Type `ipconfig` and press enter
    - Look for either `Wireless LAN adapter Wi-Fi` if you use WiFi or `Ethernet adapter Ethernet` if you use ethernet
    - Under it, there should be `IPv4 Address`
 - Linux
    - Use a command such as `ip address`, `hostname -I` or `ifconfig -a`
-- The address will usually (but not always) be in the format `192.168.XXX.XXX`
+   - The address will usually (but not always) be in the format `192.168.XXX.XXX`
 
+## Semi-automatic (Linux, macOS, Termux only)
+- Open your terminal and run the following command:
+```
+curl -sSl https://raw.githubusercontent.com/Earth-Restored/ViennaDotNet/main/install.sh | bash
+```
+- Wait until the command finishes
+- Continue following the guide from the 4th point of the "Server" part in the Manual instructions
+
+## Manual
 #### Server
 
 - Clone the repository by running the following command on your terminal:
 ```
 git clone https://github.com/Earth-Restored/ViennaDotNet.git
 ```
-- CD to the ViennaDotNet directory, then run `publish.ps1 -profiles framework-dependent-{os}-{arch}`, replace `{os}` with you os (win, linux, osx) and `{arch}` with the cpu architecture (x64, x86, arm64, arm32), e.g. `framework-dependent-win-x64`
-- Run "run_launcher.ps1"
-- Now on the same device open http://localhost:5000, create an account, make sure you confirm your email on the page that opens, if you fail to do this, you need to [Delete account db (Option B)](#i-cannot-see-the-start-server-button-when-logged-in), and login
-- Under "Server Options", set "Network/IPv4 Address" to your PC's IP address and either disable "Map/Enable Tile Rendering" or set the "Map/MapTiler API Key" (it can be found [here](https://cloud.maptiler.com/account/keys/) when logged in)
-- Under "Server Status", click "Start"
-- Accept the Minecraft Server's EULA when prompted in the Launcher's logs
-- Download and move the "resourcepack" file as described in the Launcher's logs
+1. CD to the ViennaDotNet directory, then run `publish.ps1 -profiles framework-dependent-{os}-{arch}`, replace `{os}` with you os (win, linux, osx) and `{arch}` with the cpu architecture (x64, x86, arm64, arm32), e.g. `framework-dependent-win-x64`
+2. Run "run_launcher.ps1"
+3. Now on the same device open http://localhost:5000, create an account, make sure you confirm your email on the page that opens, if you fail to do this, you need to [Delete account db (Option B)](#i-cannot-see-the-start-server-button-when-logged-in), and login
+4. Under "Server Options", set "Network/IPv4 Address" to your PC's IP address and either disable "Map/Enable Tile Rendering" or set the "Map/MapTiler API Key" (it can be found [here](https://cloud.maptiler.com/account/keys/) when logged in)
+5. Under "Server Status", click "Start"
+6. Accept the Minecraft Server's EULA when prompted in the Launcher's logs
+7. Download and move the "resourcepack" file as described in the Launcher's logs
 
 #### Client
 
@@ -69,26 +77,26 @@ git clone https://github.com/Earth-Restored/ViennaDotNet.git
 
 ##### Project Earth patcher
 
-- Download [the patcher](https://archive.org/download/dev.projectearth.patcher-1.0/dev.projectearth.patcher-1.0.apk)
-- Install the patcher on your device
-- Make sure you have a LEGAL copy of Minecraft Earth installed on that same device
-- Open the patcher, press on the 3 dots then go to Settings
-- Under Locator Server, set the following: `http://{ip}:8080`, replace `{ip}` with your PC's ip or hostnamr, **make sure you have http:// instead of https://**
-- Now go back and start patching
-- Once that's done, congratulations! You can now open the newly installed app and play Minecraft Earth!
+1. Download [the patcher](https://archive.org/download/dev.projectearth.patcher-1.0/dev.projectearth.patcher-1.0.apk)
+2. Install the patcher on your device
+3. Make sure you have a LEGAL copy of Minecraft Earth installed on that same device
+4. Open the patcher, press on the 3 dots then go to Settings
+5. Under Locator Server, set the following: `http://{ip}:8080`, replace `{ip}` with your PC's ip or hostnamr, **make sure you have http:// instead of https://**
+6. Now go back and start patching
+7. Once that's done, congratulations! You can now open the newly installed app and play Minecraft Earth!
 
 ##### MCE patcher
 
-- Download [the patcher](https://github.com/Earth-Restored/Minecraft_Earth_Patcher/releases) (UI is highly recommended) or build it from source
-- Acquire a Minecraft Earth apk, such as by dumping in from you phone.
-- Run the patcher.
-- Select the downloaded APK file.
-- Change locator Hostname/IP to `http://{ip}:8080`, replace `{ip}` with your PC's ip or hostname
+1. Download [the patcher](https://github.com/Earth-Restored/Minecraft_Earth_Patcher/releases) (UI is highly recommended) or build it from source
+2. Acquire a Minecraft Earth apk, such as by dumping in from you phone.
+2. Run the patcher.
+3. Select the downloaded APK file.
+4. Change locator Hostname/IP to `http://{ip}:8080`, replace `{ip}` with your PC's ip or hostname
 - If you want to use non microsoft login, change the options like so (use the same ip/hostname as the locator):
 ![Correct options for replacement server](https://github.com/Earth-Restored/ViennaDotNet/blob/main/images/patcher-login-server-options.png?raw=true)
-- Click patch
-- Move the patched apk to your phone and install it
-- Once that's done, congratulations! You can now open the newly installed app and play Minecraft Earth!
+5. Click patch
+6. Move the patched apk to your phone and install it
+7. Once that's done, congratulations! You can now open the newly installed app and play Minecraft Earth!
 
 #### Launcher Buildplate Preview
 1. To enable the buildplate preview, you must first obtain the Minecraft 1.20.4 resource pack.
