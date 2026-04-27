@@ -237,11 +237,19 @@ update_viennadotnet() {
         echo "======================================="
         echo ""
 
+        CURRENT_VERSION="unknown"
+
+        if [ -f ~/Vienna/version.txt ]; then
+            CURRENT_VERSION=$(cat ~/Vienna/version.txt)
+        fi
+
+        echo "Current Version: $CURRENT_VERSION"
+        echo ""
         echo "Checking latest version..."
 
-        RELEASE_JSON=$(curl -s https://api.github.com/repos/FroquaCubez/ViennaDotNet-PreCompiled/releases/latest)
+        RELEASE_JSON=$(curl -s https://api.github.com/repos/FroquaCubez/ViennaDotNet-PreCompiled/releases)
 
-        TAG=$(echo "$RELEASE_JSON" | grep -m1 '"tag_name"' | cut -d '"' -f4)
+        TAG=$(echo "$RELEASE_JSON" | grep '"tag_name"' | head -n1 | cut -d '"' -f4)
 
         if [ -z "$TAG" ]; then
             echo "Failed to fetch latest version"
@@ -251,6 +259,7 @@ update_viennadotnet() {
 
         echo "Latest Version: $TAG"
         echo ""
+
         echo "Download latest ViennaDotNet build?"
         echo ""
         echo "This will:"
@@ -267,9 +276,10 @@ update_viennadotnet() {
         echo "[earth] fetching download URL for $TAG..."
 
         URL=$(echo "$RELEASE_JSON" \
+            | grep -A2 "\"tag_name\": \"$TAG\"" \
             | grep browser_download_url \
             | grep linux-arm64 \
-            | cut -d '"' -f 4)
+            | cut -d '"' -f4 | head -n1)
 
         if [ -z "$URL" ]; then
             echo "[earth] failed to get URL"
@@ -300,6 +310,11 @@ update_viennadotnet() {
             echo "[earth] applying update from $TAG..."
 
             cp -r "$SRC"/. "$TARGET"/
+
+            # -----------------------------
+            # SAVE NEW VERSION
+            # -----------------------------
+            echo "$TAG" > ~/Vienna/version.txt
 
             echo "[earth] update complete ($TAG)"
         else
