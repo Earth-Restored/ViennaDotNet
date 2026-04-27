@@ -42,20 +42,12 @@ jobs:
         run: |
           ./publish.ps1 -profiles framework-dependent-${{ matrix.os }}-${{ matrix.arch }}
 
-      - name: Force EULA accept
+      - name: EULA accept
         shell: pwsh
         run: |
           $eulaPath = "build/Release/framework-dependent-${{ matrix.os }}-${{ matrix.arch }}/staticdata/server_template_dir/eula.txt"
           New-Item -ItemType Directory -Force -Path (Split-Path $eulaPath) | Out-Null
           "eula=true" | Set-Content -Path $eulaPath -Encoding ASCII
-
-      - name: Download resource pack
-        shell: pwsh
-        run: |
-          $file = "build/Release/framework-dependent-${{ matrix.os }}-${{ matrix.arch }}/staticdata/resourcepacks/vanilla.zip"
-          Invoke-WebRequest `
-            -Uri "https://web.archive.org/web/20210624200250if_/https://cdn.mceserv.net/availableresourcepack/resourcepacks/dba38e59-091a-4826-b76a-a08d7de5a9e2-1301b0c257a311678123b9e7325d0d6c61db3c35" `
-            -OutFile $file
 
       - name: Zip build
         shell: pwsh
