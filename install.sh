@@ -94,7 +94,7 @@ mkdir -p ~/Vienna
 echo "[5] Downloading pre-compiled server"
 cd ~
 
-RELEASE_JSON=$(curl -s https://api.github.com/repos/FroquaCubez/ViennaDotNet-PreCompiled/releases)
+RELEASE_JSON=$(curl -s https://api.github.com/repos/Earth-Restored/ViennaDotNet/releases)
 
 URL=$(echo "$RELEASE_JSON" \
 | grep -o '"browser_download_url": "[^"]*linux-arm64[^"]*"' \
@@ -146,7 +146,7 @@ print_step "4. CREATING EARTH COMMAND"
 
 mkdir -p "$PREFIX/bin"
 
-curl -fsSL https://raw.githubusercontent.com/FroquaCubez/ViennaDotNet-PreCompiled/refs/heads/main/TermuxVienna.sh -o "$PREFIX/bin/earth"
+curl -fsSL https://raw.githubusercontent.com/Earth-Restored/ViennaDotNet/refs/heads/main/TermuxVienna.sh -o "$PREFIX/bin/earth"
 
 chmod +x "$PREFIX/bin/earth"
 
