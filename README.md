@@ -33,12 +33,13 @@ In addition to the original Vienna feature set, this port adds:
 ### Instructions
 
 - Before you start, you'll need to know the IP address of your PC
+ - Windows
    - Type `ipconfig` and press enter
    - Look for either `Wireless LAN adapter Wi-Fi` if you use WiFi or `Ethernet adapter Ethernet` if you use ethernet
    - Under it, there should be `IPv4 Address`
 - Linux
    - Use a command such as `ip address`, `hostname -I` or `ifconfig -a`
-- The address will usually (but not always) be in the format `192.168.XXX.XXX`
+   - The address will usually (but not always) be in the format `192.168.XXX.XXX`
 
 ## Semi-automatic (Linux, macOS, Termux only)
 - Open your terminal and run the following command:
