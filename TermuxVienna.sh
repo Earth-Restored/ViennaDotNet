@@ -358,7 +358,7 @@ OPTIONS=(
 )
 
 CHOICE=$(printf "%s\n" "${OPTIONS[@]}" | fzf \
-    --height=50% \
+    --height=30% \
     --reverse \
     --border \
     --prompt="$TITLE > " \
