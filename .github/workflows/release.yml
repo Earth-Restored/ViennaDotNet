@@ -1,15 +1,15 @@
 name: Build and Release
 
 on:
-  push:
-    tags:
-      - 'v*'
+  release:
+    types: [published]
 
 permissions:
   contents: write
 
 jobs:
   build:
+    if: github.event.release.tag_name == 'nightly'
     runs-on: windows-latest
 
     strategy:
