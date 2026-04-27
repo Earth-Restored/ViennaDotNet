@@ -289,22 +289,14 @@ update_viennadotnet() {
 
         unzip -o update.zip >/dev/null 2>&1
 
-        SRC="ViennaDotNet-linux-arm64"
         TARGET=~/Vienna
 
-        if [ -d "$SRC" ]; then
-            echo "[earth] applying update ($TAG)..."
-
-            cp -r "$SRC"/. "$TARGET"/
-
-            echo "$TAG" > ~/Vienna/version.txt
-
-            echo "[earth] update complete ($TAG)"
-        else
-            echo "[earth] invalid package"
-        fi
-
+        echo "[earth] applying update ($TAG)..."
+        cp -r . "$TARGET"/
+        echo "$TAG" > ~/Vienna/version.txt
+        echo "[earth] update complete ($TAG)"
         rm -rf "$TMP_DIR"
+
         sleep 2
         return
     done
