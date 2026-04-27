@@ -226,7 +226,6 @@ done
 }
 
 update_viennadotnet() {
-    force_stop_server
     while true; do
         clear
         echo "======================================="
@@ -244,7 +243,8 @@ update_viennadotnet() {
         CHOICE=$(printf "Yes\nNo" | fzf --height=20% --reverse --border --prompt="Confirm Update > ")
 
         [ "$CHOICE" != "Yes" ] && return
-
+        
+        force_stop_server
         echo "[earth] fetching update URL..."
 
         URL=$(curl -s https://api.github.com/repos/FroquaCubez/ViennaDotNet-PreCompiled/releases/tags/v1 \
