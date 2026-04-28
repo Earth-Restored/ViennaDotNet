@@ -33,12 +33,15 @@ banner
 #  TERMUX BRANCH
 # ─────────────────────────────────────────
 if [ -n "$TERMUX_VERSION" ] || echo "$PREFIX" | grep -q "com.termux"; then
+export DEBIAN_FRONTEND=noninteractive
 
     print_step "TERMUX DETECTED"
 
     print_step "1. CHECKING PROOT-DISTRO"
     if ! command -v proot-distro >/dev/null 2>&1; then
-        pkg update -y && pkg install -y proot-distro
+        pkg update -y
+        pkg install -y -o Dpkg::Options::="--force-confnew" proot-distro
+        hash -r
         ok "Installed proot-distro"
     else
         skip "Already installed"
