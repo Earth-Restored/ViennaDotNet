@@ -34,6 +34,7 @@ banner
 # ─────────────────────────────────────────
 if [ -n "$TERMUX_VERSION" ] || echo "$PREFIX" | grep -q "com.termux"; then
 export DEBIAN_FRONTEND=noninteractive
+dpkg --configure -a -o Dpkg::Options::="--force-confnew"
 
     print_step "TERMUX DETECTED"
 
