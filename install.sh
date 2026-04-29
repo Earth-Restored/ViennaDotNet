@@ -34,15 +34,19 @@ banner
 # ─────────────────────────────────────────
 if [ -n "$TERMUX_VERSION" ] || echo "$PREFIX" | grep -q "com.termux"; then
 export DEBIAN_FRONTEND=noninteractive
-dpkg --configure -a -o Dpkg::Options::="--force-confnew"
+dpkg --configure -a >/dev/null 2>&1 || true
 
-    print_step "TERMUX DETECTED"
+print_step "TERMUX DETECTED"
 
     print_step "1. CHECKING PROOT-DISTRO"
     if ! command -v proot-distro >/dev/null 2>&1; then
         pkg update -y
-        pkg install -y -o Dpkg::Options::="--force-confnew" proot-distro
+        pkg install -y -o Dpkg::Options::="--force-confnew" proot-distro || {
+            dpkg --configure -a
+            pkg install -y -o Dpkg::Options::="--force-confnew" proot-distro
+        }
         hash -r
+        command -v proot-distro >/dev/null || err "proot-distro install failed"
         ok "Installed proot-distro"
     else
         skip "Already installed"
