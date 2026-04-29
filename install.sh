@@ -33,12 +33,20 @@ banner
 #  TERMUX BRANCH
 # ─────────────────────────────────────────
 if [ -n "$TERMUX_VERSION" ] || echo "$PREFIX" | grep -q "com.termux"; then
+export DEBIAN_FRONTEND=noninteractive
+dpkg --configure -a >/dev/null 2>&1 || true
 
-    print_step "TERMUX DETECTED"
+print_step "TERMUX DETECTED"
 
     print_step "1. CHECKING PROOT-DISTRO"
     if ! command -v proot-distro >/dev/null 2>&1; then
-        pkg update -y && pkg install -y proot-distro
+        pkg update -y
+        pkg install -y -o Dpkg::Options::="--force-confnew" proot-distro || {
+            dpkg --configure -a
+            pkg install -y -o Dpkg::Options::="--force-confnew" proot-distro
+        }
+        hash -r
+        command -v proot-distro >/dev/null || err "proot-distro install failed"
         ok "Installed proot-distro"
     else
         skip "Already installed"
@@ -94,14 +102,28 @@ mkdir -p ~/Vienna
 echo "[5] Downloading pre-compiled server"
 cd ~
 
-URL=$(curl -s https://api.github.com/repos/FroquaCubez/ViennaDotNet-PreCompiled/releases/tags/v1 \
-    | grep browser_download_url \
-    | grep linux-arm64 \
-    | cut -d '"' -f 4)
+RELEASE_JSON=$(curl -s https://api.github.com/repos/FroquaCubez/ViennaDotNet-PreCompiled/releases)
 
-[ -z "$URL" ] && { echo "[ERROR] Could not find download URL"; exit 1; }
+URL=$(echo "$RELEASE_JSON" \
+| grep -o '"browser_download_url": "[^"]*linux-arm64[^"]*"' \
+| cut -d '"' -f4 \
+| head -n1)
 
-wget -q "$URL"
+TAG=$(echo "$RELEASE_JSON" \
+| grep '"tag_name"' \
+| head -n1 \
+| cut -d '"' -f4)
+
+if [ -z "$URL" ]; then
+    echo "[ERROR] No download URL found"
+    exit 1
+fi
+
+echo "[INFO] Latest build: $TAG"
+echo "[INFO] Downloading..."
+
+curl -L --progress-bar -o ViennaDotNet-linux-arm64.zip "$URL"
+
 unzip -o ViennaDotNet-linux-arm64.zip
 rm -rf ~/Vienna/*
 
@@ -116,6 +138,12 @@ else
 fi
 
 chmod -R +x ~/Vienna/components/ 2>/dev/null || true
+
+echo "[6] Cleaning installer leftovers"
+
+rm -f ~/dotnet-install.sh
+rm -f ~/ViennaDotNet-linux-arm64.zip
+
 echo "[DONE]"
 EOF
 
@@ -136,7 +164,7 @@ echo "=============================="
 echo " INSTALL COMPLETE"
 echo "=============================="
 echo "Run: earth"
-echo "IMPORTANT: Open Info inside the menu first"
+echo "IMPORTANT: Read the guide in the menu first."
 echo "=============================="
 exit 0
 fi
