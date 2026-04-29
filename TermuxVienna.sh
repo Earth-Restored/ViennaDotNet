@@ -45,6 +45,7 @@ proot-distro login ubuntu -- bash << 'EOF'
 DB=~/Vienna/nohup.log
 PID_FILE=~/Vienna/server.pid
 TIME_FILE=~/Vienna/server.start
+STARTING_FILE=~/Vienna/.starting
 
 mkdir -p ~/Vienna
 
@@ -70,11 +71,27 @@ start_server() {
     export PATH=$PATH:$HOME/.dotnet:$HOME/.dotnet/tools
     export COMPlus_gcServer=0
 
+    echo "1" > "$STARTING_FILE"
+
     setsid pwsh run_launcher.ps1 > "$DB" 2>&1 &
 
     PID=$!
     echo "$PID" > "$PID_FILE"
     date +%s > "$TIME_FILE"
+
+    # background watcher waits until port is open
+    (
+        for i in $(seq 1 60); do
+            if (echo > /dev/tcp/127.0.0.1/5000) >/dev/null 2>&1; then
+                rm -f "$STARTING_FILE"
+                exit 0
+            fi
+            sleep 1
+        done
+
+        # timeout fallback
+        rm -f "$STARTING_FILE"
+    ) &
 }
 
 stop_server() {
@@ -90,7 +107,7 @@ stop_server() {
     pkill -f run_launcher.ps1 2>/dev/null
     fuser -k 5000/tcp 2>/dev/null
 
-    rm -f "$PID_FILE" "$TIME_FILE"
+    rm -f "$PID_FILE" "$TIME_FILE" "$STARTING_FILE"
 }
 
 toggle_server() {
@@ -149,6 +166,11 @@ check_eula() {
         esac
     done
 }
+
+is_port_open() {
+    (echo > /dev/tcp/127.0.0.1/5000) >/dev/null 2>&1
+}
+
 process_viewer() {
 while true; do
 clear
@@ -374,6 +396,8 @@ clear
 
 if is_running; then
     TITLE="ViennaTermux [RUNNING] http://localhost:5000"
+elif [ -f "$STARTING_FILE" ]; then
+    TITLE="ViennaTermux [STARTING...]"
 else
     TITLE="ViennaTermux [STOPPED]"
 fi
