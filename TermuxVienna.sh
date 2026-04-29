@@ -49,8 +49,11 @@ STARTING_FILE=~/Vienna/.starting
 
 mkdir -p ~/Vienna
 
-
 is_running() {
+    curl -s --max-time 1 http://127.0.0.1:5000 | grep -q .
+}
+
+is_process_alive() {
     if [ -f "$PID_FILE" ]; then
         PID=$(cat "$PID_FILE")
         kill -0 "$PID" 2>/dev/null && return 0
@@ -63,7 +66,7 @@ get_pid() {
 }
 
 start_server() {
-    if is_running; then return; fi
+    if is_process_alive; then return; fi
 
     cd ~/Vienna || exit 1
 
@@ -79,23 +82,21 @@ start_server() {
     echo "$PID" > "$PID_FILE"
     date +%s > "$TIME_FILE"
 
-    # background watcher waits until port is open
     (
         for i in $(seq 1 60); do
-            if (echo > /dev/tcp/127.0.0.1/5000) >/dev/null 2>&1; then
+            if is_process_alive && curl -s --max-time 1 http://127.0.0.1:5000 | grep -q .; then
                 rm -f "$STARTING_FILE"
                 exit 0
             fi
             sleep 1
         done
 
-        # timeout fallback
         rm -f "$STARTING_FILE"
     ) &
 }
 
 stop_server() {
-    if ! is_running; then return; fi
+    if ! is_process_alive; then return; fi
 
     if [ -f "$PID_FILE" ]; then
         PID=$(cat "$PID_FILE")
@@ -111,7 +112,7 @@ stop_server() {
 }
 
 toggle_server() {
-    if is_running; then
+    if is_process_alive; then
         CH=$(printf "Yes\nNo" | fzf --height=20% --reverse --border --prompt="Stop server? > ")
         [ "$CH" = "Yes" ] && stop_server
     else
@@ -165,10 +166,6 @@ check_eula() {
                 ;;
         esac
     done
-}
-
-is_port_open() {
-    (echo > /dev/tcp/127.0.0.1/5000) >/dev/null 2>&1
 }
 
 process_viewer() {
@@ -394,10 +391,10 @@ sleep 2
 while true; do
 clear
 
-if is_running; then
-    TITLE="ViennaTermux [RUNNING] http://localhost:5000"
-elif [ -f "$STARTING_FILE" ]; then
+if [ -f "$STARTING_FILE" ]; then
     TITLE="ViennaTermux [STARTING...]"
+elif is_running; then
+    TITLE="ViennaTermux [RUNNING] http://localhost:5000"
 else
     TITLE="ViennaTermux [STOPPED]"
 fi
