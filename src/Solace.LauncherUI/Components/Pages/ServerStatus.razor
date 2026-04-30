@@ -216,7 +216,7 @@
         => await ServerManager.EnsureComponentsOnline(exeName);
 
     private bool HasPermission(string permission)
-    => _user?.HasPermission(permission) ?? false;
+        => _user?.HasPermission(permission) ?? false;
     private bool IsButtonDisabled(string permission)
         => !HasPermission(permission);
 

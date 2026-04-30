@@ -1,0 +1,250 @@
+@page "/Admin/Data"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
+@using Solace.LauncherUI.Utils
+@attribute [Authorize(Policy = Permissions.ViewData)]
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Data - Solace</PageTitle>
+
+<div class="container mt-4">
+    <h2 class="mb-4"><i class="bi bi-database text-primary"></i> Data Management - Solace</h2>
+
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">Space Usage</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3 border-end">
+                    <h6 class="text-muted">Total Space Used</h6>
+                    <h3 class="text-primary">@($"{_totalSpaceGB:F2} GB")</h3>
+                </div>
+                <div class="col-md-9">
+                    <h6 class="text-muted">Storage Split</h6>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-globe"></i> earth.db</span>
+                            <span class="badge bg-secondary rounded-pill">@($"{_earthDbGB:F2} GB")</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-activity"></i> live.db</span>
+                            <span class="badge bg-secondary rounded-pill">@($"{_liveDbGB:F2} GB")</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-folder"></i> object_store</span>
+                            <span class="badge bg-secondary rounded-pill">@($"{_objectStoreGB:F2} GB")</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (HasPermission(Permissions.ImportExportData))
+    {
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">Import & Export</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-3">Backup your current server data or merge an existing dataset.</p>
+                <button class="btn btn-outline-primary me-2" @onclick="InitiateExport">
+                    <i class="bi bi-download"></i> Export Data
+                </button>
+                <button class="btn btn-outline-secondary" @onclick="InitiateImport">
+                    <i class="bi bi-upload"></i> Import Data
+                </button>
+            </div>
+        </div>
+    }
+
+    @if (HasPermission(Permissions.DeleteData))
+    {
+        <div class="card border-danger mb-4">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0">Danger Zone</h5>
+            </div>
+            <div class="card-body">
+                <p>Deleting all server data is a permanent action and cannot be undone. This will wipe the databases and the object store.</p>
+                
+                @if (!_isConfirmingDelete)
+                {
+                    <button class="btn btn-outline-danger" @onclick="InitiateDelete">
+                        Delete All Data
+                    </button>
+                }
+                else
+                {
+                    <div class="alert alert-warning d-flex align-items-center" role="alert">
+                        <div class="me-auto">
+                            <strong>Are you absolutely sure?</strong> 
+                            @if (!_canConfirmDelete)
+                            {
+                                <span> Please wait @_countdown seconds...</span>
+                            }
+                        </div>
+                        <div>
+                            <button class="btn btn-secondary me-2" @onclick="CancelDelete">Cancel</button>
+                            <button class="btn btn-danger" disabled="@(!_canConfirmDelete)" @onclick="ExecuteDelete">
+                                Yes, Delete Everything
+                            </button>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@if (_showImportWarning)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title"><i class="bi bi-exclamation-triangle"></i> Merge Warning</h5>
+                    <button type="button" class="btn-close" @onclick="CancelImport"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Data already exists on this server. Importing a new dataset will <strong>merge</strong> the incoming data with the existing records.</p>
+                    <p class="mb-0 text-muted small">Conflicts will be resolved by keeping the newest records. Do you wish to proceed?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CancelImport">Cancel</button>
+                    <button type="button" class="btn btn-warning" @onclick="ConfirmImport">Proceed with Merge</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (_isProcessing)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.7); z-index: 1060;">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content bg-transparent border-0 text-center">
+                <div class="modal-body text-white">
+                    <div class="spinner-border text-light mb-3" role="status" style="width: 3rem; height: 3rem;">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <h5>@_processingAction...</h5>
+                    <p class="small text-light opacity-75">Please do not close this page.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private ClaimsPrincipal? _user;
+
+    // View states - Delete
+    private bool _isConfirmingDelete = false;
+    private bool _canConfirmDelete = false;
+    private int _countdown = 5;
+
+    // View states - Import/Export
+    private bool _showImportWarning = false;
+    private bool _isProcessing = false;
+    private string _processingAction = "";
+
+    // Mock Data
+    private double _totalSpaceGB => _earthDbGB + _liveDbGB + _objectStoreGB;
+    private double _earthDbGB = 14.2;
+    private double _liveDbGB = 2.8;
+    private double _objectStoreGB = 45.5;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        _user = authState.User;
+    }
+
+    private bool HasPermission(string permission)
+        => _user?.HasPermission(permission) ?? false; 
+
+    private void InitiateExport()
+    {
+        _processingAction = "Exporting Data";
+        _isProcessing = true;
+        _ = ProcessMockActionAsync();
+    }
+
+    private void InitiateImport()
+    {
+        if (_totalSpaceGB > 0)
+        {
+            _showImportWarning = true;
+        }
+        else
+        {
+            ConfirmImport();
+        }
+    }
+
+    private void CancelImport()
+    {
+        _showImportWarning = false;
+    }
+
+    private void ConfirmImport()
+    {
+        _showImportWarning = false;
+        _processingAction = "Importing Data";
+        _isProcessing = true;
+        _ = ProcessMockActionAsync();
+    }
+
+    private async Task ProcessMockActionAsync()
+    {
+        await Task.Delay(3000);
+        
+        if (_processingAction == "Importing Data")
+        {
+            _earthDbGB += 2.5;
+            _liveDbGB += 0.4;
+            _objectStoreGB += 10.1;
+        }
+
+        _isProcessing = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task InitiateDelete()
+    {
+        _isConfirmingDelete = true;
+        _canConfirmDelete = false;
+        _countdown = 5;
+
+        while (_countdown > 0 && _isConfirmingDelete)
+        {
+            await Task.Delay(1000);
+            _countdown--;
+            StateHasChanged(); 
+        }
+
+        if (_isConfirmingDelete)
+        {
+            _canConfirmDelete = true;
+            StateHasChanged();
+        }
+    }
+
+    private void CancelDelete()
+    {
+        _isConfirmingDelete = false;
+        _canConfirmDelete = false;
+    }
+
+    private async Task ExecuteDelete()
+    {
+        _earthDbGB = 0;
+        _liveDbGB = 0;
+        _objectStoreGB = 0;
+        
+        _isConfirmingDelete = false;
+        _canConfirmDelete = false;
+    }
+}
