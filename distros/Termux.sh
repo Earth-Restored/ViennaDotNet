@@ -308,7 +308,7 @@ update_solace() {
 
         unzip -o update.zip >/dev/null 2>&1
 
-        TARGET=~/Vienna
+        TARGET=~/Solace
 
         echo "[earth] applying update ($TAG)..."
         cp -r . "$TARGET"/
