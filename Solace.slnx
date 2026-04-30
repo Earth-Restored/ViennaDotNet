@@ -1,0 +1,33 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Solace.BuildplateRenderer/Solace.BuildplateRenderer.csproj" />
+    <Project Path="src/Solace.KillHelper/Solace.KillHelper.csproj" />
+    <Project Path="src/Solace.LauncherUI/Solace.LauncherUI.csproj" />
+  </Folder>
+  <Project Path="src/Solace.ApiServer/Solace.ApiServer.csproj">
+  </Project>
+  <Project Path="src/Solace.Buildplate/Solace.Buildplate.csproj">
+  </Project>
+  <Project Path="src/Solace.BuildplateImporter/Solace.BuildplateImporter.csproj" />
+  <Project Path="src/Solace.Common/Solace.Common.csproj">
+  </Project>
+  <Project Path="src/Solace.DB/Solace.DB.csproj">
+  </Project>
+  <Project Path="src/Solace.EventBus.Client/Solace.EventBus.Client.csproj">
+  </Project>
+  <Project Path="src/Solace.EventBus.Server/Solace.EventBus.Server.csproj">
+  </Project>
+  <Project Path="src/Solace.ObjectStore.Client/Solace.ObjectStore.Client.csproj">
+  </Project>
+  <Project Path="src/Solace.ObjectStore.Server/Solace.ObjectStore.Server.csproj">
+  </Project>
+  <Project Path="src/Solace.PreviewGenerator/Solace.PreviewGenerator.csproj">
+  </Project>
+  <Project Path="src/Solace.StaticData/Solace.StaticData.csproj" />
+  <Project Path="src/Solace.TappablesGenerator/Solace.TappablesGenerator.csproj">
+  </Project>
+  <Project Path="src/Solace.TileRenderer/Solace.TileRenderer.csproj" />
+</Solution>

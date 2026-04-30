@@ -182,6 +182,7 @@ public class EventBusClient : IAsyncDisposable
         }
         catch (Exception ex) when (ex is OperationCanceledException or IOException or SocketException)
         {
+            Log.Error(ex, "EventBusClient error");
             SetError();
         }
 
@@ -192,6 +193,7 @@ public class EventBusClient : IAsyncDisposable
         {
             await kvp.Value.ErrorAsync();
         }
+
         _subscribers.Clear();
 
         foreach (var kvp in _requestHandlers)
