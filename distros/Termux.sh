@@ -1,6 +1,6 @@
 #!/data/data/com.termux/files/usr/bin/bash
 
-REMOTE_URL="https://raw.githubusercontent.com/FroquaCubez/ViennaDotNet-PreCompiled/refs/heads/main/TermuxVienna.sh"
+REMOTE_URL="https://raw.githubusercontent.com/FroquaCubez/Solace/refs/heads/main/distros/Termux.sh"
 SELF_PATH="$(realpath "$0")"
 
 echo "Checking for updates..."
