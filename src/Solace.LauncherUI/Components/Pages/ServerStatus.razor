@@ -135,11 +135,7 @@
                     <div class="log-content">
                         @foreach (var log in LogService.GetLogsFor(_activeTab))
                         {
-                            <div class="log-line">
-                                <span class="log-time">[@log.Timestamp.ToString("HH:mm:ss")]</span>
-                                <span class="log-level" style="font-size: 0.8em; opacity: 0.8;">[@log.Level]</span>
-                                <span class="log-msg">@log.RenderedMessage</span>
-                            </div>
+                            <div class="log-line"><span class="log-time">[@log.Timestamp.ToString("HH:mm:ss")]</span> <span class="log-level @GetLogLevelClass(log.Level)">[@GetShortLevel(log.Level)]</span> <span class="log-msg">@log.RenderedMessage</span></div>
                         }
                     </div>
                 </div>
@@ -217,6 +213,7 @@
 
     private bool HasPermission(string permission)
         => _user?.HasPermission(permission) ?? false;
+
     private bool IsButtonDisabled(string permission)
         => !HasPermission(permission);
 
@@ -228,4 +225,26 @@
             Solace.LauncherUI.ServerStatus.Stopping => "status-stopping",
             _ => "status-offline"
         };
+
+    private string GetShortLevel(string level) => level switch
+    {
+        "Verbose" => "VRB",
+        "Debug" => "DBG",
+        "Information" => "INF",
+        "Warning" => "WRN",
+        "Error" => "ERR",
+        "Fatal" => "FTL",
+        _ => level?.Length >= 3 ? level.Substring(0, 3).ToUpper() : "UNK"
+    };
+
+    private string GetLogLevelClass(string level) => level switch
+    {
+        "Verbose" => "log-vrb",
+        "Debug" => "log-dbg",
+        "Information" => "log-inf",
+        "Warning" => "log-wrn",
+        "Error" => "log-err",
+        "Fatal" => "log-ftl",
+        _ => ""
+    };
 }

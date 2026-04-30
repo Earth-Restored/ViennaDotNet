@@ -1,66 +1,97 @@
- /* Custom Status Glows */
- .status-indicator {
-     width: 24px;
-     height: 24px;
-     border-radius: 50%;
- }
+.status-indicator {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+}
 
- .status-online {
-     background-color: #2ecc71;
-     box-shadow: 0 0 12px rgba(46, 204, 113, 0.5);
- }
+.status-online {
+    background-color: #2ecc71;
+    box-shadow: 0 0 12px rgba(46, 204, 113, 0.5);
+}
 
- .status-starting {
-     background-color: #f1c40f;
-     box-shadow: 0 0 12px rgba(241, 196, 15, 0.5);
- }
+.status-starting {
+    background-color: #f1c40f;
+    box-shadow: 0 0 12px rgba(241, 196, 15, 0.5);
+}
 
- .status-stopping {
-     background-color: #f1c40f;
-     box-shadow: 0 0 12px rgba(241, 196, 15, 0.5);
- }
+.status-stopping {
+    background-color: #f1c40f;
+    box-shadow: 0 0 12px rgba(241, 196, 15, 0.5);
+}
 
- .status-offline {
-     background-color: #e74c3c;
-     box-shadow: 0 0 12px rgba(231, 76, 60, 0.5);
- }
+.status-offline {
+    background-color: #e74c3c;
+    box-shadow: 0 0 12px rgba(231, 76, 60, 0.5);
+}
 
- .log-container {
-     background: #121212;
-     border-radius: 8px;
-     padding: 12px;
-     height: 300px;
-     overflow-y: auto;
-     -webkit-overflow-scrolling: touch;
- }
+.log-container {
+    background: #121212;
+    border-radius: 8px;
+    padding: 12px;
+    height: 300px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
 
- .log-content {
-     font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-     font-size: 0.8rem;
-     line-height: 1.4;
- }
+.log-content {
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
 
- .log-line {
-     color: #e0e0e0;
-     margin-bottom: 4px;
-     display: flex;
- }
+.log-line {
+    color: #e0e0e0;
+    margin-bottom: 4px;
+    display: block;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+}
 
- .log-time {
-     color: #888;
-     margin-right: 8px;
-     flex-shrink: 0;
- }
+.log-time {
+    color: #888;
+    margin-right: 4px;
+}
 
- .log-msg {
-     word-break: break-all;
- }
+.log-level {
+    font-weight: bold;
+    margin-right: 4px;
+    white-space: nowrap;
+}
 
- .nav-scroller {
-     scrollbar-width: none;
-     -ms-overflow-style: none;
- }
+.log-msg {}
 
- .nav-scroller::-webkit-scrollbar {
-     display: none;
- }
+.log-vrb {
+    color: #8b949e;
+}
+
+.log-dbg {
+    color: #a5d6ff;
+}
+
+.log-inf {
+    color: #3fb950;
+}
+
+.log-wrn {
+    color: #d29922;
+}
+
+.log-err {
+    color: #f85149;
+}
+
+.log-ftl {
+    color: #ffffff;
+    background-color: #b31d28;
+    padding: 0 4px;
+    border-radius: 3px;
+}
+
+.nav-scroller {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.nav-scroller::-webkit-scrollbar {
+    display: none;
+}
