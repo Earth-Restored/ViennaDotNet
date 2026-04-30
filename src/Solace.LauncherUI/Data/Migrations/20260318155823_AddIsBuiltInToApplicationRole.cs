@@ -2,7 +2,7 @@
 
 #nullable disable
 
-namespace ViennaDotNet.LauncherUI.Migrations
+namespace Solace.LauncherUI.Migrations
 {
     /// <inheritdoc />
     public partial class AddIsBuiltInToApplicationRole : Migration

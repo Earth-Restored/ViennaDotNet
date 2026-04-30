@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using ViennaDotNet.ApiServer.Models;
+using Solace.ApiServer.Models;
 
-namespace ViennaDotNet.ApiServer;
+namespace Solace.ApiServer;
 
 public class LiveDbContext : DbContext
 {

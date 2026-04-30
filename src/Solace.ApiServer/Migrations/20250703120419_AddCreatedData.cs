@@ -2,7 +2,7 @@
 
 #nullable disable
 
-namespace ViennaDotNet.ApiServer.Migrations
+namespace Solace.ApiServer.Migrations
 {
     /// <inheritdoc />
     public partial class AddCreatedData : Migration

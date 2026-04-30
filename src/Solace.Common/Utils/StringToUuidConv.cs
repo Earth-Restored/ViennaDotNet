@@ -2,7 +2,7 @@
 using System.Globalization;
 using Uma.Uuid;
 
-namespace ViennaDotNet.Common.Utils;
+namespace Solace.Common.Utils;
 
 // TypeConverter from string to Uuid, useful for directly storing uuids instead of strings
 public class StringToUuidConv : TypeConverter

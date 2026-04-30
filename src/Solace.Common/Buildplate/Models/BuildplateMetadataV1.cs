@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace ViennaDotNet.Buildplate.Model;
+namespace Solace.Buildplate.Model;
 
 public sealed record BuildplateMetadataV1(
     [property: JsonPropertyName("size")] int Size,

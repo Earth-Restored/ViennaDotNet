@@ -1,4 +1,4 @@
-﻿namespace ViennaDotNet.ApiServer.Types.Workshop;
+﻿namespace Solace.ApiServer.Types.Workshop;
 
 public sealed record FinishPrice(
     int Cost,

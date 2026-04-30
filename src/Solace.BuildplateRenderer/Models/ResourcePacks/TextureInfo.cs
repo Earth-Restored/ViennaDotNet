@@ -1,7 +1,7 @@
 using System.Collections.Immutable;
 using System.Text.Json.Serialization;
 
-namespace ViennaDotNet.BuildplateRenderer.Models.ResourcePacks;
+namespace Solace.BuildplateRenderer.Models.ResourcePacks;
 
 // https://minecraft.wiki/w/Resource_pack#Texture_animation
 public sealed class TextureInfoJson

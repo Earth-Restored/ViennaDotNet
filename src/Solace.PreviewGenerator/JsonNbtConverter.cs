@@ -1,8 +1,8 @@
 ﻿using System.Text.Json.Serialization;
-using ViennaDotNet.Common.Excceptions;
-using ViennaDotNet.PreviewGenerator.NBT;
+using Solace.Common.Excceptions;
+using Solace.PreviewGenerator.NBT;
 
-namespace ViennaDotNet.PreviewGenerator;
+namespace Solace.PreviewGenerator;
 
 internal sealed class JsonNbtConverter
 {

@@ -1,4 +1,4 @@
-﻿namespace ViennaDotNet.Common.Excceptions;
+﻿namespace Solace.Common.Excceptions;
 
 public class UnsupportedOperationException : Exception
 {

@@ -1,8 +1,8 @@
 ﻿using System.Collections.Immutable;
 using System.Diagnostics;
-using ViennaDotNet.Common;
+using Solace.Common;
 
-namespace ViennaDotNet.StaticData;
+namespace Solace.StaticData;
 
 public sealed class TappablesConfig
 {

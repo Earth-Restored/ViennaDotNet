@@ -3,8 +3,8 @@
 @using Microsoft.AspNetCore.Identity
 @using System.Security.Claims
 @using Microsoft.EntityFrameworkCore
-@using ViennaDotNet.LauncherUI.Data
-@using ViennaDotNet.LauncherUI.Utils
+@using Solace.LauncherUI.Data
+@using Solace.LauncherUI.Utils
 @attribute [Authorize(Policy = Permissions.ViewUsers)]
 @rendermode InteractiveServer
 @inject UserManager<ApplicationUser> UserManager

@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace ViennaDotNet.ApiServer.Types.Common;
+namespace Solace.ApiServer.Types.Common;
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum Rarity

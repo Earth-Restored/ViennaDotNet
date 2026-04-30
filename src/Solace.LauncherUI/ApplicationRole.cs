@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 
-namespace ViennaDotNet.LauncherUI;
+namespace Solace.LauncherUI;
 
 public class ApplicationRole : IdentityRole
 {

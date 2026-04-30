@@ -7,7 +7,7 @@ using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace ViennaDotNet.ApiServer.Controllers.XboxLive;
+namespace Solace.ApiServer.Controllers.XboxLive;
 
 [Route("titles")]
 [Route("title.mgt.xboxlive.com/titles")]

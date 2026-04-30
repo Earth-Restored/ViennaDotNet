@@ -1,6 +1,6 @@
-﻿using ViennaDotNet.ApiServer.Types.Common;
+﻿using Solace.ApiServer.Types.Common;
 
-namespace ViennaDotNet.ApiServer.Types.Catalog;
+namespace Solace.ApiServer.Types.Catalog;
 
 public sealed record BoostMetadata(
     string Name,

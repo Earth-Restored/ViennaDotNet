@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace ViennaDotNet.LauncherUI.Migrations
+namespace Solace.LauncherUI.Migrations
 {
     /// <inheritdoc />
     public partial class CreateIdentitySchema : Migration

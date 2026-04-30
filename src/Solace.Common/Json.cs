@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 
-namespace ViennaDotNet.Common;
+namespace Solace.Common;
 
 public static class Json
 {

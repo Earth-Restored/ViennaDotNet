@@ -1,9 +1,9 @@
 ﻿using Serilog;
 using SkiaSharp;
-using ViennaDotNet.Common;
-using ViennaDotNet.EventBus.Client;
+using Solace.Common;
+using Solace.EventBus.Client;
 
-namespace ViennaDotNet.TileRenderer;
+namespace Solace.TileRenderer;
 
 internal sealed class EventBusTileRenderer : IAsyncDisposable
 {

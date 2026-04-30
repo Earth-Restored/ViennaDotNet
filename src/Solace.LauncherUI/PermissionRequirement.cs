@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 
-namespace ViennaDotNet.LauncherUI;
+namespace Solace.LauncherUI;
 
 public class PermissionRequirement(string permission) : IAuthorizationRequirement
 {

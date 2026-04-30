@@ -1,9 +1,9 @@
 ﻿using Serilog;
 using System.Text;
-using ViennaDotNet.Common;
-using ViennaDotNet.PreviewGenerator.Registry;
+using Solace.Common;
+using Solace.PreviewGenerator.Registry;
 
-namespace ViennaDotNet.Buildplate.Launcher;
+namespace Solace.Buildplate.Launcher;
 
 public static class PreviewGenerator
 {
@@ -17,7 +17,7 @@ public static class PreviewGenerator
         {
             using (var ms = new MemoryStream(serverData))
             {
-                previewString = ViennaDotNet.PreviewGenerator.Generator.Generate(ms);
+                previewString = Solace.PreviewGenerator.Generator.Generate(ms);
             }
         }
         catch (Exception ex)

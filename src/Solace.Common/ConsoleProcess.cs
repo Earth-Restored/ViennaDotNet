@@ -1,9 +1,9 @@
 ﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Serilog;
-using ViennaDotNet.Common.Utils;
+using Solace.Common.Utils;
 
-namespace ViennaDotNet.Common;
+namespace Solace.Common;
 
 // from https://stackoverflow.com/a/50311340/15878562
 public sealed class ConsoleProcess : IDisposable

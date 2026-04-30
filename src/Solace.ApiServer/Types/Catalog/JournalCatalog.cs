@@ -1,6 +1,6 @@
-﻿using static ViennaDotNet.ApiServer.Types.Catalog.JournalCatalog;
+﻿using static Solace.ApiServer.Types.Catalog.JournalCatalog;
 
-namespace ViennaDotNet.ApiServer.Types.Catalog;
+namespace Solace.ApiServer.Types.Catalog;
 
 public sealed record JournalCatalog(
     Dictionary<string, Item> Items

@@ -1,6 +1,6 @@
 ﻿using System.Buffers.Binary;
 
-namespace ViennaDotNet.Common.Utils;
+namespace Solace.Common.Utils;
 
 public static class BinaryReaderExtensions
 {

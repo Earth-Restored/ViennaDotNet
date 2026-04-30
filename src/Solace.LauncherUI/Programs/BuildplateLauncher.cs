@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using ILogger = Serilog.ILogger;
 
-namespace ViennaDotNet.LauncherUI.Programs;
+namespace Solace.LauncherUI.Programs;
 
 internal static class BuildplateLauncher
 {

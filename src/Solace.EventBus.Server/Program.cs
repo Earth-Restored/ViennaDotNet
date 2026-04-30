@@ -2,7 +2,7 @@
 using Serilog;
 using System.Diagnostics;
 
-namespace ViennaDotNet.EventBus.Server;
+namespace Solace.EventBus.Server;
 
 internal static class Program
 {

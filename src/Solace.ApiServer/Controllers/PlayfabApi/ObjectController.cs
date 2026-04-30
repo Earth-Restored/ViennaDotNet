@@ -1,9 +1,9 @@
 ﻿using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
-using ViennaDotNet.ApiServer.Models.Playfab;
-using ViennaDotNet.Common.Utils;
+using Solace.ApiServer.Models.Playfab;
+using Solace.Common.Utils;
 
-namespace ViennaDotNet.ApiServer.Controllers.PlayfabApi;
+namespace Solace.ApiServer.Controllers.PlayfabApi;
 
 [Route("Object")]
 [Route("20CA2.playfabapi.com/Object")]

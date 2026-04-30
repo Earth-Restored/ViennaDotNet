@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace ViennaDotNet.ApiServer.Types.Buildplates;
+namespace Solace.ApiServer.Types.Buildplates;
 
 public sealed record SharedBuildplate(
     string PlayerId,

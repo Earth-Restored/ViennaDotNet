@@ -1,9 +1,9 @@
-﻿using ViennaDotNet.DB;
-using ViennaDotNet.DB.Models.Player;
-using ViennaDotNet.StaticData;
-using static ViennaDotNet.DB.Models.Player.Tokens;
+﻿using Solace.DB;
+using Solace.DB.Models.Player;
+using Solace.StaticData;
+using static Solace.DB.Models.Player.Tokens;
 
-namespace ViennaDotNet.ApiServer.Utils;
+namespace Solace.ApiServer.Utils;
 
 public sealed class LevelUtils
 {

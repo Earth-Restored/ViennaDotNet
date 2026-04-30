@@ -1,6 +1,6 @@
-﻿using ViennaDotNet.ApiServer.Types.Common;
+﻿using Solace.ApiServer.Types.Common;
 
-namespace ViennaDotNet.ApiServer.Types.Profile;
+namespace Solace.ApiServer.Types.Profile;
 
 public sealed record Profile(
     Dictionary<int, Profile.LevelR> LevelDistribution,

@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ViennaDotNet.Common\ViennaDotNet.Common.csproj" />
+    <ProjectReference Include="..\Solace.Common\Solace.Common.csproj" />
   </ItemGroup>
 
 </Project>

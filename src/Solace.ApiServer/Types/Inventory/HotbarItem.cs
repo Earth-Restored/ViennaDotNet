@@ -1,4 +1,4 @@
-﻿namespace ViennaDotNet.ApiServer.Types.Inventory;
+﻿namespace Solace.ApiServer.Types.Inventory;
 
 public sealed record HotbarItem(
      string Id,

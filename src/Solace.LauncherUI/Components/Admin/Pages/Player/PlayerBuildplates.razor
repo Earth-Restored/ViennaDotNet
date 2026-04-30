@@ -3,13 +3,13 @@
 @using System.Security.Claims
 @using System.Diagnostics
 @using Serilog
-@using ViennaDotNet.BuildplateImporter
-@using ViennaDotNet.BuildplateRenderer
-@using ViennaDotNet.DB
-@using ViennaDotNet.EventBus.Client
-@using ViennaDotNet.LauncherUI.Programs
-@using ViennaDotNet.LauncherUI.Utils
-@using ViennaDotNet.ObjectStore.Client
+@using Solace.BuildplateImporter
+@using Solace.BuildplateRenderer
+@using Solace.DB
+@using Solace.EventBus.Client
+@using Solace.LauncherUI.Programs
+@using Solace.LauncherUI.Utils
+@using Solace.ObjectStore.Client
 @attribute [Authorize(Policy = Permissions.ManagePlayers)]
 @rendermode InteractiveServer
 @inject AuthenticationStateProvider AuthStateProvider

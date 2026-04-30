@@ -1,8 +1,8 @@
 ﻿using SharpNBT;
 using System.IO.Compression;
-using ViennaDotNet.Common.Utils;
+using Solace.Common.Utils;
 
-namespace ViennaDotNet.PreviewGenerator;
+namespace Solace.PreviewGenerator;
 
 internal sealed class ServerDataZip
 {

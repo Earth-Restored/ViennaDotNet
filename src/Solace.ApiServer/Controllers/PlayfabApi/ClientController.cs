@@ -1,12 +1,12 @@
 ﻿using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.RegularExpressions;
-using ViennaDotNet.ApiServer.Models;
-using ViennaDotNet.ApiServer.Models.Playfab;
-using ViennaDotNet.ApiServer.Utils;
-using ViennaDotNet.Common.Utils;
+using Solace.ApiServer.Models;
+using Solace.ApiServer.Models.Playfab;
+using Solace.ApiServer.Utils;
+using Solace.Common.Utils;
 
-namespace ViennaDotNet.ApiServer.Controllers.PlayfabApi;
+namespace Solace.ApiServer.Controllers.PlayfabApi;
 
 [Route("Client")]
 [Route("20CA2.playfabapi.com/Client")]

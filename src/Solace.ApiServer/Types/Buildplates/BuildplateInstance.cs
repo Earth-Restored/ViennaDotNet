@@ -1,8 +1,8 @@
 ﻿using System.Text.Json.Serialization;
-using ViennaDotNet.ApiServer.Types.Common;
-using static ViennaDotNet.ApiServer.Types.Buildplates.BuildplateInstance;
+using Solace.ApiServer.Types.Common;
+using static Solace.ApiServer.Types.Buildplates.BuildplateInstance;
 
-namespace ViennaDotNet.ApiServer.Types.Buildplates;
+namespace Solace.ApiServer.Types.Buildplates;
 
 public sealed record BuildplateInstance(
     string InstanceId,

@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace ViennaDotNet.ApiServer.Models;
+namespace Solace.ApiServer.Models;
 
 public class Account
 {

@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace ViennaDotNet.BuildplateRenderer.Utils;
+namespace Solace.BuildplateRenderer.Utils;
 
 // Adapted from MemoryStream implementation in .NET Runtime.
 // Copyright (c) .NET Foundation and Contributors. Licensed under the MIT License.

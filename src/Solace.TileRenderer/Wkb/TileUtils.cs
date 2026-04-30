@@ -1,6 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
 
-namespace ViennaDotNet.TileRenderer.Wkb;
+namespace Solace.TileRenderer.Wkb;
 
 internal static class TileUtils
 {

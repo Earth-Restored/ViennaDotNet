@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.InteropServices;
 
-namespace ViennaDotNet.Common.Utils;
+namespace Solace.Common.Utils;
 
 public static partial class ProcessExtensions
 {
@@ -66,7 +66,7 @@ public static partial class ProcessExtensions
     {
         Debug.Assert(RuntimeInformation.IsOSPlatform(OSPlatform.Windows));
 
-        string exePath = Path.GetFullPath("ViennaDotNet.KillHelper.exe");
+        string exePath = Path.GetFullPath("Solace.KillHelper.exe");
 
         var startInfo = new ProcessStartInfo(exePath, [process.Id.ToString()])
         {

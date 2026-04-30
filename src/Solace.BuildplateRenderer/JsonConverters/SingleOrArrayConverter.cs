@@ -2,7 +2,7 @@ using System.Collections;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace ViennaDotNet.BuildplateRenderer.JsonConverters;
+namespace Solace.BuildplateRenderer.JsonConverters;
 
 // Source - https://stackoverflow.com/a/59430729
 // Posted by dbc, modified by community. See post 'Timeline' for change history

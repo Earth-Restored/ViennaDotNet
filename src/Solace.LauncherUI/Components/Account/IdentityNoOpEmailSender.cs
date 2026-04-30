@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
-using ViennaDotNet.LauncherUI.Data;
+using Solace.LauncherUI.Data;
 
-namespace ViennaDotNet.LauncherUI.Components.Account;
+namespace Solace.LauncherUI.Components.Account;
 
 // Remove the "else if (EmailSender is IdentityNoOpEmailSender)" block from RegisterConfirmation.razor after updating with a real implementation.
 internal sealed class IdentityNoOpEmailSender : IEmailSender<ApplicationUser>

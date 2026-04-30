@@ -2,9 +2,9 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
-using ViennaDotNet.Common;
+using Solace.Common;
 
-namespace ViennaDotNet.StaticData;
+namespace Solace.StaticData;
 
 public sealed class Catalog
 {

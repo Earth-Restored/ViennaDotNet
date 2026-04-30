@@ -1,3 +1,3 @@
-# ViennaDotNet.TileRenderer
+# Solace.TileRenderer
 
 Based on https://github.com/Project-Genoa/TileRenderer

@@ -2,13 +2,13 @@ using System.Collections.Immutable;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using ViennaDotNet.BuildplateRenderer.JsonConverters;
+using Solace.BuildplateRenderer.JsonConverters;
 using MPSBufferArray = BitcoderCZ.Buffers.FixedArray1<string>;
 using MPSBuffer = BitcoderCZ.Buffers.ImmutableInlineArray<BitcoderCZ.Buffers.FixedArray1<string>, string>;
 using BitcoderCZ.Utils;
 using System.Diagnostics;
 
-namespace ViennaDotNet.BuildplateRenderer.Models.ResourcePacks;
+namespace Solace.BuildplateRenderer.Models.ResourcePacks;
 
 [StructLayout(LayoutKind.Auto)]
 public readonly struct BlockState : IEquatable<BlockState>

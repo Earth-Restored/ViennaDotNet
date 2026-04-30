@@ -1,6 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
 
-namespace ViennaDotNet.Common;
+namespace Solace.Common;
 
 public static class MathE
 {

@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace ViennaDotNet.TappablesGenerator;
+namespace Solace.TappablesGenerator;
 
 public sealed record Encounter(
     string Id,

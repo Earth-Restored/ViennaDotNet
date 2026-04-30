@@ -1,8 +1,8 @@
 ﻿using System.Text.Json.Serialization;
-using ViennaDotNet.Common.Utils;
-using ViennaDotNet.DB.Models.Common;
+using Solace.Common.Utils;
+using Solace.DB.Models.Common;
 
-namespace ViennaDotNet.DB.Models.Player;
+namespace Solace.DB.Models.Player;
 
 public sealed class ActivityLog
 {

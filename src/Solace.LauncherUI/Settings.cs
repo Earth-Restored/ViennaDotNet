@@ -1,9 +1,9 @@
 ﻿using Serilog;
 using System.Net;
 using System.Text.Json;
-using ViennaDotNet.Common.Utils;
+using Solace.Common.Utils;
 
-namespace ViennaDotNet.LauncherUI;
+namespace Solace.LauncherUI;
 
 public sealed class Settings
 {

@@ -2,9 +2,9 @@
 using SkiaSharp;
 using System.Collections.Frozen;
 using System.Text.Json;
-using ViennaDotNet.TileRenderer.Wkb;
+using Solace.TileRenderer.Wkb;
 
-namespace ViennaDotNet.TileRenderer;
+namespace Solace.TileRenderer;
 
 public class TileRenderer
 {

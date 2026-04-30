@@ -1,6 +1,6 @@
 using System.Security.Claims;
 
-namespace ViennaDotNet.LauncherUI.Utils;
+namespace Solace.LauncherUI.Utils;
 
 public static class ClaimsPrincipalExtensions
 {

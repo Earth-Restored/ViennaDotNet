@@ -4,10 +4,10 @@ using System.Diagnostics;
 using System.Numerics;
 using System.Text.Json;
 using BitcoderCZ.Buffers;
-using ViennaDotNet.BuildplateRenderer.Models.ResourcePacks;
-using ViennaDotNet.BuildplateRenderer.Utils;
-using BSVBufferArray = BitcoderCZ.Buffers.FixedArray1<ViennaDotNet.BuildplateRenderer.Models.ResourcePacks.VariantModel>;
-using BSVBuffer = BitcoderCZ.Buffers.ImmutableInlineArray<BitcoderCZ.Buffers.FixedArray1<ViennaDotNet.BuildplateRenderer.Models.ResourcePacks.VariantModel>, ViennaDotNet.BuildplateRenderer.Models.ResourcePacks.VariantModel>;
+using Solace.BuildplateRenderer.Models.ResourcePacks;
+using Solace.BuildplateRenderer.Utils;
+using BSVBufferArray = BitcoderCZ.Buffers.FixedArray1<Solace.BuildplateRenderer.Models.ResourcePacks.VariantModel>;
+using BSVBuffer = BitcoderCZ.Buffers.ImmutableInlineArray<BitcoderCZ.Buffers.FixedArray1<Solace.BuildplateRenderer.Models.ResourcePacks.VariantModel>, Solace.BuildplateRenderer.Models.ResourcePacks.VariantModel>;
 using MPSBufferArray = BitcoderCZ.Buffers.FixedArray1<string>;
 using MPSBuffer = BitcoderCZ.Buffers.ImmutableInlineArray<BitcoderCZ.Buffers.FixedArray1<string>, string>;
 using System.Runtime.InteropServices;
@@ -18,7 +18,7 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 
-namespace ViennaDotNet.BuildplateRenderer;
+namespace Solace.BuildplateRenderer;
 
 // https://minecraft.wiki/w/Resource_pack
 // https://minecraft.wiki/w/Model

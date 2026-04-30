@@ -1,7 +1,7 @@
 ﻿using System.Text.Json.Serialization;
-using ViennaDotNet.ApiServer.Types.Buildplates;
+using Solace.ApiServer.Types.Buildplates;
 
-namespace ViennaDotNet.ApiServer.Types.Shop;
+namespace Solace.ApiServer.Types.Shop;
 
 public sealed record StoreItemInfo(
     Guid Id,

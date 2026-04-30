@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace ViennaDotNet.ApiServer.Controllers.XboxLive;
+namespace Solace.ApiServer.Controllers.XboxLive;
 
 [Route("")]
 [Route("accounts.xboxlive.com")]

@@ -1,7 +1,7 @@
-﻿using ViennaDotNet.Common.Utils;
-using ViennaDotNet.DB;
+﻿using Solace.Common.Utils;
+using Solace.DB;
 
-namespace ViennaDotNet.ApiServer.Utils;
+namespace Solace.ApiServer.Utils;
 
 public class EarthApiResponse
 {

@@ -1,4 +1,4 @@
-﻿namespace ViennaDotNet.StaticData;
+﻿namespace Solace.StaticData;
 
 public sealed class TileRenderer
 {

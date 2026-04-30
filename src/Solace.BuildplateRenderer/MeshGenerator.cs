@@ -6,12 +6,12 @@ using System.Numerics;
 using System.Runtime.InteropServices;
 using BitcoderCZ.Maths.Vectors;
 using SharpNBT;
-using ViennaDotNet.Buildplate.Model;
-using ViennaDotNet.BuildplateRenderer.Models.ResourcePacks;
-using ViennaDotNet.BuildplateRenderer.Utils;
-using ViennaDotNet.Common.Utils;
+using Solace.Buildplate.Model;
+using Solace.BuildplateRenderer.Models.ResourcePacks;
+using Solace.BuildplateRenderer.Utils;
+using Solace.Common.Utils;
 
-namespace ViennaDotNet.BuildplateRenderer;
+namespace Solace.BuildplateRenderer;
 
 [StructLayout(LayoutKind.Sequential)]
 public readonly struct MeshVertex

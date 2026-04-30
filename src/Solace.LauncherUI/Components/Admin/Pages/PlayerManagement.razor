@@ -2,9 +2,9 @@
 @using Microsoft.AspNetCore.Authorization
 @using Serilog
 @using System.Security.Claims
-@using ViennaDotNet.DB
-@using ViennaDotNet.DB.Models.Player
-@using ViennaDotNet.LauncherUI.Utils
+@using Solace.DB
+@using Solace.DB.Models.Player
+@using Solace.LauncherUI.Utils
 @attribute [Authorize(Policy = Permissions.ViewPlayers)]
 @rendermode InteractiveServer
 @inject IJSRuntime JS

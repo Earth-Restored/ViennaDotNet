@@ -2,7 +2,7 @@
 using Microsoft.Net.Http.Headers;
 using System.Security.Cryptography;
 
-namespace ViennaDotNet.ApiServer.Authentication;
+namespace Solace.ApiServer.Authentication;
 
 public class ETagMiddleware
 {

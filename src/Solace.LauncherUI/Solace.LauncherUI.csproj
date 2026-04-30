@@ -32,11 +32,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../ViennaDotNet.BuildplateImporter/ViennaDotNet.BuildplateImporter.csproj" />
-    <ProjectReference Include="../ViennaDotNet.BuildplateRenderer/ViennaDotNet.BuildplateRenderer.csproj" />
-    <ProjectReference Include="../ViennaDotNet.Common/ViennaDotNet.Common.csproj" />
-    <ProjectReference Include="../ViennaDotNet.DB/ViennaDotNet.DB.csproj" />
-    <ProjectReference Include="../ViennaDotNet.ObjectStore.Client/ViennaDotNet.ObjectStore.Client.csproj" />
+    <ProjectReference Include="../Solace.BuildplateImporter/Solace.BuildplateImporter.csproj" />
+    <ProjectReference Include="../Solace.BuildplateRenderer/Solace.BuildplateRenderer.csproj" />
+    <ProjectReference Include="../Solace.Common/Solace.Common.csproj" />
+    <ProjectReference Include="../Solace.DB/Solace.DB.csproj" />
+    <ProjectReference Include="../Solace.ObjectStore.Client/Solace.ObjectStore.Client.csproj" />
   </ItemGroup>
 
 </Project>

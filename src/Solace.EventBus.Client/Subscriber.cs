@@ -1,4 +1,4 @@
-﻿namespace ViennaDotNet.EventBus.Client;
+﻿namespace Solace.EventBus.Client;
 
 public sealed class SubscriberListener : ISubscriberListener
 {

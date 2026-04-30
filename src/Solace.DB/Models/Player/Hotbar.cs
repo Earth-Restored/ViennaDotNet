@@ -1,6 +1,6 @@
-﻿using ViennaDotNet.Common.Utils;
+﻿using Solace.Common.Utils;
 
-namespace ViennaDotNet.DB.Models.Player;
+namespace Solace.DB.Models.Player;
 
 public sealed class Hotbar
 {

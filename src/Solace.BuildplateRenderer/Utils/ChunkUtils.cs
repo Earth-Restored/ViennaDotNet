@@ -7,9 +7,9 @@ using System.Collections.Frozen;
 using System.Runtime.CompilerServices;
 using BitcoderCZ.Maths.Vectors;
 using SharpNBT;
-using ViennaDotNet.BuildplateRenderer.Models.ResourcePacks;
+using Solace.BuildplateRenderer.Models.ResourcePacks;
 
-namespace ViennaDotNet.BuildplateRenderer.Utils;
+namespace Solace.BuildplateRenderer.Utils;
 
 internal static class ChunkUtils
 {

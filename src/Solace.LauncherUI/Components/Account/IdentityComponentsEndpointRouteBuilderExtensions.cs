@@ -7,9 +7,9 @@ using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Primitives;
-using ViennaDotNet.LauncherUI.Components.Account.Pages;
-using ViennaDotNet.LauncherUI.Components.Account.Pages.Manage;
-using ViennaDotNet.LauncherUI.Data;
+using Solace.LauncherUI.Components.Account.Pages;
+using Solace.LauncherUI.Components.Account.Pages.Manage;
+using Solace.LauncherUI.Data;
 
 namespace Microsoft.AspNetCore.Routing;
 

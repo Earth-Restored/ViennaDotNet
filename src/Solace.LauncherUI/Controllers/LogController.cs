@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 
-namespace ViennaDotNet.LauncherUI.Controllers;
+namespace Solace.LauncherUI.Controllers;
 
 [ApiController]
 [Route("api/logs")]

@@ -3,16 +3,16 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
-using ViennaDotNet.ApiServer.Exceptions;
-using ViennaDotNet.ApiServer.Types.Common;
-using ViennaDotNet.ApiServer.Types.Tappables;
-using ViennaDotNet.ApiServer.Utils;
-using ViennaDotNet.Common.Utils;
-using ViennaDotNet.DB;
-using ViennaDotNet.DB.Models.Player;
-using ViennaDotNet.StaticData;
+using Solace.ApiServer.Exceptions;
+using Solace.ApiServer.Types.Common;
+using Solace.ApiServer.Types.Tappables;
+using Solace.ApiServer.Utils;
+using Solace.Common.Utils;
+using Solace.DB;
+using Solace.DB.Models.Player;
+using Solace.StaticData;
 
-namespace ViennaDotNet.ApiServer.Controllers.EarthApi;
+namespace Solace.ApiServer.Controllers.EarthApi;
 
 [Authorize]
 [ApiVersion("1.1")]

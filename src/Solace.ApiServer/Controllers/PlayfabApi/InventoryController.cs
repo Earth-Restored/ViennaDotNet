@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
-using ViennaDotNet.ApiServer.Models.Playfab;
+using Solace.ApiServer.Models.Playfab;
 
-namespace ViennaDotNet.ApiServer.Controllers.PlayfabApi;
+namespace Solace.ApiServer.Controllers.PlayfabApi;
 
 [Route("inventory")]
 [Route("20CA2.playfabapi.com/inventory")]

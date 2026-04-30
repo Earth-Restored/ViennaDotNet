@@ -1,6 +1,6 @@
 ﻿using Cyotek.Data.Nbt;
 
-namespace ViennaDotNet.Buildplate.Launcher;
+namespace Solace.Buildplate.Launcher;
 
 internal sealed class NbtBuilder
 {

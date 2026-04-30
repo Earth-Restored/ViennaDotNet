@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace ViennaDotNet.Buildplate.Model;
+namespace Solace.Buildplate.Model;
 
 public sealed record PreviewRequest(
     [property: JsonPropertyName("serverDataBase64")] string ServerDataBase64,

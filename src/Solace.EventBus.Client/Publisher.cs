@@ -1,7 +1,7 @@
 ﻿using System.Text.RegularExpressions;
-using ViennaDotNet.Common.Utils;
+using Solace.Common.Utils;
 
-namespace ViennaDotNet.EventBus.Client;
+namespace Solace.EventBus.Client;
 
 public sealed class Publisher
 {

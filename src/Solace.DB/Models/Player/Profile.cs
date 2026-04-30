@@ -1,4 +1,4 @@
-﻿namespace ViennaDotNet.DB.Models.Player;
+﻿namespace Solace.DB.Models.Player;
 
 public sealed class Profile
 {

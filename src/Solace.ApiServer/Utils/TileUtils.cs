@@ -1,10 +1,10 @@
 ﻿using Serilog;
-using ViennaDotNet.Common;
-using ViennaDotNet.DB;
-using ViennaDotNet.EventBus.Client;
-using ViennaDotNet.ObjectStore.Client;
+using Solace.Common;
+using Solace.DB;
+using Solace.EventBus.Client;
+using Solace.ObjectStore.Client;
 
-namespace ViennaDotNet.ApiServer.Utils;
+namespace Solace.ApiServer.Utils;
 
 internal static class TileUtils
 {

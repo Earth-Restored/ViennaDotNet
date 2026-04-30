@@ -5,7 +5,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading.Channels;
 
-namespace ViennaDotNet.ObjectStore.Client;
+namespace Solace.ObjectStore.Client;
 
 public class ObjectStoreClient : IAsyncDisposable
 {

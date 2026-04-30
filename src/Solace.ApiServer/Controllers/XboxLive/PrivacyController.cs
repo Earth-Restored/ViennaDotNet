@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using System.Text.RegularExpressions;
 
-namespace ViennaDotNet.ApiServer.Controllers.XboxLive;
+namespace Solace.ApiServer.Controllers.XboxLive;
 
 [Route("users")]
 [Route("privacy.xboxlive.com/users")]

@@ -1,9 +1,9 @@
 ﻿using Serilog;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
-using ViennaDotNet.Common.Utils;
+using Solace.Common.Utils;
 
-namespace ViennaDotNet.EventBus.Server;
+namespace Solace.EventBus.Server;
 
 public partial class Server
 {

@@ -3,7 +3,7 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-namespace ViennaDotNet.StaticData;
+namespace Solace.StaticData;
 
 public sealed class Playfab
 {

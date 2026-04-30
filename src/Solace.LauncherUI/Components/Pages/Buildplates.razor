@@ -12,15 +12,15 @@
 @using System.Diagnostics
 @using Microsoft.EntityFrameworkCore
 @using Serilog
-@using ViennaDotNet.Buildplate.Model
-@using ViennaDotNet.BuildplateImporter
-@using ViennaDotNet.BuildplateRenderer
-@using ViennaDotNet.DB
-@using ViennaDotNet.EventBus.Client
-@using ViennaDotNet.LauncherUI.Data
-@using ViennaDotNet.LauncherUI.Programs
-@using ViennaDotNet.LauncherUI.Utils
-@using ViennaDotNet.ObjectStore.Client
+@using Solace.Buildplate.Model
+@using Solace.BuildplateImporter
+@using Solace.BuildplateRenderer
+@using Solace.DB
+@using Solace.EventBus.Client
+@using Solace.LauncherUI.Data
+@using Solace.LauncherUI.Programs
+@using Solace.LauncherUI.Utils
+@using Solace.ObjectStore.Client
 @attribute [Authorize(Policy = Permissions.ViewBuildplates)]
 @rendermode InteractiveServer
 @inject AuthenticationStateProvider AuthStateProvider

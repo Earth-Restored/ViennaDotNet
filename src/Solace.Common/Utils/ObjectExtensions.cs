@@ -1,7 +1,7 @@
 ﻿using System.Collections;
 using System.Reflection;
 
-namespace ViennaDotNet.Common.Utils;
+namespace Solace.Common.Utils;
 
 public static class ObjectExtensions
 {

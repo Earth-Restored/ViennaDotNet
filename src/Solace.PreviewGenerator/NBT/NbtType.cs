@@ -1,6 +1,6 @@
-﻿using ViennaDotNet.Common.Utils;
+﻿using Solace.Common.Utils;
 
-namespace ViennaDotNet.PreviewGenerator.NBT;
+namespace Solace.PreviewGenerator.NBT;
 
 public sealed class NbtType
 {

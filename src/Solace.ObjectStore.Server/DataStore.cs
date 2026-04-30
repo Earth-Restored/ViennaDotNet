@@ -1,6 +1,6 @@
-﻿using ViennaDotNet.Common.Utils;
+﻿using Solace.Common.Utils;
 
-namespace ViennaDotNet.ObjectStore.Server;
+namespace Solace.ObjectStore.Server;
 
 public class DataStore
 {

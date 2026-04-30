@@ -1,8 +1,8 @@
-﻿using ViennaDotNet.Common.Utils;
-using ViennaDotNet.DB;
-using ViennaDotNet.DB.Models.Player;
+﻿using Solace.Common.Utils;
+using Solace.DB;
+using Solace.DB.Models.Player;
 
-namespace ViennaDotNet.ApiServer.Utils;
+namespace Solace.ApiServer.Utils;
 
 public static class TokenUtils
 {

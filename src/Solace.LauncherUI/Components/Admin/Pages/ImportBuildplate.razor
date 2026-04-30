@@ -4,12 +4,12 @@
 @using Serilog
 @using System.Buffers
 @using System.Text.Json
-@using ViennaDotNet.BuildplateImporter
-@using ViennaDotNet.DB
-@using ViennaDotNet.EventBus.Client
-@using ViennaDotNet.LauncherUI.Programs
-@using ViennaDotNet.LauncherUI.Utils
-@using ViennaDotNet.ObjectStore.Client
+@using Solace.BuildplateImporter
+@using Solace.DB
+@using Solace.EventBus.Client
+@using Solace.LauncherUI.Programs
+@using Solace.LauncherUI.Utils
+@using Solace.ObjectStore.Client
 @attribute [Authorize(Policy = Permissions.ManageBuildplates)]
 @rendermode InteractiveServer
 @inject NavigationManager NavManager

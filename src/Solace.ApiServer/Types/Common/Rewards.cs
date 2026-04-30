@@ -1,4 +1,4 @@
-﻿namespace ViennaDotNet.ApiServer.Types.Common;
+﻿namespace Solace.ApiServer.Types.Common;
 
 // TODO: determine format
 public sealed record Rewards(

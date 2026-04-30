@@ -6,7 +6,7 @@ using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 
-namespace ViennaDotNet.ApiServer.Authentication;
+namespace Solace.ApiServer.Authentication;
 
 public class GenoaAuthenticationHandler : AuthenticationHandler<AuthenticationSchemeOptions>
 {

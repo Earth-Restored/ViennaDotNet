@@ -1,8 +1,8 @@
 ﻿using System.Text;
 using System.Text.Json.Serialization;
-using ViennaDotNet.Common.Utils;
+using Solace.Common.Utils;
 
-namespace ViennaDotNet.PreviewGenerator.NBT;
+namespace Solace.PreviewGenerator.NBT;
 
 public class NbtMap// : IDictionary<string, object>
 {

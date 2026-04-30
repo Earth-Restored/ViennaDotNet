@@ -4,11 +4,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using ViennaDotNet.LauncherUI.Data;
+using Solace.LauncherUI.Data;
 
 #nullable disable
 
-namespace ViennaDotNet.LauncherUI.Migrations
+namespace Solace.LauncherUI.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
     [Migration("20260417083644_AddBuildplatePreview")]
@@ -143,7 +143,7 @@ namespace ViennaDotNet.LauncherUI.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("ViennaDotNet.LauncherUI.ApplicationRole", b =>
+            modelBuilder.Entity("Solace.LauncherUI.ApplicationRole", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("TEXT");
@@ -179,7 +179,7 @@ namespace ViennaDotNet.LauncherUI.Migrations
                     b.ToTable("AspNetRoles", (string)null);
                 });
 
-            modelBuilder.Entity("ViennaDotNet.LauncherUI.Data.ApplicationUser", b =>
+            modelBuilder.Entity("Solace.LauncherUI.Data.ApplicationUser", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("TEXT");
@@ -244,7 +244,7 @@ namespace ViennaDotNet.LauncherUI.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
-            modelBuilder.Entity("ViennaDotNet.LauncherUI.Models.Db.DbBuildplatePreview", b =>
+            modelBuilder.Entity("Solace.LauncherUI.Models.Db.DbBuildplatePreview", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -272,7 +272,7 @@ namespace ViennaDotNet.LauncherUI.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
-                    b.HasOne("ViennaDotNet.LauncherUI.ApplicationRole", null)
+                    b.HasOne("Solace.LauncherUI.ApplicationRole", null)
                         .WithMany()
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -281,7 +281,7 @@ namespace ViennaDotNet.LauncherUI.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
                 {
-                    b.HasOne("ViennaDotNet.LauncherUI.Data.ApplicationUser", null)
+                    b.HasOne("Solace.LauncherUI.Data.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -290,7 +290,7 @@ namespace ViennaDotNet.LauncherUI.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
                 {
-                    b.HasOne("ViennaDotNet.LauncherUI.Data.ApplicationUser", null)
+                    b.HasOne("Solace.LauncherUI.Data.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -299,7 +299,7 @@ namespace ViennaDotNet.LauncherUI.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserPasskey<string>", b =>
                 {
-                    b.HasOne("ViennaDotNet.LauncherUI.Data.ApplicationUser", null)
+                    b.HasOne("Solace.LauncherUI.Data.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -350,13 +350,13 @@ namespace ViennaDotNet.LauncherUI.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<string>", b =>
                 {
-                    b.HasOne("ViennaDotNet.LauncherUI.ApplicationRole", null)
+                    b.HasOne("Solace.LauncherUI.ApplicationRole", null)
                         .WithMany()
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("ViennaDotNet.LauncherUI.Data.ApplicationUser", null)
+                    b.HasOne("Solace.LauncherUI.Data.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -365,7 +365,7 @@ namespace ViennaDotNet.LauncherUI.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
                 {
-                    b.HasOne("ViennaDotNet.LauncherUI.Data.ApplicationUser", null)
+                    b.HasOne("Solace.LauncherUI.Data.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)

@@ -1,6 +1,6 @@
-﻿using static ViennaDotNet.TappablesGenerator.Tappable;
+﻿using static Solace.TappablesGenerator.Tappable;
 
-namespace ViennaDotNet.TappablesGenerator;
+namespace Solace.TappablesGenerator;
 
 public record Tappable(
     string Id,

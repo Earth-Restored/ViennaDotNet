@@ -9,11 +9,11 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
 using System.Xml;
-using ViennaDotNet.ApiServer.Models;
-using ViennaDotNet.ApiServer.Utils;
-using ViennaDotNet.Common.Utils;
+using Solace.ApiServer.Models;
+using Solace.ApiServer.Utils;
+using Solace.Common.Utils;
 
-namespace ViennaDotNet.ApiServer.Controllers.Live;
+namespace Solace.ApiServer.Controllers.Live;
 
 [Route("")]
 [Route("login.live.com")]

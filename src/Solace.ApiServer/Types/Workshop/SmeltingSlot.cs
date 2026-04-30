@@ -1,6 +1,6 @@
-﻿using ViennaDotNet.ApiServer.Types.Common;
+﻿using Solace.ApiServer.Types.Common;
 
-namespace ViennaDotNet.ApiServer.Types.Workshop;
+namespace Solace.ApiServer.Types.Workshop;
 
 public record SmeltingSlot(
     SmeltingSlot.FuelR? Fuel,

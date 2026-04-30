@@ -8,7 +8,7 @@ using SharpGLTF.Scenes;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 
-namespace ViennaDotNet.BuildplateRenderer;
+namespace Solace.BuildplateRenderer;
 
 public static class MeshDataExtensions
 {

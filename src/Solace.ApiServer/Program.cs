@@ -5,17 +5,17 @@ using Serilog.Events;
 using System.ComponentModel;
 using System.Diagnostics;
 using Uma.Uuid;
-using ViennaDotNet.ApiServer.Utils;
-using ViennaDotNet.BuildplateImporter;
-using ViennaDotNet.Common;
-using ViennaDotNet.Common.Utils;
-using ViennaDotNet.DB;
-using ViennaDotNet.EventBus.Client;
-using ViennaDotNet.ObjectStore.Client;
-using ViennaDotNet.StaticData;
-using SData = ViennaDotNet.StaticData.StaticData;
+using Solace.ApiServer.Utils;
+using Solace.BuildplateImporter;
+using Solace.Common;
+using Solace.Common.Utils;
+using Solace.DB;
+using Solace.EventBus.Client;
+using Solace.ObjectStore.Client;
+using Solace.StaticData;
+using SData = Solace.StaticData.StaticData;
 
-namespace ViennaDotNet.ApiServer;
+namespace Solace.ApiServer;
 
 public static class Program
 {
@@ -77,7 +77,7 @@ public static class Program
             .MinimumLevel.Debug()
             .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
             .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
-            .MinimumLevel.Override("ViennaDotNet.ApiServer.Authentication", LogEventLevel.Warning)
+            .MinimumLevel.Override("Solace.ApiServer.Authentication", LogEventLevel.Warning)
             .CreateLogger();*/
 
         if (!Debugger.IsAttached)
@@ -121,7 +121,7 @@ public static class Program
             .MinimumLevel.Debug()
             .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
             .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Information)
-            .MinimumLevel.Override("ViennaDotNet.ApiServer.Authentication", LogEventLevel.Information);
+            .MinimumLevel.Override("Solace.ApiServer.Authentication", LogEventLevel.Information);
         var log = loggerConfig.CreateLogger();
 
         Log.Logger = log;

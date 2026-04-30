@@ -1,4 +1,4 @@
-﻿namespace ViennaDotNet.TileRenderer;
+﻿namespace Solace.TileRenderer;
 
 public enum RenderLayer // Layer order is bottom to top btw, not in same order as Genoa Colours!!!
 {

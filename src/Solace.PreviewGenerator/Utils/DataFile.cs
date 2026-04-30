@@ -1,8 +1,8 @@
 ﻿using Serilog;
 using System.Text.Json.Nodes;
-using ViennaDotNet.Common;
+using Solace.Common;
 
-namespace ViennaDotNet.PreviewGenerator.Utils;
+namespace Solace.PreviewGenerator.Utils;
 
 public static class DataFile
 {

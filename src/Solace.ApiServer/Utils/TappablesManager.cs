@@ -1,11 +1,11 @@
 ﻿using Serilog;
 using System.Diagnostics;
 using System.Text.Json.Serialization;
-using ViennaDotNet.Common;
-using ViennaDotNet.Common.Utils;
-using ViennaDotNet.EventBus.Client;
+using Solace.Common;
+using Solace.Common.Utils;
+using Solace.EventBus.Client;
 
-namespace ViennaDotNet.ApiServer.Utils;
+namespace Solace.ApiServer.Utils;
 
 public sealed class TappablesManager
 {

@@ -1,4 +1,4 @@
-﻿namespace ViennaDotNet.Buildplate.Connector.Model;
+﻿namespace Solace.Buildplate.Connector.Model;
 
 public sealed record InventoryUpdateItemWearMessage(
     string PlayerId,

@@ -7,20 +7,20 @@ using System.Diagnostics;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json.Serialization;
-using ViennaDotNet.ApiServer.Exceptions;
-using ViennaDotNet.ApiServer.Types.Buildplates;
-using ViennaDotNet.ApiServer.Types.Common;
-using ViennaDotNet.ApiServer.Types.Inventory;
-using ViennaDotNet.ApiServer.Utils;
-using ViennaDotNet.Common.Utils;
-using ViennaDotNet.DB;
-using ViennaDotNet.DB.Models.Global;
-using ViennaDotNet.DB.Models.Player;
-using ViennaDotNet.ObjectStore.Client;
-using ViennaDotNet.StaticData;
-using Buildplates = ViennaDotNet.DB.Models.Player.Buildplates;
+using Solace.ApiServer.Exceptions;
+using Solace.ApiServer.Types.Buildplates;
+using Solace.ApiServer.Types.Common;
+using Solace.ApiServer.Types.Inventory;
+using Solace.ApiServer.Utils;
+using Solace.Common.Utils;
+using Solace.DB;
+using Solace.DB.Models.Global;
+using Solace.DB.Models.Player;
+using Solace.ObjectStore.Client;
+using Solace.StaticData;
+using Buildplates = Solace.DB.Models.Player.Buildplates;
 
-namespace ViennaDotNet.ApiServer.Controllers.EarthApi;
+namespace Solace.ApiServer.Controllers.EarthApi;
 
 [Authorize]
 [ApiVersion("1.1")]

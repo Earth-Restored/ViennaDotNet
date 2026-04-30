@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace ViennaDotNet.ApiServer.Types.Workshop;
+namespace Solace.ApiServer.Types.Workshop;
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum State

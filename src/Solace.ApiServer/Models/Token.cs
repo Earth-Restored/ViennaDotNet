@@ -1,5 +1,5 @@
 ﻿using System.Text.Json.Serialization;
-namespace ViennaDotNet.ApiServer.Models;
+namespace Solace.ApiServer.Models;
 
 public sealed record Token<TData>(
     DateTimeOffset Issued,

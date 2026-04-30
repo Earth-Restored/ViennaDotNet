@@ -3,9 +3,9 @@
 // </copyright>
 
 using System.Text.Json;
-using ViennaDotNet.BuildplateRenderer.JsonConverters;
+using Solace.BuildplateRenderer.JsonConverters;
 
-namespace ViennaDotNet.BuildplateRenderer.Utils;
+namespace Solace.BuildplateRenderer.Utils;
 
 internal static class JsonUtils
 {

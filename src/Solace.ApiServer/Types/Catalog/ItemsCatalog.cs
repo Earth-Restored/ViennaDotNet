@@ -1,11 +1,11 @@
 ﻿using System.Collections;
-using ViennaDotNet.ApiServer.Types.Common;
-using static ViennaDotNet.ApiServer.Types.Catalog.ItemsCatalog;
-using static ViennaDotNet.ApiServer.Types.Catalog.ItemsCatalog.EfficiencyCategory;
-using static ViennaDotNet.ApiServer.Types.Catalog.ItemsCatalog.ItemR;
-using static ViennaDotNet.ApiServer.Types.Catalog.ItemsCatalog.ItemR.ItemData;
+using Solace.ApiServer.Types.Common;
+using static Solace.ApiServer.Types.Catalog.ItemsCatalog;
+using static Solace.ApiServer.Types.Catalog.ItemsCatalog.EfficiencyCategory;
+using static Solace.ApiServer.Types.Catalog.ItemsCatalog.ItemR;
+using static Solace.ApiServer.Types.Catalog.ItemsCatalog.ItemR.ItemData;
 
-namespace ViennaDotNet.ApiServer.Types.Catalog;
+namespace Solace.ApiServer.Types.Catalog;
 
 public sealed record ItemsCatalog(
     ItemR[] Items,

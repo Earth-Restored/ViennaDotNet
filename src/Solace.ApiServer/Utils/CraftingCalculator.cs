@@ -1,9 +1,9 @@
 ﻿using System.Diagnostics;
-using ViennaDotNet.Common.Utils;
-using ViennaDotNet.DB.Models.Player.Workshop;
-using ViennaDotNet.StaticData;
+using Solace.Common.Utils;
+using Solace.DB.Models.Player.Workshop;
+using Solace.StaticData;
 
-namespace ViennaDotNet.ApiServer.Utils;
+namespace Solace.ApiServer.Utils;
 
 public static class CraftingCalculator
 {

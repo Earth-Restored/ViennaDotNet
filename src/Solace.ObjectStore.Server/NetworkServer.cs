@@ -6,7 +6,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace ViennaDotNet.ObjectStore.Server;
+namespace Solace.ObjectStore.Server;
 
 public sealed partial class NetworkServer
 {

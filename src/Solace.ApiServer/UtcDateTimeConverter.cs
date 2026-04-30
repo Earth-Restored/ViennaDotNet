@@ -3,7 +3,7 @@ using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace ViennaDotNet.ApiServer;
+namespace Solace.ApiServer;
 
 public sealed class UtcDateTimeConverter : JsonConverter<DateTime>
 {

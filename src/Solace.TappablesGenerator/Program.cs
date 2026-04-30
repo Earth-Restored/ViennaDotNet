@@ -1,10 +1,10 @@
 ﻿using CommandLine;
 using Serilog;
 using System.Diagnostics;
-using ViennaDotNet.EventBus.Client;
-using ViennaDotNet.StaticData;
+using Solace.EventBus.Client;
+using Solace.StaticData;
 
-namespace ViennaDotNet.TappablesGenerator;
+namespace Solace.TappablesGenerator;
 
 internal static class Program
 {

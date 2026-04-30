@@ -1,4 +1,4 @@
-﻿namespace ViennaDotNet.ApiServer.Types;
+﻿namespace Solace.ApiServer.Types;
 
 public sealed record LocatorResponse(
     Dictionary<string, LocatorResponse.Environment> ServiceEnvironments,

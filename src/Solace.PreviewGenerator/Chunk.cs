@@ -1,12 +1,12 @@
 ﻿using System.Globalization;
 using Serilog;
 using SharpNBT;
-using ViennaDotNet.PreviewGenerator.BlockEntity;
-using ViennaDotNet.PreviewGenerator.NBT;
-using ViennaDotNet.PreviewGenerator.Registry;
-using ViennaDotNet.PreviewGenerator.Utils;
+using Solace.PreviewGenerator.BlockEntity;
+using Solace.PreviewGenerator.NBT;
+using Solace.PreviewGenerator.Registry;
+using Solace.PreviewGenerator.Utils;
 
-namespace ViennaDotNet.PreviewGenerator;
+namespace Solace.PreviewGenerator;
 
 internal sealed class Chunk
 {

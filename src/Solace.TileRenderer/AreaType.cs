@@ -1,4 +1,4 @@
-﻿namespace ViennaDotNet.TileRenderer;
+﻿namespace Solace.TileRenderer;
 
 // Taken from the resource pack (iirc)
 internal enum AreaType

@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
 
-namespace ViennaDotNet.LauncherUI.Utils;
+namespace Solace.LauncherUI.Utils;
 
 internal static class ProcessUtils
 {

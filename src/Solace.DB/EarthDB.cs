@@ -5,15 +5,15 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
-using ViennaDotNet.Common;
-using ViennaDotNet.Common.Excceptions;
-using ViennaDotNet.Common.Utils;
+using Solace.Common;
+using Solace.Common.Excceptions;
+using Solace.Common.Utils;
 
 [assembly: InternalsVisibleTo("Launcher")]
-[assembly: InternalsVisibleTo("ViennaDotNet.LauncherUI")]
-[assembly: InternalsVisibleTo("ViennaDotNet.BuildplateImporter")]
+[assembly: InternalsVisibleTo("Solace.LauncherUI")]
+[assembly: InternalsVisibleTo("Solace.BuildplateImporter")]
 
-namespace ViennaDotNet.DB;
+namespace Solace.DB;
 
 public sealed class EarthDB : IDisposable
 {

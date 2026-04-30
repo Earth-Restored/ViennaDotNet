@@ -6,7 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using BitcoderCZ.Maths.Vectors;
 
-namespace ViennaDotNet.BuildplateRenderer.JsonConverters;
+namespace Solace.BuildplateRenderer.JsonConverters;
 
 internal sealed class JsonConverter_double3 : JsonConverter<double3>
 {

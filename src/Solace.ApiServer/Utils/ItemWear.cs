@@ -1,7 +1,7 @@
 ﻿using Serilog;
-using ViennaDotNet.StaticData;
+using Solace.StaticData;
 
-namespace ViennaDotNet.ApiServer.Utils;
+namespace Solace.ApiServer.Utils;
 
 public static class ItemWear
 {

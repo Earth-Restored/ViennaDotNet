@@ -1,6 +1,6 @@
 ﻿using System.IO.Compression;
 
-namespace ViennaDotNet.Common.Utils;
+namespace Solace.Common.Utils;
 
 public static class IOExtenions
 {

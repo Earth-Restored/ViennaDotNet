@@ -1,11 +1,11 @@
 ﻿using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
 using Serilog;
-using ViennaDotNet.ApiServer.Types;
-using ViennaDotNet.ApiServer.Utils;
-using ViennaDotNet.Common;
+using Solace.ApiServer.Types;
+using Solace.ApiServer.Utils;
+using Solace.Common;
 
-namespace ViennaDotNet.ApiServer.Controllers.EarthApi;
+namespace Solace.ApiServer.Controllers.EarthApi;
 
 [ApiController]
 [ApiVersion("1.0")]

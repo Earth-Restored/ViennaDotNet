@@ -1,4 +1,4 @@
-﻿namespace ViennaDotNet.DB.Models.Global;
+﻿namespace Solace.DB.Models.Global;
 
 public sealed record TemplateBuildplate(
     string Name,

@@ -2,13 +2,13 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
-using ViennaDotNet.ApiServer.Types.Common;
-using ViennaDotNet.ApiServer.Utils;
-using ViennaDotNet.Common;
-using ViennaDotNet.Common.Utils;
-using Rewards = ViennaDotNet.ApiServer.Types.Common.Rewards;
+using Solace.ApiServer.Types.Common;
+using Solace.ApiServer.Utils;
+using Solace.Common;
+using Solace.Common.Utils;
+using Rewards = Solace.ApiServer.Types.Common.Rewards;
 
-namespace ViennaDotNet.ApiServer.Controllers.EarthApi;
+namespace Solace.ApiServer.Controllers.EarthApi;
 
 [Authorize]
 [ApiVersion("1.1")]

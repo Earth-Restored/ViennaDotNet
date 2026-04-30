@@ -5,15 +5,15 @@ using Microsoft.AspNetCore.Mvc;
 using Serilog;
 using System.Diagnostics;
 using System.Security.Claims;
-using ViennaDotNet.ApiServer.Exceptions;
-using ViennaDotNet.ApiServer.Utils;
-using ViennaDotNet.Common.Utils;
-using ViennaDotNet.DB;
-using ViennaDotNet.DB.Models.Player;
-using ViennaDotNet.StaticData;
-using Effect = ViennaDotNet.ApiServer.Types.Common.Effect;
+using Solace.ApiServer.Exceptions;
+using Solace.ApiServer.Utils;
+using Solace.Common.Utils;
+using Solace.DB;
+using Solace.DB.Models.Player;
+using Solace.StaticData;
+using Effect = Solace.ApiServer.Types.Common.Effect;
 
-namespace ViennaDotNet.ApiServer.Controllers.EarthApi;
+namespace Solace.ApiServer.Controllers.EarthApi;
 
 [Authorize]
 [ApiVersion("1.1")]

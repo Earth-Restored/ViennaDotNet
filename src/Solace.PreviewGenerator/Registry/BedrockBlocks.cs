@@ -2,11 +2,11 @@
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using ViennaDotNet.Common.Utils;
-using ViennaDotNet.PreviewGenerator.NBT;
-using ViennaDotNet.PreviewGenerator.Utils;
+using Solace.Common.Utils;
+using Solace.PreviewGenerator.NBT;
+using Solace.PreviewGenerator.Utils;
 
-namespace ViennaDotNet.PreviewGenerator.Registry;
+namespace Solace.PreviewGenerator.Registry;
 
 public static class BedrockBlocks
 {

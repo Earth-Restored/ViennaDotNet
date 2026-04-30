@@ -1,8 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
 using Serilog;
-using ViennaDotNet.BuildplateRenderer;
+using Solace.BuildplateRenderer;
 
-namespace ViennaDotNet.LauncherUI;
+namespace Solace.LauncherUI;
 
 internal static class ResourcePackManagerSingleton
 {

@@ -6,17 +6,17 @@ using Serilog;
 using System.Diagnostics;
 using System.Security.Claims;
 using System.Text;
-using ViennaDotNet.ApiServer.Exceptions;
-using ViennaDotNet.ApiServer.Types.Buildplates;
-using ViennaDotNet.ApiServer.Types.Shop;
-using ViennaDotNet.BuildplateImporter;
-using ViennaDotNet.Common.Utils;
-using ViennaDotNet.DB;
-using ViennaDotNet.DB.Models.Player;
-using ViennaDotNet.ObjectStore.Client;
-using ViennaDotNet.StaticData;
+using Solace.ApiServer.Exceptions;
+using Solace.ApiServer.Types.Buildplates;
+using Solace.ApiServer.Types.Shop;
+using Solace.BuildplateImporter;
+using Solace.Common.Utils;
+using Solace.DB;
+using Solace.DB.Models.Player;
+using Solace.ObjectStore.Client;
+using Solace.StaticData;
 
-namespace ViennaDotNet.ApiServer.Controllers.EarthApi;
+namespace Solace.ApiServer.Controllers.EarthApi;
 
 [Authorize]
 [ApiVersion("1.1")]

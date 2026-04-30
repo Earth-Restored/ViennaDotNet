@@ -1,8 +1,8 @@
 ﻿using NetTopologySuite.IO.VectorTiles.Mapbox;
 using Serilog;
-using ViennaDotNet.TileRenderer.Wkb;
+using Solace.TileRenderer.Wkb;
 
-namespace ViennaDotNet.TileRenderer;
+namespace Solace.TileRenderer;
 
 internal sealed class MaptilerTileDataSource : ITileDataSource
 {

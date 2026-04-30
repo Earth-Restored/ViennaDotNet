@@ -1,6 +1,6 @@
 ﻿using System.Text.RegularExpressions;
 
-namespace ViennaDotNet.EventBus.Client;
+namespace Solace.EventBus.Client;
 
 public sealed class RequestSender
 {

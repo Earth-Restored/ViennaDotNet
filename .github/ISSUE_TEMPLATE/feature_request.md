@@ -1,6 +1,6 @@
 ---
 name: Feature request
-about: Suggest an idea for ViennaDotNet
+about: Suggest an idea for Solace
 title: "[Feature request]"
 labels: enhancement
 assignees: ''

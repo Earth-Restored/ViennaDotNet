@@ -1,12 +1,12 @@
 ﻿using System.Diagnostics;
-using ViennaDotNet.ApiServer.Types.Common;
-using ViennaDotNet.DB.Models.Player;
-using ViennaDotNet.StaticData;
+using Solace.ApiServer.Types.Common;
+using Solace.DB.Models.Player;
+using Solace.StaticData;
 
-using CICIBIEActivation = ViennaDotNet.StaticData.Catalog.ItemsCatalogR.Item.BoostInfoR.Effect.ActivationE;
-using CICIBIEType = ViennaDotNet.StaticData.Catalog.ItemsCatalogR.Item.BoostInfoR.Effect.TypeE;
+using CICIBIEActivation = Solace.StaticData.Catalog.ItemsCatalogR.Item.BoostInfoR.Effect.ActivationE;
+using CICIBIEType = Solace.StaticData.Catalog.ItemsCatalogR.Item.BoostInfoR.Effect.TypeE;
 
-namespace ViennaDotNet.ApiServer.Utils;
+namespace Solace.ApiServer.Utils;
 
 public static class BoostUtils
 {

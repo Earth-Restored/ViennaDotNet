@@ -1,8 +1,8 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using ViennaDotNet.BuildplateRenderer.Models.ResourcePacks;
+using Solace.BuildplateRenderer.Models.ResourcePacks;
 
-namespace ViennaDotNet.BuildplateRenderer.JsonConverters;
+namespace Solace.BuildplateRenderer.JsonConverters;
 
 public class VariantModelArrayConverter : JsonConverter<VariantModel[]>
 {

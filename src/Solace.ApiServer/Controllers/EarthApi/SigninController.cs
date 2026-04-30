@@ -3,9 +3,9 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Serilog;
 using System.Text.RegularExpressions;
-using ViennaDotNet.Common.Utils;
+using Solace.Common.Utils;
 
-namespace ViennaDotNet.ApiServer.Controllers;
+namespace Solace.ApiServer.Controllers;
 
 [ApiVersion("1.1")]
 public partial class SigninController : ViennaControllerBase

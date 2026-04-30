@@ -1,6 +1,6 @@
 ﻿using System.Globalization;
 
-namespace ViennaDotNet.TileRenderer.Wkb;
+namespace Solace.TileRenderer.Wkb;
 
 public struct Point
 {

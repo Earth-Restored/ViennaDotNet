@@ -1,7 +1,7 @@
-﻿using ViennaDotNet.DB;
-using ViennaDotNet.DB.Models.Player;
+﻿using Solace.DB;
+using Solace.DB.Models.Player;
 
-namespace ViennaDotNet.ApiServer.Utils;
+namespace Solace.ApiServer.Utils;
 
 public static class ActivityLogUtils
 {

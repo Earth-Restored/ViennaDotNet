@@ -5,9 +5,9 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Channels;
-using ViennaDotNet.Common.Utils;
+using Solace.Common.Utils;
 
-namespace ViennaDotNet.EventBus.Server;
+namespace Solace.EventBus.Server;
 
 public sealed class NetworkServer
 {

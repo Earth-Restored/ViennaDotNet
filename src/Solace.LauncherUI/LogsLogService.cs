@@ -3,7 +3,7 @@ using Serilog;
 using Serilog.Configuration;
 using Serilog.Core;
 
-namespace ViennaDotNet.LauncherUI;
+namespace Solace.LauncherUI;
 
 public class LogsLogService : ILogEventSink
 {

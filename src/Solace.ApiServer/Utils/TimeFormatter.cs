@@ -1,6 +1,6 @@
 ﻿using System.Globalization;
 
-namespace ViennaDotNet.ApiServer.Utils;
+namespace Solace.ApiServer.Utils;
 
 public static class TimeFormatter
 {

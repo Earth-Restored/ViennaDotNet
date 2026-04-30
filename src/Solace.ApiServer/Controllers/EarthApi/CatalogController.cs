@@ -3,21 +3,21 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
-using ViennaDotNet.ApiServer.Types.Catalog;
-using ViennaDotNet.ApiServer.Utils;
-using ViennaDotNet.StaticData;
-using CICIBIEType = ViennaDotNet.StaticData.Catalog.ItemsCatalogR.Item.BoostInfoR.Effect.TypeE;
-using CICIBIType = ViennaDotNet.StaticData.Catalog.ItemsCatalogR.Item.BoostInfoR.TypeE;
-using CICICategory = ViennaDotNet.StaticData.Catalog.ItemsCatalogR.Item.CategoryE;
-using CICIJEBehavior = ViennaDotNet.StaticData.Catalog.ItemsCatalogR.Item.JournalEntryR.BehaviorE;
-using CICIJEBiome = ViennaDotNet.StaticData.Catalog.ItemsCatalogR.Item.JournalEntryR.BiomeE;
-using CICIType = ViennaDotNet.StaticData.Catalog.ItemsCatalogR.Item.TypeE;
-using CICIUseType = ViennaDotNet.StaticData.Catalog.ItemsCatalogR.Item.UseTypeE;
-using CIJGCJGParentCollection = ViennaDotNet.StaticData.Catalog.ItemJournalGroupsCatalogR.JournalGroup.ParentCollectionE;
-using CRCCRCategory = ViennaDotNet.StaticData.Catalog.RecipesCatalogR.CraftingRecipe.CategoryE;
-using ItemsCatalog = ViennaDotNet.ApiServer.Types.Catalog.ItemsCatalog;
+using Solace.ApiServer.Types.Catalog;
+using Solace.ApiServer.Utils;
+using Solace.StaticData;
+using CICIBIEType = Solace.StaticData.Catalog.ItemsCatalogR.Item.BoostInfoR.Effect.TypeE;
+using CICIBIType = Solace.StaticData.Catalog.ItemsCatalogR.Item.BoostInfoR.TypeE;
+using CICICategory = Solace.StaticData.Catalog.ItemsCatalogR.Item.CategoryE;
+using CICIJEBehavior = Solace.StaticData.Catalog.ItemsCatalogR.Item.JournalEntryR.BehaviorE;
+using CICIJEBiome = Solace.StaticData.Catalog.ItemsCatalogR.Item.JournalEntryR.BiomeE;
+using CICIType = Solace.StaticData.Catalog.ItemsCatalogR.Item.TypeE;
+using CICIUseType = Solace.StaticData.Catalog.ItemsCatalogR.Item.UseTypeE;
+using CIJGCJGParentCollection = Solace.StaticData.Catalog.ItemJournalGroupsCatalogR.JournalGroup.ParentCollectionE;
+using CRCCRCategory = Solace.StaticData.Catalog.RecipesCatalogR.CraftingRecipe.CategoryE;
+using ItemsCatalog = Solace.ApiServer.Types.Catalog.ItemsCatalog;
 
-namespace ViennaDotNet.ApiServer.Controllers.EarthApi;
+namespace Solace.ApiServer.Controllers.EarthApi;
 
 [Authorize]
 [ApiVersion("1.1")]

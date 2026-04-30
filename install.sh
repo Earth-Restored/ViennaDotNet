@@ -379,13 +379,13 @@ chown "$CURRENT_USER":"$(id -gn "$CURRENT_USER")" "$INSTALL_DIR"
 
 if [ -d "$REPO_DIR/.git" ]; then
     cd "$REPO_DIR"
-    git remote set-url origin https://github.com/Earth-Restored/ViennaDotNet.git
+    git remote set-url origin https://github.com/Earth-Restored/Solace.git
     git fetch origin main
     git reset --hard origin/main
     git submodule update --init --recursive
     ok "Repository updated"
 else
-    sudo -u "$CURRENT_USER" git clone --recurse-submodules https://github.com/Earth-Restored/ViennaDotNet.git "$REPO_DIR"
+    sudo -u "$CURRENT_USER" git clone --recurse-submodules https://github.com/Earth-Restored/Solace.git "$REPO_DIR"
     cd "$REPO_DIR"
     ok "Repository cloned"
 fi

@@ -1,11 +1,11 @@
 ﻿using System.Diagnostics;
-using ViennaDotNet.Common.Utils;
-using ViennaDotNet.DB;
-using ViennaDotNet.DB.Models.Common;
-using ViennaDotNet.DB.Models.Player;
-using ViennaDotNet.StaticData;
+using Solace.Common.Utils;
+using Solace.DB;
+using Solace.DB.Models.Common;
+using Solace.DB.Models.Player;
+using Solace.StaticData;
 
-namespace ViennaDotNet.ApiServer.Utils;
+namespace Solace.ApiServer.Utils;
 
 public sealed class Rewards
 {

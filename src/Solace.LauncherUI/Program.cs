@@ -11,13 +11,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Serilog;
 using Serilog.Events;
-using ViennaDotNet.DB;
-using ViennaDotNet.LauncherUI.Components;
-using ViennaDotNet.LauncherUI.Components.Account;
-using ViennaDotNet.LauncherUI.Data;
-using ViennaDotNet.ObjectStore.Client;
+using Solace.DB;
+using Solace.LauncherUI.Components;
+using Solace.LauncherUI.Components.Account;
+using Solace.LauncherUI.Data;
+using Solace.ObjectStore.Client;
 
-namespace ViennaDotNet.LauncherUI;
+namespace Solace.LauncherUI;
 
 public partial class Program
 {
@@ -48,7 +48,7 @@ public partial class Program
             .MinimumLevel.Debug()
             .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
             .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Information)
-            .MinimumLevel.Override("ViennaDotNet.ApiServer.Authentication", LogEventLevel.Information)
+            .MinimumLevel.Override("Solace.ApiServer.Authentication", LogEventLevel.Information)
             .CreateLogger();
 
         Log.Logger = log;

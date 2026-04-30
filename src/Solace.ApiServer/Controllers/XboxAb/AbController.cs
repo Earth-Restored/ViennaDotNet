@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 
-namespace ViennaDotNet.ApiServer.Controllers.XboxAb;
+namespace Solace.ApiServer.Controllers.XboxAb;
 
 [Route("ab")]
 [Route("www.xboxab.com/ab")]

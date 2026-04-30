@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace ViennaDotNet.ApiServer;
+namespace Solace.ApiServer;
 
 public sealed record class Config(Config.LoginR Login, Config.XboxLiveR XboxLive, Config.PlayfabApiR PlayfabApi)
 {

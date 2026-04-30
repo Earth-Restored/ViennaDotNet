@@ -4,9 +4,9 @@ using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using Serilog.Events;
-using ViennaDotNet.ApiServer.Authentication;
+using Solace.ApiServer.Authentication;
 
-namespace ViennaDotNet.ApiServer;
+namespace Solace.ApiServer;
 
 public class Startup
 {

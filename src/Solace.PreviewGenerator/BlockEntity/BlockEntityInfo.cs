@@ -1,6 +1,6 @@
 ﻿using SharpNBT;
 
-namespace ViennaDotNet.PreviewGenerator.BlockEntity;
+namespace Solace.PreviewGenerator.BlockEntity;
 
 public class BlockEntityInfo
 {

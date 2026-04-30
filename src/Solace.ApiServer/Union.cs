@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 
-namespace ViennaDotNet.ApiServer;
+namespace Solace.ApiServer;
 
 public readonly struct Union<TA, TB>
     where TA : notnull

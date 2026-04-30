@@ -1,7 +1,7 @@
 ﻿using Microsoft.Win32.SafeHandles;
 using System.Runtime.InteropServices;
 
-namespace ViennaDotNet.Common.Utils;
+namespace Solace.Common.Utils;
 
 public static class ConsoleUtils
 {

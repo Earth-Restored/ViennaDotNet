@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace ViennaDotNet.ApiServer.Types.Tappables;
+namespace Solace.ApiServer.Types.Tappables;
 
 public sealed record EncounterState(
     EncounterState.ActiveEncounterStateE ActiveEncounterState

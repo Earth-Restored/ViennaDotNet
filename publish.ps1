@@ -28,7 +28,7 @@ function Invoke-ProjectPublish {
 
 git submodule update --init --remote --merge --recursive
 
-$projects = "ViennaDotNet.ApiServer", "ViennaDotNet.Buildplate", "ViennaDotNet.EventBus.Server", "ViennaDotNet.ObjectStore.Server", "ViennaDotNet.TappablesGenerator", "ViennaDotNet.TileRenderer"
+$projects = "Solace.ApiServer", "Solace.Buildplate", "Solace.EventBus.Server", "Solace.ObjectStore.Server", "Solace.TappablesGenerator", "Solace.TileRenderer"
 
 foreach ($buildProfile in $profiles) {
     $publishDir = "./build/$configuration/$buildProfile"
@@ -46,19 +46,19 @@ foreach ($buildProfile in $profiles) {
     }
 
     Invoke-ProjectPublish `
-        -ProjectPath "./src/ViennaDotNet.LauncherUI/ViennaDotNet.LauncherUI.csproj" `
+        -ProjectPath "./src/Solace.LauncherUI/Solace.LauncherUI.csproj" `
         -OutDir "$publishDir/launcher" `
         -Configuration $configuration `
         -BuildProfile $buildProfile
 
     if ($buildProfile -like "*win*"){
         Invoke-ProjectPublish `
-            -ProjectPath "./src/ViennaDotNet.KillHelper/ViennaDotNet.KillHelper.csproj" `
+            -ProjectPath "./src/Solace.KillHelper/Solace.KillHelper.csproj" `
             -OutDir "$publishDir/components" `
             -Configuration $configuration `
             -BuildProfile $buildProfile
         Invoke-ProjectPublish `
-            -ProjectPath "./src/ViennaDotNet.KillHelper/ViennaDotNet.KillHelper.csproj" `
+            -ProjectPath "./src/Solace.KillHelper/Solace.KillHelper.csproj" `
             -OutDir "$publishDir/launcher" `
             -Configuration $configuration `
             -BuildProfile $buildProfile

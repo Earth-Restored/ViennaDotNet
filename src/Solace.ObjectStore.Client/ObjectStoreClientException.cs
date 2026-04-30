@@ -1,4 +1,4 @@
-﻿namespace ViennaDotNet.ObjectStore.Client;
+﻿namespace Solace.ObjectStore.Client;
 
 public class ObjectStoreClientException : Exception
 {

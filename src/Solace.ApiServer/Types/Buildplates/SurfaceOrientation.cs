@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace ViennaDotNet.ApiServer.Types.Buildplates;
+namespace Solace.ApiServer.Types.Buildplates;
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum SurfaceOrientation

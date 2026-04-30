@@ -1,6 +1,6 @@
 ﻿using Serilog;
 
-namespace ViennaDotNet.ObjectStore.Server;
+namespace Solace.ObjectStore.Server;
 
 public class Server
 {

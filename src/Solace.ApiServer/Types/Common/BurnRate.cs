@@ -1,4 +1,4 @@
-﻿namespace ViennaDotNet.ApiServer.Types.Common;
+﻿namespace Solace.ApiServer.Types.Common;
 
 public sealed record BurnRate(
     int BurnTime,

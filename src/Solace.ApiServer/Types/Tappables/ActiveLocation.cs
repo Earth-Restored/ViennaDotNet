@@ -1,7 +1,7 @@
 ﻿using System.Text.Json.Serialization;
-using ViennaDotNet.ApiServer.Types.Common;
+using Solace.ApiServer.Types.Common;
 
-namespace ViennaDotNet.ApiServer.Types.Tappables;
+namespace Solace.ApiServer.Types.Tappables;
 
 public record ActiveLocation(
     string Id,

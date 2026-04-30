@@ -1,18 +1,18 @@
 using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
-using ViennaDotNet.Buildplate.Model;
-using ViennaDotNet.BuildplateImporter;
-using ViennaDotNet.BuildplateRenderer;
-using ViennaDotNet.DB;
-using ViennaDotNet.DB.Models.Global;
-using ViennaDotNet.DB.Models.Player;
-using ViennaDotNet.EventBus.Client;
-using ViennaDotNet.LauncherUI.Data;
-using ViennaDotNet.LauncherUI.Models.Db;
-using ViennaDotNet.ObjectStore.Client;
+using Solace.Buildplate.Model;
+using Solace.BuildplateImporter;
+using Solace.BuildplateRenderer;
+using Solace.DB;
+using Solace.DB.Models.Global;
+using Solace.DB.Models.Player;
+using Solace.EventBus.Client;
+using Solace.LauncherUI.Data;
+using Solace.LauncherUI.Models.Db;
+using Solace.ObjectStore.Client;
 
-namespace ViennaDotNet.LauncherUI.Utils;
+namespace Solace.LauncherUI.Utils;
 
 public static class ImporterExtensions
 {

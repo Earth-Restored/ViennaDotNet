@@ -1,7 +1,7 @@
 ﻿using System.Text.Json.Serialization;
-using ViennaDotNet.Common.Utils;
+using Solace.Common.Utils;
 
-namespace ViennaDotNet.DB.Models.Global;
+namespace Solace.DB.Models.Global;
 
 public sealed class SharedBuildplates
 {

@@ -1,7 +1,7 @@
 using System.Collections.Immutable;
 using System.Reflection;
 
-namespace ViennaDotNet.LauncherUI;
+namespace Solace.LauncherUI;
 
 public static class Permissions
 {

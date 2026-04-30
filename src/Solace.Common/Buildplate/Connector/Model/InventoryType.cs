@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace ViennaDotNet.Buildplate.Connector.Model;
+namespace Solace.Buildplate.Connector.Model;
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum InventoryType

@@ -1,10 +1,10 @@
 ﻿using Serilog;
 using SharpNBT;
-using ViennaDotNet.PreviewGenerator.BlockEntity;
-using ViennaDotNet.PreviewGenerator.NBT;
-using ViennaDotNet.PreviewGenerator.Registry;
+using Solace.PreviewGenerator.BlockEntity;
+using Solace.PreviewGenerator.NBT;
+using Solace.PreviewGenerator.Registry;
 
-namespace ViennaDotNet.PreviewGenerator.Utils;
+namespace Solace.PreviewGenerator.Utils;
 
 public static class BlockEntityTranslator
 {

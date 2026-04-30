@@ -1,6 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace ViennaDotNet.TileRenderer;
+namespace Solace.TileRenderer;
 
 public readonly struct RenderContext
 {

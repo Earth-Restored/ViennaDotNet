@@ -1,8 +1,8 @@
 ﻿using System.Collections;
 using System.Diagnostics.CodeAnalysis;
-using ViennaDotNet.Common.Utils;
+using Solace.Common.Utils;
 
-namespace ViennaDotNet.PreviewGenerator.NBT;
+namespace Solace.PreviewGenerator.NBT;
 
 public class NbtMapBuilder : IDictionary<string, object>
 {

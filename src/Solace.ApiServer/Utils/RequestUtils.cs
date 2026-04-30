@@ -1,4 +1,4 @@
-﻿namespace ViennaDotNet.ApiServer.Utils;
+﻿namespace Solace.ApiServer.Utils;
 
 internal static class RequestUtils
 {

@@ -1,12 +1,12 @@
 ﻿using Serilog;
 using System.Diagnostics;
 using System.Reflection;
-using ViennaDotNet.Common;
-using ViennaDotNet.Common.Utils;
-using ViennaDotNet.LauncherUI.Programs;
+using Solace.Common;
+using Solace.Common.Utils;
+using Solace.LauncherUI.Programs;
 using ILogger = Serilog.ILogger;
 
-namespace ViennaDotNet.LauncherUI;
+namespace Solace.LauncherUI;
 
 internal static class FileChecker
 {

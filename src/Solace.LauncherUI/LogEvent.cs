@@ -1,4 +1,4 @@
-namespace ViennaDotNet.LauncherUI;
+namespace Solace.LauncherUI;
 
 public sealed class LogEvent
 {

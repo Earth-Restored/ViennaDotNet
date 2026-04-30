@@ -22,8 +22,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ViennaDotNet.EventBus.Client\ViennaDotNet.EventBus.Client.csproj" />
-    <ProjectReference Include="..\ViennaDotNet.StaticData\ViennaDotNet.StaticData.csproj" />
+    <ProjectReference Include="..\Solace.EventBus.Client\Solace.EventBus.Client.csproj" />
+    <ProjectReference Include="..\Solace.StaticData\Solace.StaticData.csproj" />
   </ItemGroup>
 
   <ItemGroup>

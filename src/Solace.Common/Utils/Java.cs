@@ -1,4 +1,4 @@
-﻿namespace ViennaDotNet.Common.Utils;
+﻿namespace Solace.Common.Utils;
 
 public static class Java
 {

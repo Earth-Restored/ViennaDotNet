@@ -6,7 +6,7 @@ using System.Text.RegularExpressions;
 using BitcoderCZ.Maths.Vectors;
 using SharpNBT;
 
-namespace ViennaDotNet.BuildplateRenderer.Utils;
+namespace Solace.BuildplateRenderer.Utils;
 
 // https://minecraft.wiki/w/Anvil_file_format
 internal static partial class RegionUtils

@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace ViennaDotNet.ApiServer.Models.Playfab;
+namespace Solace.ApiServer.Models.Playfab;
 
 internal sealed record PlayfabOkResponse(
     [property: JsonPropertyName("code")] int Code,

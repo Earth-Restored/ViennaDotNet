@@ -1,6 +1,6 @@
-﻿using ViennaDotNet.ApiServer.Types.Common;
+﻿using Solace.ApiServer.Types.Common;
 
-namespace ViennaDotNet.ApiServer.Types.Boost;
+namespace Solace.ApiServer.Types.Boost;
 
 public sealed record Boosts(
     Boosts.Potion?[] Potions,

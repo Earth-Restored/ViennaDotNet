@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
 using BitcoderCZ.Maths.Vectors;
 
-namespace ViennaDotNet.BuildplateRenderer.Models.ResourcePacks;
+namespace Solace.BuildplateRenderer.Models.ResourcePacks;
 
 public sealed class BlockModel
 {

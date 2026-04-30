@@ -3,10 +3,10 @@ using Serilog;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
-using ViennaDotNet.DB;
-using ViennaDotNet.DB.Models.Player;
+using Solace.DB;
+using Solace.DB.Models.Player;
 
-namespace ViennaDotNet.LauncherUI.Utils;
+namespace Solace.LauncherUI.Utils;
 
 internal static class DataUtils
 {

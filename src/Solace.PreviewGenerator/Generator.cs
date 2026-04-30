@@ -1,9 +1,9 @@
 ﻿using Serilog;
-using ViennaDotNet.Common;
-using ViennaDotNet.Common.Utils;
-using ViennaDotNet.PreviewGenerator.Registry;
+using Solace.Common;
+using Solace.Common.Utils;
+using Solace.PreviewGenerator.Registry;
 
-namespace ViennaDotNet.PreviewGenerator;
+namespace Solace.PreviewGenerator;
 
 public static class Generator
 {

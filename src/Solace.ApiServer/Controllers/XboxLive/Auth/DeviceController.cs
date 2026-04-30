@@ -1,9 +1,9 @@
 ﻿using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
-using ViennaDotNet.ApiServer.Models;
-using ViennaDotNet.ApiServer.Utils;
+using Solace.ApiServer.Models;
+using Solace.ApiServer.Utils;
 
-namespace ViennaDotNet.ApiServer.Controllers.XboxLive.Auth;
+namespace Solace.ApiServer.Controllers.XboxLive.Auth;
 
 [Route("device/authenticate")]
 [Route("device.auth.xboxlive.com/device/authenticate")]

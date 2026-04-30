@@ -1,10 +1,10 @@
 using System.Diagnostics;
 using Serilog;
-using ViennaDotNet.Common.Utils;
-using ViennaDotNet.LauncherUI.Programs;
-using ViennaDotNet.LauncherUI.Utils;
+using Solace.Common.Utils;
+using Solace.LauncherUI.Programs;
+using Solace.LauncherUI.Utils;
 
-namespace ViennaDotNet.LauncherUI;
+namespace Solace.LauncherUI;
 
 public sealed class ServerComponent
 {

@@ -1,12 +1,12 @@
 ﻿using System.Text.Json.Serialization;
 using Serilog;
-using ViennaDotNet.Buildplate.Connector.Model;
-using ViennaDotNet.Buildplate.Model;
-using ViennaDotNet.Common;
-using ViennaDotNet.Common.Utils;
-using ViennaDotNet.EventBus.Client;
+using Solace.Buildplate.Connector.Model;
+using Solace.Buildplate.Model;
+using Solace.Common;
+using Solace.Common.Utils;
+using Solace.EventBus.Client;
 
-namespace ViennaDotNet.Buildplate.Launcher;
+namespace Solace.Buildplate.Launcher;
 
 public sealed class InstanceManager
 {

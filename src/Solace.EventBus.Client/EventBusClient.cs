@@ -6,7 +6,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading.Channels;
 
-namespace ViennaDotNet.EventBus.Client;
+namespace Solace.EventBus.Client;
 
 public class EventBusClient : IAsyncDisposable
 {

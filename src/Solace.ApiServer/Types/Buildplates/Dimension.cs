@@ -1,4 +1,4 @@
-﻿namespace ViennaDotNet.ApiServer.Types.Buildplates;
+﻿namespace Solace.ApiServer.Types.Buildplates;
 
 // TODO: record struct?
 public sealed record Dimension(

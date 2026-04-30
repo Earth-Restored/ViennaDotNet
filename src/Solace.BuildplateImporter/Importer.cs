@@ -3,16 +3,16 @@ using System.IO.Compression;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
-using ViennaDotNet.Buildplate.Model;
-using ViennaDotNet.Common;
-using ViennaDotNet.Common.Utils;
-using ViennaDotNet.DB;
-using ViennaDotNet.DB.Models.Global;
-using ViennaDotNet.DB.Models.Player;
-using ViennaDotNet.EventBus.Client;
-using ViennaDotNet.ObjectStore.Client;
+using Solace.Buildplate.Model;
+using Solace.Common;
+using Solace.Common.Utils;
+using Solace.DB;
+using Solace.DB.Models.Global;
+using Solace.DB.Models.Player;
+using Solace.EventBus.Client;
+using Solace.ObjectStore.Client;
 
-namespace ViennaDotNet.BuildplateImporter;
+namespace Solace.BuildplateImporter;
 
 public sealed class Importer : IAsyncDisposable
 {

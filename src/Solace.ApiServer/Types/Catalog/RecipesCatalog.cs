@@ -1,4 +1,4 @@
-﻿namespace ViennaDotNet.ApiServer.Types.Catalog;
+﻿namespace Solace.ApiServer.Types.Catalog;
 
 public sealed record RecipesCatalog(
     RecipesCatalog.CraftingRecipe[] Crafting,

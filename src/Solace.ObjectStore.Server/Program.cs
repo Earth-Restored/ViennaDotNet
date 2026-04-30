@@ -2,7 +2,7 @@
 using Serilog;
 using System.Diagnostics;
 
-namespace ViennaDotNet.ObjectStore.Server;
+namespace Solace.ObjectStore.Server;
 
 internal static class Program
 {

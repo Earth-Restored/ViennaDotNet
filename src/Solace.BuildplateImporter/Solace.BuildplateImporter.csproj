@@ -7,10 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ViennaDotNet.Common\ViennaDotNet.Common.csproj" />
-    <ProjectReference Include="..\ViennaDotNet.DB\ViennaDotNet.DB.csproj" />
-    <ProjectReference Include="..\ViennaDotNet.EventBus.Client\ViennaDotNet.EventBus.Client.csproj" />
-    <ProjectReference Include="..\ViennaDotNet.ObjectStore.Client\ViennaDotNet.ObjectStore.Client.csproj" />
+    <ProjectReference Include="..\Solace.Common\Solace.Common.csproj" />
+    <ProjectReference Include="..\Solace.DB\Solace.DB.csproj" />
+    <ProjectReference Include="..\Solace.EventBus.Client\Solace.EventBus.Client.csproj" />
+    <ProjectReference Include="..\Solace.ObjectStore.Client\Solace.ObjectStore.Client.csproj" />
   </ItemGroup>
 
 </Project>

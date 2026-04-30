@@ -1,4 +1,4 @@
-﻿namespace ViennaDotNet.DB.Models.Common;
+﻿namespace Solace.DB.Models.Common;
 
 public sealed record Rewards(
     int Rubies,

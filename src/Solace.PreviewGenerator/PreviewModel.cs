@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace ViennaDotNet.PreviewGenerator;
+namespace Solace.PreviewGenerator;
 
 internal sealed record PreviewModel(
      [property: JsonPropertyName("format_version")] int FormatVersion, // always 1

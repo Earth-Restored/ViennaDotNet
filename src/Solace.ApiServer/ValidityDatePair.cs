@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 
-namespace ViennaDotNet.ApiServer;
+namespace Solace.ApiServer;
 
 internal readonly struct ValidityDatePair
 {

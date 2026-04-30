@@ -1,8 +1,8 @@
 using SharpGLTF.Schema2;
 using SixLabors.ImageSharp.PixelFormats;
-using ViennaDotNet.BuildplateRenderer.Models.ResourcePacks;
+using Solace.BuildplateRenderer.Models.ResourcePacks;
 
-namespace ViennaDotNet.BuildplateRenderer;
+namespace Solace.BuildplateRenderer;
 
 public sealed class ResourcePackManager
 {

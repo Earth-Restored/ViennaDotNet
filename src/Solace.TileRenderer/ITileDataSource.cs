@@ -1,6 +1,6 @@
-﻿using ViennaDotNet.TileRenderer.Wkb;
+﻿using Solace.TileRenderer.Wkb;
 
-namespace ViennaDotNet.TileRenderer;
+namespace Solace.TileRenderer;
 
 public interface ITileDataSource : IDisposable
 {

@@ -1,4 +1,4 @@
-﻿namespace ViennaDotNet.PreviewGenerator.BlockEntity;
+﻿namespace Solace.PreviewGenerator.BlockEntity;
 
 public enum BlockEntityType : int
 {

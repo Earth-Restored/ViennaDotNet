@@ -1,7 +1,7 @@
 ﻿
 using System.Text.Json.Serialization;
 
-namespace ViennaDotNet.ApiServer.Types.Common;
+namespace Solace.ApiServer.Types.Common;
 
 public sealed record Token(
     Token.Type ClientType,

@@ -1,4 +1,4 @@
-﻿namespace ViennaDotNet.TileRenderer.Wkb;
+﻿namespace Solace.TileRenderer.Wkb;
 
 internal enum WkbGeometryType
 {

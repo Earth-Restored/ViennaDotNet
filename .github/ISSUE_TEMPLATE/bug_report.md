@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Report a bug on ViennaDotNet
+about: Report a bug on Solace
 title: "[Bug]"
 labels: bug
 assignees: ''

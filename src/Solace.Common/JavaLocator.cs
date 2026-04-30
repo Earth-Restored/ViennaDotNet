@@ -1,7 +1,7 @@
 ﻿using Serilog;
-using ViennaDotNet.Common.Utils;
+using Solace.Common.Utils;
 
-namespace ViennaDotNet.Common;
+namespace Solace.Common;
 
 public static class JavaLocator
 {

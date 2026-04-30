@@ -1,4 +1,4 @@
-﻿namespace ViennaDotNet.ApiServer.Exceptions;
+﻿namespace Solace.ApiServer.Exceptions;
 
 public class ServerErrorException : Exception
 {

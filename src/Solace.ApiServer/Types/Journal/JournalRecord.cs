@@ -1,8 +1,8 @@
 ﻿using System.Text.Json.Serialization;
-using ViennaDotNet.ApiServer.Types.Common;
-using static ViennaDotNet.ApiServer.Types.Journal.JournalRecord;
+using Solace.ApiServer.Types.Common;
+using static Solace.ApiServer.Types.Journal.JournalRecord;
 
-namespace ViennaDotNet.ApiServer.Types.Journal;
+namespace Solace.ApiServer.Types.Journal;
 
 public sealed record JournalRecord(
      Dictionary<string, InventoryJournalEntry> InventoryJournal,

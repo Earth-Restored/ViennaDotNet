@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using ViennaDotNet.LauncherUI.Models.Db;
+using Solace.LauncherUI.Models.Db;
 
-namespace ViennaDotNet.LauncherUI.Data;
+namespace Solace.LauncherUI.Data;
 
 public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
     : IdentityDbContext<ApplicationUser, ApplicationRole, string>(options)

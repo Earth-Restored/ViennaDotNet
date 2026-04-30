@@ -2,10 +2,10 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
-using ViennaDotNet.ApiServer.Models;
-using ViennaDotNet.Common.Utils;
+using Solace.ApiServer.Models;
+using Solace.Common.Utils;
 
-namespace ViennaDotNet.ApiServer.Controllers.XboxLive;
+namespace Solace.ApiServer.Controllers.XboxLive;
 
 [Route("users")]
 [Route("profile.xboxlive.com/users")]

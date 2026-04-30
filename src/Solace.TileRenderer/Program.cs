@@ -4,10 +4,10 @@ using Serilog;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using ViennaDotNet.EventBus.Client;
-using ViennaDotNet.StaticData;
+using Solace.EventBus.Client;
+using Solace.StaticData;
 
-namespace ViennaDotNet.TileRenderer;
+namespace Solace.TileRenderer;
 
 internal static class Program
 {

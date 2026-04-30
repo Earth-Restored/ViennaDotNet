@@ -1,7 +1,7 @@
 ﻿using System.Collections;
 using System.Text.Json.Serialization;
 
-namespace ViennaDotNet.PreviewGenerator.NBT;
+namespace Solace.PreviewGenerator.NBT;
 
 public class NbtList : IList
 {

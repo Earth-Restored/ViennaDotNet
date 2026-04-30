@@ -2,11 +2,11 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using ViennaDotNet.ApiServer;
+using Solace.ApiServer;
 
 #nullable disable
 
-namespace ViennaDotNet.ApiServer.Migrations
+namespace Solace.ApiServer.Migrations
 {
     [DbContext(typeof(LiveDbContext))]
     partial class LiveDbContextModelSnapshot : ModelSnapshot
@@ -16,7 +16,7 @@ namespace ViennaDotNet.ApiServer.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.6");
 
-            modelBuilder.Entity("ViennaDotNet.ApiServer.Models.Account", b =>
+            modelBuilder.Entity("Solace.ApiServer.Models.Account", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("TEXT");

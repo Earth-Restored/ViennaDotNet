@@ -1,4 +1,4 @@
-﻿namespace ViennaDotNet.DB.Models.Player.Workshop;
+﻿namespace Solace.DB.Models.Player.Workshop;
 
 public sealed class SmeltingSlot
 {

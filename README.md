@@ -1,4 +1,4 @@
-![Banner](src/ViennaDotNet.LauncherUI/wwwroot/banner.png)
+![Banner](src/Solace.LauncherUI/wwwroot/banner.png)
 
 ![GitHub License](https://img.shields.io/github/license/Earth-Restored/ViennaDotNet?style=flat-square)
 ![GitHub Repo stars](https://img.shields.io/github/stars/Earth-Restored/ViennaDotNet?style=flat-square)
@@ -74,7 +74,7 @@ curl -sSl https://raw.githubusercontent.com/Earth-Restored/ViennaDotNet/main/ins
 1. Clone the repository by running the following command on your terminal:
 
     ```shell
-    git clone https://github.com/Earth-Restored/ViennaDotNet.git
+    git clone https://github.com/Earth-Restored/Solace.git
     ```
 
 2. CD to the ViennaDotNet directory, then run `publish.ps1 -profiles framework-dependent-{os}-{arch}`, replace `{os}` with you os (win, linux, osx) and `{arch}` with the cpu architecture (x64, x86, arm64, arm32), e.g. `framework-dependent-win-x64`

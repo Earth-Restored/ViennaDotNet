@@ -1,10 +1,10 @@
 ﻿using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
-using ViennaDotNet.ApiServer.Models;
-using ViennaDotNet.ApiServer.Utils;
+using Solace.ApiServer.Models;
+using Solace.ApiServer.Utils;
 
-namespace ViennaDotNet.ApiServer;
+namespace Solace.ApiServer;
 
 [ApiController]
 public abstract class ViennaControllerBase : ControllerBase

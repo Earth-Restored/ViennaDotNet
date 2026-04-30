@@ -1,10 +1,10 @@
 ﻿using System.IO.Compression;
 using System.Text;
 using Serilog;
-using ViennaDotNet.Common;
-using ViennaDotNet.Common.Utils;
+using Solace.Common;
+using Solace.Common.Utils;
 
-namespace ViennaDotNet.Buildplate.Model;
+namespace Solace.Buildplate.Model;
 
 public sealed record WorldData(
     byte[] ServerData,

@@ -6,11 +6,11 @@ using OData2Linq;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using ViennaDotNet.ApiServer.Models.Playfab;
-using ViennaDotNet.Common.Utils;
-using CItem = ViennaDotNet.StaticData.Playfab.Item;
+using Solace.ApiServer.Models.Playfab;
+using Solace.Common.Utils;
+using CItem = Solace.StaticData.Playfab.Item;
 
-namespace ViennaDotNet.ApiServer.Controllers.PlayfabApi;
+namespace Solace.ApiServer.Controllers.PlayfabApi;
 
 [Route("Catalog")]
 [Route("20CA2.playfabapi.com/Catalog")]
@@ -334,9 +334,9 @@ public class CatalogController : ViennaControllerBase
                     data.Tabs.Select(tab => new Item.DisplayPropertiesR.Tab(
                         tab.ScreenLayoutQueries.Select(layoutQuery => new Item.DisplayPropertiesR.Tab.ScreenLayoutQuery(
                             // TODO: haven't seen it yet, but it's possible these can have properties
-                            layoutQuery.ColumnType is ViennaDotNet.StaticData.Playfab.Tab.ColumnType.Rectangle ? new object() : null,
-                            layoutQuery.ColumnType is ViennaDotNet.StaticData.Playfab.Tab.ColumnType.Square ? new object() : null,
-                            layoutQuery.ColumnType is ViennaDotNet.StaticData.Playfab.Tab.ColumnType.Grid ? new object() : null,
+                            layoutQuery.ColumnType is Solace.StaticData.Playfab.Tab.ColumnType.Rectangle ? new object() : null,
+                            layoutQuery.ColumnType is Solace.StaticData.Playfab.Tab.ColumnType.Square ? new object() : null,
+                            layoutQuery.ColumnType is Solace.StaticData.Playfab.Tab.ColumnType.Grid ? new object() : null,
                             layoutQuery.Queries.Select(query => new Item.DisplayPropertiesR.Tab.ScreenLayoutQuery.Query(
                                 query.ProductIds,
                                 query.QueryContentTypes.Select(type => type.ToString()),

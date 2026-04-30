@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Identity;
-using ViennaDotNet.LauncherUI.Data;
+using Solace.LauncherUI.Data;
 
-namespace ViennaDotNet.LauncherUI.Components.Account;
+namespace Solace.LauncherUI.Components.Account;
 
 internal sealed class IdentityRedirectManager(NavigationManager navigationManager)
 {

@@ -1,4 +1,4 @@
-namespace ViennaDotNet.LauncherUI.Components.Account;
+namespace Solace.LauncherUI.Components.Account;
 
 public class PasskeyInputModel
 {

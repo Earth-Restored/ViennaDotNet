@@ -4,10 +4,10 @@ using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text.Json;
-using ViennaDotNet.ApiServer.Models;
-using ViennaDotNet.Common;
+using Solace.ApiServer.Models;
+using Solace.Common;
 
-namespace ViennaDotNet.ApiServer.Utils;
+namespace Solace.ApiServer.Utils;
 
 internal static class JwtUtils
 {

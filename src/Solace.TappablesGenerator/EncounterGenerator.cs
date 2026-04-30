@@ -1,9 +1,9 @@
 ﻿using Serilog;
 using System.Diagnostics;
-using ViennaDotNet.Common.Utils;
-using ViennaDotNet.StaticData;
+using Solace.Common.Utils;
+using Solace.StaticData;
 
-namespace ViennaDotNet.TappablesGenerator;
+namespace Solace.TappablesGenerator;
 
 public class EncounterGenerator
 {

@@ -1,9 +1,9 @@
 ﻿using Serilog;
-using ViennaDotNet.Common;
-using ViennaDotNet.Common.Utils;
-using ViennaDotNet.EventBus.Client;
+using Solace.Common;
+using Solace.Common.Utils;
+using Solace.EventBus.Client;
 
-namespace ViennaDotNet.TappablesGenerator;
+namespace Solace.TappablesGenerator;
 
 public sealed class ActiveTiles
 {

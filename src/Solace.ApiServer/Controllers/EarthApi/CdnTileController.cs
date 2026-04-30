@@ -1,9 +1,9 @@
 ﻿using Asp.Versioning;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
-using ViennaDotNet.ApiServer.Utils;
+using Solace.ApiServer.Utils;
 
-namespace ViennaDotNet.ApiServer.Controllers.EarthApi;
+namespace Solace.ApiServer.Controllers.EarthApi;
 
 [ApiVersion("1.1")]
 [Route("cdn/tile/16/{_}/{tilePos1}_{tilePos2}_16.png")]

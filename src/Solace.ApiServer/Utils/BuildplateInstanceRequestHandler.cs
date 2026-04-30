@@ -1,20 +1,20 @@
 ﻿using Serilog;
 using System.Diagnostics;
 using System.Text;
-using ViennaDotNet.Buildplate.Connector.Model;
-using ViennaDotNet.Common;
-using ViennaDotNet.Common.Utils;
-using ViennaDotNet.DB;
-using ViennaDotNet.DB.Models.Common;
-using ViennaDotNet.DB.Models.Global;
-using ViennaDotNet.DB.Models.Player;
-using ViennaDotNet.EventBus.Client;
-using ViennaDotNet.ObjectStore.Client;
-using ViennaDotNet.StaticData;
-using Buildplates = ViennaDotNet.DB.Models.Player.Buildplates;
-using CICIBIEType = ViennaDotNet.StaticData.Catalog.ItemsCatalogR.Item.BoostInfoR.Effect.TypeE;
+using Solace.Buildplate.Connector.Model;
+using Solace.Common;
+using Solace.Common.Utils;
+using Solace.DB;
+using Solace.DB.Models.Common;
+using Solace.DB.Models.Global;
+using Solace.DB.Models.Player;
+using Solace.EventBus.Client;
+using Solace.ObjectStore.Client;
+using Solace.StaticData;
+using Buildplates = Solace.DB.Models.Player.Buildplates;
+using CICIBIEType = Solace.StaticData.Catalog.ItemsCatalogR.Item.BoostInfoR.Effect.TypeE;
 
-namespace ViennaDotNet.ApiServer.Utils;
+namespace Solace.ApiServer.Utils;
 
 public sealed class BuildplateInstanceRequestHandler
 {
