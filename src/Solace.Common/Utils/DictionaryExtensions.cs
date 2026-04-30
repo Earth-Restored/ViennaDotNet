@@ -12,26 +12,42 @@ public static class DictionaryExtensions
 
     public static TValue? GetOrDefault<TKey, TValue>(this IDictionary<TKey, TValue> dic, TKey key)
     {
-        if (dic.TryGetValue(key, out TValue? value)) return value;
-        else return default;
+        if (dic.TryGetValue(key, out TValue? value))
+        {
+            return value;
+        }
+        else
+        {
+            return default;
+        }
     }
     public static TValue? GetOrDefault<TKey, TValue>(this IDictionary<TKey, TValue> dic, TKey key, TValue? defaultValue)
     {
-        if (dic.TryGetValue(key, out TValue? value)) return value;
-        else return defaultValue;
+        if (dic.TryGetValue(key, out TValue? value))
+        {
+            return value;
+        }
+        else
+        {
+            return defaultValue;
+        }
     }
 
     public static void ForEach<TKey, TValue>(this IDictionary<TKey, TValue> dic, Action<TKey, TValue> loopAction)
     {
         foreach (var item in dic)
+        {
             loopAction(item.Key, item.Value);
+        }
     }
 
     public static TValue? JavaRemove<TKey, TValue>(this IDictionary<TKey, TValue> dic, TKey key)
     {
         TValue? value;
         if (!dic.TryGetValue(key, out value))
+        {
             value = default;
+        }
 
         dic.Remove(key);
 
@@ -40,12 +56,17 @@ public static class DictionaryExtensions
 
     public static TValue? ComputeIfAbsent<TKey, TValue>(this IDictionary<TKey, TValue> dic, TKey key, Func<TKey, TValue?> mappingFunction)
     {
-        if (dic.TryGetValue(key, out TValue? value)) return value;
+        if (dic.TryGetValue(key, out TValue? value))
+        {
+            return value;
+        }
         else
         {
             TValue? newValue = mappingFunction(key);
             if (newValue is null)
+            {
                 return default;
+            }
             else
             {
                 dic.Add(key, newValue);
@@ -59,10 +80,16 @@ public static class DictionaryExtensions
         List<TKey> toRemove = [];
 
         foreach (var item in dic)
+        {
             if (predicate(item))
+            {
                 toRemove.Add(item.Key);
+            }
+        }
 
         for (int i = 0; i < toRemove.Count; i++)
+        {
             dic.Remove(toRemove[i]);
+        }
     }
 }

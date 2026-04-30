@@ -52,18 +52,28 @@ internal static class Program
 
         Options options;
         if (res is Parsed<Options> parsed)
+        {
             options = parsed.Value;
+        }
         else if (res is NotParsed<Options> notParsed)
         {
             if (res.Errors.Any(error => error is HelpRequestedError))
+            {
                 return 0;
+            }
             else if (res.Errors.Any(error => error is VersionRequestedError))
+            {
                 return 0;
+            }
             else
+            {
                 return 1;
+            }
         }
         else
+        {
             return 1;
+        }
 
         StaticDataPath = options.StaticDataPath;
 

@@ -53,22 +53,30 @@ internal sealed class Chunk
             ListTag paletteTag = blockStatesTag.Get<ListTag>("palette");
             List<string> javaPalette = new(paletteTag.Count);
             foreach (Tag paletteEntryTag in paletteTag)
+            {
                 javaPalette.Add(ReadPaletteEntry((CompoundTag)paletteEntryTag));
+            }
 
             int[] javaBlocks;
             if (javaPalette.Count == 0)
+            {
                 throw new IOException("Chunk section has empty palette");
+            }
 
             if (!blockStatesTag.ContainsKey("data"))
             {
                 if (javaPalette.Count > 1)
+                {
                     throw new IOException("Chunk section has palette with more than one entry and no data");
+                }
 
                 javaBlocks = new int[4096];
                 Array.Fill(javaBlocks, 0);
             }
             else
+            {
                 javaBlocks = ReadBitArray(blockStatesTag.Get<LongArrayTag>("data"), javaPalette.Count);
+            }
 
             for (int x = 0; x < 16; x++)
             {
@@ -82,7 +90,9 @@ internal sealed class Chunk
                         if (bedrockMapping is null)
                         {
                             if (alreadyNotifiedMissingBlocks.Add(javaName))
+                            {
                                 Log.Warning($"Chunk contained block with no mapping {javaName}");
+                            }
                         }
 
                         // TODO: how to handle waterlogged blocks???
@@ -92,7 +102,9 @@ internal sealed class Chunk
                         JavaBlocks.BedrockMapping.BlockEntityR? blockEntityMapping = bedrockMapping is not null && bedrockMapping.BlockEntity is not null ? bedrockMapping.BlockEntity : null;
                         NbtMap? bedrockBlockEntityData = blockEntityMapping is not null ? BlockEntityTranslator.TranslateBlockEntity(blockEntityMapping, null) : null;
                         if (bedrockBlockEntityData is not null)
+                        {
                             bedrockBlockEntityData = bedrockBlockEntityData.ToBuilder().PutInt("x", x + ChunkX * 16).PutInt("y", y + subchunkY * 16).PutInt("z", z + ChunkZ * 16).PutBoolean("isMovable", false).Build();
+                        }
 
                         BlockEntities[(x * 256 + y + subchunkY * 16) * 16 + z] = bedrockBlockEntityData;
                         blockEntityMappings[(x * 256 + y + subchunkY * 16) * 16 + z] = blockEntityMapping;
@@ -114,11 +126,15 @@ internal sealed class Chunk
 
             JavaBlocks.BedrockMapping.BlockEntityR? blockEntityMapping = blockEntityMappings[(x * 256 + y) * 16 + z];
             if (blockEntityMapping is null)
+            {
                 Log.Debug($"Ignoring block entity of type {type}");
+            }
 
             NbtMap? bedrockBlockEntityData = blockEntityMapping is not null ? BlockEntityTranslator.TranslateBlockEntity(blockEntityMapping, blockEntityInfo) : null;
             if (bedrockBlockEntityData is not null)
+            {
                 bedrockBlockEntityData = bedrockBlockEntityData.ToBuilder().PutInt("x", x + ChunkX * 16).PutInt("y", y).PutInt("z", z + ChunkZ * 16).PutBoolean("isMovable", false).Build();
+            }
 
             BlockEntities[(x * 256 + y) * 16 + z] = bedrockBlockEntityData;
         }

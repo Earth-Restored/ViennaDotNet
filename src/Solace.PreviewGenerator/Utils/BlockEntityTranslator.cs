@@ -44,7 +44,9 @@ public static class BlockEntityTranslator
                     builder.PutString("id", "FlowerPot");
                     NbtMap? contents = ((JavaBlocks.BedrockMapping.FlowerPotBlockEntity)blockEntityMapping).Contents;
                     if (contents is not null)
+                    {
                         builder.PutCompound("PlantBlock", contents);
+                    }
 
                     return builder.Build();
                 }
@@ -93,7 +95,9 @@ public static class BlockEntityTranslator
                     {
                         NbtMap? blockEntityNbt = BlockEntityTranslator.TranslateBlockEntity(bedrockMapping.BlockEntity, null);
                         if (blockEntityNbt is not null)
+                        {
                             builder.PutCompound("movingEntity", blockEntityNbt.ToBuilder().PutInt("x", javaBlockEntityInfo.X).PutInt("y", javaBlockEntityInfo.Y).PutInt("z", javaBlockEntityInfo.Z).PutBoolean("isMovable", false).Build());
+                        }
                     }
 
                     if (!javaNbt.ContainsKey("basePos"))

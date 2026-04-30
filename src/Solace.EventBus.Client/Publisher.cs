@@ -29,9 +29,20 @@ public sealed class Publisher : IAsyncDisposable
 
     public async Task<bool> PublishAsync(string queueName, string type, string data)
     {
-        if (!ValidateQueueName(queueName)) throw new ArgumentException("Queue name contains invalid characters");
-        if (!ValidateType(type)) throw new ArgumentException("Type contains invalid characters");
-        if (!ValidateData(data)) throw new ArgumentException("Data contains invalid characters");
+        if (!ValidateQueueName(queueName))
+        {
+            throw new ArgumentException("Queue name contains invalid characters");
+        }
+
+        if (!ValidateType(type))
+        {
+            throw new ArgumentException("Type contains invalid characters");
+        }
+
+        if (!ValidateData(data))
+        {
+            throw new ArgumentException("Data contains invalid characters");
+        }
 
         string eventMessage = $"SEND {queueName}:{type}:{data}";
         

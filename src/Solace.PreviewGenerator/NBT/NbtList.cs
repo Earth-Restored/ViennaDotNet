@@ -55,7 +55,9 @@ public sealed class NbtList : IList
     public object Get(int index)
     {
         if (index < 0 || index >= _array.Length)
+        {
             throw new ArgumentOutOfRangeException(nameof(index), "Expected 0-" + (_array.Length - 1) + ". Got " + index);
+        }
 
         return NbtUtils.Copy(_array.GetValue(index)!);
     }

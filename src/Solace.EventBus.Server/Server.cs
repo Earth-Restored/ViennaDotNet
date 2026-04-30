@@ -386,8 +386,12 @@ public sealed partial class Server : IDisposable
     private static bool ValidateData(string str)
     {
         for (int i = 0; i < str.Length; i++)
+        {
             if (str[i] < 32 || str[i] >= 127)
+            {
                 return false;
+            }
+        }
 
         return true;
     }

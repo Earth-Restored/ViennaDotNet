@@ -26,7 +26,9 @@ public static class TimeFormatter
     {
         string[] parts = duration.Split(':');
         if (parts.Length < 3)
+        {
             throw new ArgumentException("Invalid duration format");
+        }
 
         long hours = long.Parse(parts[0]);
         long minutes = long.Parse(parts[1]);

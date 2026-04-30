@@ -56,11 +56,17 @@ public static class NbtUtils
     public static object Copy(object val)
     {
         if (val is byte[] byteArr)
+        {
             return byteArr.Clone();
+        }
         else if (val is int[] intArr)
+        {
             return intArr.Clone();
+        }
         else if (val is long[] longArr)
+        {
             return longArr.Clone();
+        }
 
         return val;
     }

@@ -57,14 +57,18 @@ public class InventoryController : ControllerBase
         foreach (var item in hotbarModel.Items)
         {
             if (item is not null)
+            {
                 hotbarItemCounts[item.Uuid] = hotbarItemCounts.GetOrDefault(item.Uuid, 0) + item.Count;
+            }
         }
 
         HashSet<string> hotbarItemInstances = [];
         foreach (var item in hotbarModel.Items)
         {
             if (item is not null && item.InstanceId is not null)
+            {
                 hotbarItemInstances.Add(item.InstanceId);
+            }
         }
 
         var inventory = new Types.Inventory.Inventory(

@@ -28,9 +28,20 @@ public sealed class RequestSender : IAsyncDisposable
 
     public async Task<string?> RequestAsync(string queueName, string type, string data)
     {
-        if (!ValidateQueueName(queueName)) throw new ArgumentException("Queue name contains invalid characters");
-        if (!ValidateType(type)) throw new ArgumentException("Type contains invalid characters");
-        if (!ValidateData(data)) throw new ArgumentException("Data contains invalid characters");
+        if (!ValidateQueueName(queueName))
+        {
+            throw new ArgumentException("Queue name contains invalid characters");
+        }
+
+        if (!ValidateType(type))
+        {
+            throw new ArgumentException("Type contains invalid characters");
+        }
+
+        if (!ValidateData(data))
+        {
+            throw new ArgumentException("Data contains invalid characters");
+        }
 
         string requestMessage = $"REQ {queueName}:{type}:{data}";
         var tcs = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -107,12 +118,20 @@ public sealed class RequestSender : IAsyncDisposable
         
         if (parts[0] == "NREP")
         {
-            if (parts.Length != 1) return false;
+            if (parts.Length != 1)
+            {
+                return false;
+            }
+
             response = null;
         }
         else if (parts[0] == "REP")
         {
-            if (parts.Length != 2) return false;
+            if (parts.Length != 2)
+            {
+                return false;
+            }
+
             response = parts[1];
         }
         else

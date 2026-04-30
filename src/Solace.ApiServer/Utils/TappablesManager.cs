@@ -97,7 +97,9 @@ public sealed class TappablesManager
         {
             Tappable? tappable = tappablesInTile.GetOrDefault(id, null);
             if (tappable is not null)
+            {
                 return tappable;
+            }
         }
 
         return null;

@@ -22,9 +22,13 @@ public static class Generator
             {
                 var chunk = Chunk.Read(serverDataZip.GetChunkNBT(chunkX, chunkZ));
                 if (chunk is null)
+                {
                     Log.Error($"Could not convert chunk {chunkX}, {chunkZ}");
+                }
                 else
+                {
                     chunks.AddLast(chunk);
+                }
             }
         }
 
@@ -49,7 +53,9 @@ public static class Generator
                         }
 
                         if (palette.Count == 1 && palette.ContainsKey(BedrockBlocks.AirId))
+                        {
                             return null;
+                        }
                         else
                         {
                             return new PreviewModel.SubChunk(

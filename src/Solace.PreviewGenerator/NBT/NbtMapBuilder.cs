@@ -149,7 +149,9 @@ public sealed class NbtMapBuilder : IDictionary<string, object>
     public NbtMapBuilder PutList(string name, NbtType type, IList list)
     {
         if (list is not NbtList)
+        {
             list = new NbtList(type, list);
+        }
 
         Add(name, list);
         return this;
@@ -169,7 +171,9 @@ public sealed class NbtMapBuilder : IDictionary<string, object>
     public NbtMap Build()
     {
         if (Count == 0)
+        {
             return NbtMap.EMPTY;
+        }
 
         return new NbtMap(this);
     }

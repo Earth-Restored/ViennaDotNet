@@ -62,7 +62,9 @@ public sealed class ActiveTiles
                 return string.Empty;
             }
             else
+            {
                 return null;
+            }
         },
         async () =>
         {

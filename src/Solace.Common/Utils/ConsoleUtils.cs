@@ -38,7 +38,9 @@ public static class ConsoleUtils
     {
         var fs = CreateFileStream("CONIN$", GENERIC_READ, FILE_SHARE_READ, FileAccess.Read);
         if (fs is not null)
+        {
             Console.SetIn(new StreamReader(fs));
+        }
     }
 
     private static FileStream? CreateFileStream(string name, uint win32DesiredAccess, uint win32ShareMode, FileAccess dotNetFileAccess)

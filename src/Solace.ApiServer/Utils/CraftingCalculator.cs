@@ -17,7 +17,9 @@ public static class CraftingCalculator
 
         LinkedList<InputItem> input = [];
         if (activeJob.Input.Length != recipe.Ingredients.Length)
+        {
             throw new InvalidOperationException();
+        }
 
         for (int index = 0; index < recipe.Ingredients.Length; index++)
         {
@@ -87,11 +89,15 @@ public static class CraftingCalculator
     public static FinishPrice CalculateFinishPrice(int remainingTime)
     {
         if (remainingTime < 0)
+        {
             throw new ArgumentException($"{nameof(remainingTime)} is negative.", nameof(remainingTime));
+        }
 
         int periods = remainingTime / 10000;
         if (remainingTime % 10000 > 0)
+        {
             periods = periods + 1;
+        }
 
         int price = periods * 5;
         int changesAt = (periods - 1) * 10000;

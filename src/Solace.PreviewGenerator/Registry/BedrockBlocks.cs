@@ -67,17 +67,25 @@ public static class BedrockBlocks
                     Debug.Assert(entry.Value is JsonValue);
                     var stateElement = (JsonValue)entry.Value;
                     if (stateElement.GetValueKind() == JsonValueKind.String)
+                    {
                         state[entry.Key] = stateElement.GetValue<string>()!;
+                    }
                     else
+                    {
                         state[entry.Key] = stateElement.GetValue<int>();
+                    }
                 }
 
                 var blockNameAndState = new BlockNameAndState(name, state);
                 if (!stateToIdMap.TryAdd(blockNameAndState, id))
+                {
                     Log.Warning($"Duplicate Bedrock block name/state {name}", StringComparison.Ordinal);
-                    
+                }
+
                 if (!idToStateMap.TryAdd(id, blockNameAndState))
+                {
                     Log.Warning($"Duplicate Bedrock block ID {id}", StringComparison.Ordinal);
+                }
             }
         });
 
@@ -113,7 +121,9 @@ public static class BedrockBlocks
 
         BlockNameAndState? blockNameAndState = idToStateMap.GetOrDefault(id, null);
         if (blockNameAndState is null)
+        {
             return null;
+        }
 
         Dictionary<string, object> state = [];
         blockNameAndState.State.ForEach((key, value) => state[key] = value);
@@ -126,17 +136,25 @@ public static class BedrockBlocks
 
         BlockNameAndState? blockNameAndState = idToStateMap.GetOrDefault(id, null);
         if (blockNameAndState is null)
+        {
             return null;
+        }
 
         NbtMapBuilder builder = NbtMap.Builder();
         blockNameAndState.State.ForEach((key, value) =>
         {
             if (value is string s)
+            {
                 builder.PutString(key, s);
+            }
             else if (value is int i)
+            {
                 builder.PutInt(key, i);
+            }
             else
+            {
                 throw new InvalidOperationException();
+            }
         });
         return builder.Build();
     }

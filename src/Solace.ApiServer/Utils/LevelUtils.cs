@@ -27,7 +27,9 @@ public sealed class LevelUtils
             }
 
             if (changed)
+            {
                 updateQuery.Update("profile", playerId, profile);
+            }
 
             return updateQuery;
         });

@@ -56,8 +56,12 @@ public static class BlockEntityTypeE
     public static BlockEntityType? From(int id)
     {
         if (id >= 0 && id < VALUES.Length)
+        {
             return VALUES[id];
+        }
         else
+        {
             return null;
+        }
     }
 }

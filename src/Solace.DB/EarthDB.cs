@@ -398,7 +398,9 @@ public sealed class EarthDB : IDisposable
             }
 
             foreach (ExtrasEntry entry in extras)
+            {
                 results.extras[entry.Name] = entry.Value;
+            }
 
             foreach (var entry in thenFunctions)
             {

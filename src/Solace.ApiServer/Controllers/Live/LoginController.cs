@@ -614,7 +614,11 @@ public partial class LoginController : SolaceControllerBase
             var expr = document.CreateNavigator()!.Compile(xpath);
             expr.SetContext(nsmgr);
             object result = document.CreateNavigator()!.Evaluate(expr);
-            if (result is double d) return d;
+            if (result is double d)
+            {
+                return d;
+            }
+
             return 0;
         }
     }

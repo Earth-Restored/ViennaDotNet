@@ -8,6 +8,8 @@ public static class StreamExtensions
     public static async Task<string> ReadAsString(this Stream stream, CancellationToken cancellationToken = default)
     {
         using (var reader = new StreamReader(stream))
+        {
             return await reader.ReadToEndAsync(cancellationToken);
+        }
     }
 }

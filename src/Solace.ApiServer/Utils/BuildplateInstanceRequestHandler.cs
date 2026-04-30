@@ -90,7 +90,9 @@ public sealed class BuildplateInstanceRequestHandler
                                Log.Debug("RequestHandler playerConnected");
                                RequestWithInstanceId<PlayerConnectedRequest>? requestWithInstanceId = ReadRequest<PlayerConnectedRequest>(request.Data);
                                if (requestWithInstanceId is null)
+                               {
                                    return null;
+                               }
 
                                PlayerConnectedResponse? playerConnectedResponse = await buildplateInstanceRequestHandler.HandlePlayerConnected(requestWithInstanceId.InstanceId, requestWithInstanceId.Request);
                                return playerConnectedResponse is not null ? Json.Serialize(playerConnectedResponse) : null;
@@ -99,7 +101,9 @@ public sealed class BuildplateInstanceRequestHandler
                            {
                                RequestWithInstanceId<PlayerDisconnectedRequest>? requestWithInstanceId = ReadRequest<PlayerDisconnectedRequest>(request.Data);
                                if (requestWithInstanceId is null)
+                               {
                                    return null;
+                               }
 
                                PlayerDisconnectedResponse? playerDisconnectedResponse = await buildplateInstanceRequestHandler.HandlePlayerDisconnected(requestWithInstanceId.InstanceId, requestWithInstanceId.Request, request.Timestamp);
                                return playerDisconnectedResponse is not null ? Json.Serialize(playerDisconnectedResponse) : null;
@@ -148,7 +152,9 @@ public sealed class BuildplateInstanceRequestHandler
                            {
                                RequestWithInstanceId<InventoryRemoveItemRequest>? requestWithBuildplateId = ReadRequest<InventoryRemoveItemRequest>(request.Data);
                                if (requestWithBuildplateId is null)
+                               {
                                    return null;
+                               }
 
                                object response = await buildplateInstanceRequestHandler.HandleInventoryRemove(requestWithBuildplateId.InstanceId, requestWithBuildplateId.Request);
                                return response is not null ? Json.Serialize(response) : null;
@@ -315,7 +321,9 @@ public sealed class BuildplateInstanceRequestHandler
             .ExecuteAsync(_earthDB);
         Buildplates.Buildplate? buildplateUnsafeForPreviewGenerator = results.Get<Buildplates>("buildplates").GetBuildplate(buildplateId);
         if (buildplateUnsafeForPreviewGenerator is null)
+        {
             return false;
+        }
 
         string? preview = await BuildplateInstancesManager.GetBuildplatePreviewAsync(serverData, buildplateUnsafeForPreviewGenerator.Night);
         if (preview is null)
@@ -894,7 +902,9 @@ public sealed class BuildplateInstanceRequestHandler
                     inventory.AddItems(inventoryUpdateItemWearMessage.ItemId, [new NonStackableItemInstance(inventoryUpdateItemWearMessage.InstanceId, inventoryUpdateItemWearMessage.Wear)]);
                 }
                 else
+                {
                     Log.Warning($"Buildplate instance {instanceId} attempted to update item wear for item {inventoryUpdateItemWearMessage.ItemId} {inventoryUpdateItemWearMessage.InstanceId} player {inventoryUpdateItemWearMessage.PlayerId} that is not in inventory");
+                }
 
                 return new EarthDB.Query(true)
                     .Update("inventory", inventoryUpdateItemWearMessage.PlayerId, inventory);

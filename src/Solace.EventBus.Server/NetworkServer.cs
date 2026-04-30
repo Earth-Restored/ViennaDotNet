@@ -104,7 +104,10 @@ public sealed class NetworkServer : IDisposable
 
                     reader.AdvanceTo(buffer.Start, buffer.End);
 
-                    if (result.IsCompleted) break;
+                    if (result.IsCompleted)
+                    {
+                        break;
+                    }
                 }
             }
             catch (Exception ex)
