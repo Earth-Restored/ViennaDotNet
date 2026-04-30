@@ -3,13 +3,14 @@
 @using Microsoft.AspNetCore.Authorization
 @using System.Security.Claims
 @using Solace.LauncherUI.Utils
+@using System.IO.Compression
 @attribute [Authorize(Policy = Permissions.ViewData)]
 @inject AuthenticationStateProvider AuthenticationStateProvider
 
 <PageTitle>Data - Solace</PageTitle>
 
 <div class="container mt-4">
-    <h2 class="mb-4"><i class="bi bi-database text-primary"></i> Data Management - Solace</h2>
+    <h2 class="mb-4"><i class="bi bi-database text-primary"></i> Data Management</h2>
 
     <div class="card mb-4">
         <div class="card-header bg-light">
@@ -53,9 +54,31 @@
                 <button class="btn btn-outline-primary me-2" @onclick="InitiateExport">
                     <i class="bi bi-download"></i> Export Data
                 </button>
-                <button class="btn btn-outline-secondary" @onclick="InitiateImport">
-                    <i class="bi bi-upload"></i> Import Data
-                </button>
+
+                <div class="mt-4 p-3 border rounded bg-light">
+                    <h6><i class="bi bi-file-earmark-zip"></i> Import Data</h6>
+                    <p class="small text-muted">
+                        Supported structures (zip these files/folders): <br />
+                        <strong>Solace:</strong> <code>earth.db</code>, <code>live.db</code>, <code>object_store/</code>
+                        <br />
+                        <strong>Vienna:</strong> <code>db/</code>, <code>objects/</code>
+                    </p>
+    
+                    <div class="input-group">
+                        <InputFile OnChange="HandleFileSelected" class="form-control" accept=".zip" />
+                        @if (_selectedFile != null)
+                        {
+                            <button class="btn btn-primary" @onclick="InitiateImport">
+                                <i class="bi bi-cloud-upload"></i> Upload & Process
+                            </button>
+                        }
+                    </div>
+    
+                    @if (!string.IsNullOrEmpty(_uploadError))
+                    {
+                        <div class="text-danger small mt-2">@_uploadError</div>
+                    }
+                </div>
             </div>
         </div>
     }
@@ -67,75 +90,78 @@
                 <h5 class="mb-0">Danger Zone</h5>
             </div>
             <div class="card-body">
-                <p>Deleting all server data is a permanent action and cannot be undone. This will wipe the databases and the object store.</p>
+                <p>Deleting all server data is a permanent action and cannot be undone. This will wipe the databases and the
+                    object store.</p>
                 
-                @if (!_isConfirmingDelete)
-                {
-                    <button class="btn btn-outline-danger" @onclick="InitiateDelete">
-                        Delete All Data
-                    </button>
-                }
-                else
-                {
-                    <div class="alert alert-warning d-flex align-items-center" role="alert">
-                        <div class="me-auto">
-                            <strong>Are you absolutely sure?</strong> 
-                            @if (!_canConfirmDelete)
-                            {
-                                <span> Please wait @_countdown seconds...</span>
-                            }
+                    @if (!_isConfirmingDelete)
+                    {
+                        <button class="btn btn-outline-danger" @onclick="InitiateDelete">
+                            Delete All Data
+                        </button>
+                    }
+                    else
+                    {
+                        <div class="alert alert-warning d-flex align-items-center" role="alert">
+                            <div class="me-auto">
+                                <strong>Are you absolutely sure?</strong>
+                                @if (!_canConfirmDelete)
+                                {
+                                    <span> Please wait @_countdown seconds...</span>
+                                }
+                            </div>
+                            <div>
+                                <button class="btn btn-secondary me-2" @onclick="CancelDelete">Cancel</button>
+                                <button class="btn btn-danger" disabled="@(!_canConfirmDelete)" @onclick="ExecuteDelete">
+                                    Yes, Delete Everything
+                                </button>
+                            </div>
                         </div>
-                        <div>
-                            <button class="btn btn-secondary me-2" @onclick="CancelDelete">Cancel</button>
-                            <button class="btn btn-danger" disabled="@(!_canConfirmDelete)" @onclick="ExecuteDelete">
-                                Yes, Delete Everything
-                            </button>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+
+    @if (_showImportWarning)
+    {
+        <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-warning">
+                        <h5 class="modal-title"><i class="bi bi-exclamation-triangle"></i> Merge Warning</h5>
+                        <button type="button" class="btn-close" @onclick="CancelImport"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Data already exists on this server. Importing a new dataset will <strong>merge</strong> the incoming
+                            data with the existing records.</p>
+                            <p class="mb-0 text-muted small">Conflicts will be resolved by keeping the newest records. Do you wish
+                                to proceed?</p>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" @onclick="CancelImport">Cancel</button>
+                                <button type="button" class="btn btn-warning" @onclick="ConfirmImport">Proceed with Merge</button>
+                            </div>
                         </div>
                     </div>
-                }
-            </div>
-        </div>
-    }
-</div>
+                </div>
+            }
 
-@if (_showImportWarning)
-{
-    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header bg-warning">
-                    <h5 class="modal-title"><i class="bi bi-exclamation-triangle"></i> Merge Warning</h5>
-                    <button type="button" class="btn-close" @onclick="CancelImport"></button>
-                </div>
-                <div class="modal-body">
-                    <p>Data already exists on this server. Importing a new dataset will <strong>merge</strong> the incoming data with the existing records.</p>
-                    <p class="mb-0 text-muted small">Conflicts will be resolved by keeping the newest records. Do you wish to proceed?</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @onclick="CancelImport">Cancel</button>
-                    <button type="button" class="btn btn-warning" @onclick="ConfirmImport">Proceed with Merge</button>
-                </div>
-            </div>
-        </div>
-    </div>
-}
-
-@if (_isProcessing)
-{
-    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.7); z-index: 1060;">
-        <div class="modal-dialog modal-dialog-centered modal-sm">
-            <div class="modal-content bg-transparent border-0 text-center">
-                <div class="modal-body text-white">
-                    <div class="spinner-border text-light mb-3" role="status" style="width: 3rem; height: 3rem;">
-                        <span class="visually-hidden">Loading...</span>
+            @if (_isProcessing)
+            {
+                <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.7); z-index: 1060;">
+                    <div class="modal-dialog modal-dialog-centered modal-sm">
+                        <div class="modal-content bg-transparent border-0 text-center">
+                            <div class="modal-body text-white">
+                                <div class="spinner-border text-light mb-3" role="status" style="width: 3rem; height: 3rem;">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <h5>@_processingAction...</h5>
+                                <p class="small text-light opacity-75">Please do not close this page.</p>
+                            </div>
+                        </div>
                     </div>
-                    <h5>@_processingAction...</h5>
-                    <p class="small text-light opacity-75">Please do not close this page.</p>
                 </div>
-            </div>
-        </div>
-    </div>
-}
+            }
 
 @code {
     private ClaimsPrincipal? _user;
@@ -150,6 +176,11 @@
     private bool _isProcessing = false;
     private string _processingAction = "";
 
+    // import
+    private IBrowserFile? _selectedFile;
+    private string? _uploadError;
+    private long _maxAllowedSize = 1024 * 1024 * 500; // 500 MB limit (Adjust as needed)
+
     // Mock Data
     private double _totalSpaceGB => _earthDbGB + _liveDbGB + _objectStoreGB;
     private double _earthDbGB = 14.2;
@@ -163,7 +194,7 @@
     }
 
     private bool HasPermission(string permission)
-        => _user?.HasPermission(permission) ?? false; 
+        => _user?.HasPermission(permission) ?? false;
 
     private void InitiateExport()
     {
@@ -174,6 +205,11 @@
 
     private void InitiateImport()
     {
+        if (_selectedFile == null)
+        {
+            return;
+        }
+
         if (_totalSpaceGB > 0)
         {
             _showImportWarning = true;
@@ -189,12 +225,22 @@
         _showImportWarning = false;
     }
 
-    private void ConfirmImport()
+    private async Task ConfirmImport()
     {
+        if (_selectedFile == null)
+        {
+            return;
+        }
+
         _showImportWarning = false;
-        _processingAction = "Importing Data";
         _isProcessing = true;
-        _ = ProcessMockActionAsync();
+        _processingAction = "Uploading";
+
+        await ProcessZipFileAsync(_selectedFile);
+
+        _isProcessing = false;
+        _selectedFile = null;
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task ProcessMockActionAsync()
@@ -222,7 +268,7 @@
         {
             await Task.Delay(1000);
             _countdown--;
-            StateHasChanged(); 
+            StateHasChanged();
         }
 
         if (_isConfirmingDelete)
@@ -246,5 +292,65 @@
         
         _isConfirmingDelete = false;
         _canConfirmDelete = false;
+    }
+
+    private void HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        _uploadError = null;
+        _selectedFile = e.File;
+
+        if (!_selectedFile.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+        {
+            _uploadError = "Please select a valid .zip file.";
+            _selectedFile = null;
+        }
+    }
+
+    private async Task ProcessZipFileAsync(IBrowserFile file)
+    {
+        try
+        {
+            using var stream = file.OpenReadStream(_maxAllowedSize);
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            ms.Seek(0, SeekOrigin.Begin);
+
+            using var archive = new ZipArchive(ms, ZipArchiveMode.Read);
+            
+            bool isSolace = false;
+            bool isVienna = false;
+
+            // Detect Structure
+            if (archive.Entries.Any(e => e.FullName.Equals("earth.db", StringComparison.OrdinalIgnoreCase)))
+                isSolace = true;
+            else if (archive.Entries.Any(e => e.FullName.StartsWith("db/earth.db", StringComparison.OrdinalIgnoreCase)))
+                isVienna = true;
+
+            if (!isSolace && !isVienna)
+            {
+                _uploadError = "Invalid ZIP structure. Please follow Solace or Vienna format.";
+                return;
+            }
+
+            _processingAction = isSolace ? "Processing Solace Format" : "Processing Vienna Format";
+            StateHasChanged();
+
+            // Logic to move files to your storage location
+            foreach (var entry in archive.Entries)
+            {
+                // Example: Extracting GUID files from object stores
+                if (entry.FullName.Contains("object_store/") || entry.FullName.Contains("objects/"))
+                {
+                    // Logic to write entry.Open() to your destination path
+                }
+            }
+
+            // Mock success update
+            await ProcessMockActionAsync();
+        }
+        catch (Exception ex)
+        {
+            _uploadError = $"Error processing file: {ex.Message}";
+        }
     }
 }
