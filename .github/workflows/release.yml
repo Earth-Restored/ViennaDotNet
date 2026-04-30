@@ -1,0 +1,55 @@
+name: Build and Release
+
+on:
+  release:
+    types: [created]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    strategy:
+      matrix:
+        include:
+          - os: win
+            arch: x64
+          - os: win
+            arch: arm64
+          - os: linux
+            arch: x64
+          - os: linux
+            arch: arm64
+          - os: osx
+            arch: x64
+          - os: osx
+            arch: arm64
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Build
+        shell: pwsh
+        run: |
+          ./publish.ps1 -profiles framework-dependent-${{ matrix.os }}-${{ matrix.arch }}
+
+      - name: Zip build
+        shell: pwsh
+        run: |
+          Compress-Archive `
+            -Path "build/Release/framework-dependent-${{ matrix.os }}-${{ matrix.arch }}/*" `
+            -DestinationPath "Solace-${{ matrix.os }}-${{ matrix.arch }}.zip"
+
+      - name: Upload release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.release.tag_name }}
+          files: Solace-${{ matrix.os }}-${{ matrix.arch }}.zip
