@@ -127,6 +127,7 @@ curl -L --progress-bar -o Solace-linux-arm64.zip "$URL"
 
 unzip -o Solace-linux-arm64.zip
 rm -rf ~/Solace/*
+echo "$TAG" > ~/Solace/version.txt
 
 if [ -d Solace-linux-arm64 ]; then
     mv Solace-linux-arm64/* ~/Solace/
@@ -154,7 +155,7 @@ print_step "4. CREATING EARTH COMMAND"
 
 mkdir -p "$PREFIX/bin"
 
-curl -fsSL https://raw.githubusercontent.com/Earth-Restored/Solace/refs/heads/main/TermuxVienna.sh -o "$PREFIX/bin/earth"
+curl -fsSL https://raw.githubusercontent.com/FroquaCubez/Solace/refs/heads/main/distros/Termux.sh -o "$PREFIX/bin/earth"
 
 chmod +x "$PREFIX/bin/earth"
 
