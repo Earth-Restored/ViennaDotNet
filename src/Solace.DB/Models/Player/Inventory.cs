@@ -76,7 +76,7 @@ public sealed class Inventory
     {
         if (count < 0)
         {
-            throw new ArgumentException(nameof(count));
+            throw new ArgumentException($"{nameof(count)} is negative.", nameof(count));
         }
 
         _stackableItems[id] = _stackableItems.GetOrDefault(id, 0) + count;

@@ -62,11 +62,8 @@ public static class JavaBlocks
 
                 int id = element["id"]!.GetValue<int>();
                 string name = element["name"]!.GetValue<string>()!;
-                if (map.ContainsKey(id))
+                if (!map.TryAdd(id, name))
                     Log.Warning($"Duplicate Java block ID {id}");
-                else
-                    map.Add(id, name);
-
                 try
                 {
                     BedrockMapping? bedrockMapping = ReadBedrockMapping((JsonObject)element["bedrock"]!, jArray);
@@ -126,10 +123,8 @@ public static class JavaBlocks
                     }
                 }
 
-                if (nonVanillaStatesList.ContainsKey(baseName))
+                if (!nonVanillaStatesList.TryAdd(baseName, stateNames))
                     Log.Warning($"Duplicate Java non-vanilla block name {baseName}");
-                else
-                    nonVanillaStatesList.Add(baseName, stateNames);
             }
         });
     }

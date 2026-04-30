@@ -285,7 +285,7 @@
         _model = new RoleEditModel
         {
             Id = role.Id,
-            Name = role.Name,
+            Name = role.Name!,
             Color = role.Color,
             Position = role.Position,
             IsReadOnly = !canEdit,
@@ -447,9 +447,9 @@
         await LoadData();
     }
 
-    private void TogglePermission(string perm, object checkedValue)
+    private void TogglePermission(string perm, object? checkedValue)
     {
-        if ((bool)checkedValue) _modelPermissions.Add(perm);
+        if (checkedValue is null ? false : (bool)checkedValue) _modelPermissions.Add(perm);
         else _modelPermissions.Remove(perm);
     }
 

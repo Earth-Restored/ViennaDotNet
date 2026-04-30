@@ -669,7 +669,9 @@ public sealed class BuildplateInstanceRequestHandler
         return new PlayerDisconnectedResponse();
     }
 
+#pragma warning disable IDE0060 // Remove unused parameter
     private static bool? HandlePlayerDead(string instanceId, string playerId, long currentTime)
+#pragma warning restore IDE0060 // Remove unused parameter
     {
         BuildplateInstancesManager.InstanceInfo? instanceInfo = BuildplateInstancesManager.GetInstanceInfo(instanceId);
         return instanceInfo is null
@@ -745,7 +747,9 @@ public sealed class BuildplateInstanceRequestHandler
         }
     }
 
+#pragma warning disable IDE0060 // Remove unused parameter
     private async Task<InventoryResponse?> HandleGetInventory(string instanceId, string requestedInventoryPlayerId)
+#pragma warning restore IDE0060 // Remove unused parameter
     {
         EarthDB.Results results = await new EarthDB.Query(false)
             .Get("inventory", requestedInventoryPlayerId, typeof(Inventory))
@@ -766,7 +770,9 @@ public sealed class BuildplateInstanceRequestHandler
         );
     }
 
+#pragma warning disable IDE0060 // Remove unused parameter
     private async Task<bool> HandleInventoryAdd(string instanceId, InventoryAddItemMessage inventoryAddItemMessage, long timestamp)
+#pragma warning restore IDE0060 // Remove unused parameter
     {
         Catalog.ItemsCatalogR.Item? catalogItem = _catalog.ItemsCatalog.GetItem(inventoryAddItemMessage.ItemId);
         if (catalogItem is null)
@@ -904,7 +910,9 @@ public sealed class BuildplateInstanceRequestHandler
         return true;
     }
 
+#pragma warning disable IDE0060 // Remove unused parameter
     private async Task<bool> HandleInventorySetHotbar(string instanceId, InventorySetHotbarMessage inventorySetHotbarMessage)
+#pragma warning restore IDE0060 // Remove unused parameter
     {
         EarthDB.Results results = await new EarthDB.Query(true)
             .Get("inventory", inventorySetHotbarMessage.PlayerId, typeof(Inventory))

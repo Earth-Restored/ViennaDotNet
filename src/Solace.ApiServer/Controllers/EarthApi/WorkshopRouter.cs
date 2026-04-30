@@ -301,7 +301,7 @@ public class WorkshopRouter : SolaceControllerBase
                         return query;
                     }
 
-                    craftingSlot.ActiveJob = new CraftingSlot.ActiveJobR(startRequest.SessionId, recipe.Id, requestStartedOn, inputItems.Select(inputItems1 => inputItems1.ToArray()).ToArray(), startRequest.Multiplier, 0, false);
+                    craftingSlot.ActiveJob = new CraftingSlot.ActiveJobR(startRequest.SessionId, recipe.Id, requestStartedOn, [.. inputItems.Select(inputItems1 => inputItems1.ToArray())], startRequest.Multiplier, 0, false);
 
                     query.Update("crafting", playerId, craftingSlots).Update("inventory", playerId, inventory).Update("hotbar", playerId, hotbar);
 
@@ -1078,7 +1078,7 @@ public class WorkshopRouter : SolaceControllerBase
     private static Types.Workshop.CraftingSlot CraftingSlotModelToResponse(CraftingSlot craftingSlotModel, long currentTime, int streamVersion)
     {
         if (craftingSlotModel.Locked)
-            throw new ArgumentException(nameof(craftingSlotModel));
+            throw new ArgumentException($"{nameof(craftingSlotModel)} is locked.", nameof(craftingSlotModel));
 
         CraftingSlot.ActiveJobR? activeJob = craftingSlotModel.ActiveJob;
         if (activeJob is not null)
@@ -1123,7 +1123,7 @@ public class WorkshopRouter : SolaceControllerBase
     private static Types.Workshop.SmeltingSlot SmeltingSlotModelToResponse(SmeltingSlot smeltingSlotModel, long currentTime, int streamVersion)
     {
         if (smeltingSlotModel.Locked)
-            throw new ArgumentException(nameof(smeltingSlotModel));
+            throw new ArgumentException($"{nameof(smeltingSlotModel)} is locked.", nameof(smeltingSlotModel));
 
         SmeltingSlot.ActiveJobR? activeJob = smeltingSlotModel.ActiveJob;
         if (activeJob is not null)

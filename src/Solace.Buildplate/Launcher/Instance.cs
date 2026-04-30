@@ -19,9 +19,9 @@ public sealed class Instance
 
     public static Instance Run(EventBusClient eventBusClient, string? playerId, string buildplateId, BuildplateSource buildplateSource, string instanceId, bool survival, bool night, bool saveEnabled, InventoryType inventoryType, long? shutdownTime, string publicAddress, int port, int serverInternalPort, string javaCmd, FileInfo fountainBridgeJar, DirectoryInfo serverTemplateDir, string fabricJarName, FileInfo connectorPluginJar, DirectoryInfo baseDir, string eventBusConnectionString)
     {
-        if (playerId is null && buildplateSource == BuildplateSource.PLAYER)
+        if (playerId is null && buildplateSource is BuildplateSource.PLAYER)
         {
-            throw new ArgumentException();
+            throw new ArgumentException($"{nameof(playerId)} cannot be null when {nameof(buildplateSource)} is {nameof(BuildplateSource.PLAYER)}");
         }
 
         var instance = new Instance(eventBusClient, playerId, buildplateId, buildplateSource, instanceId, survival, night, saveEnabled, inventoryType, shutdownTime, publicAddress, port, serverInternalPort, javaCmd, fountainBridgeJar, serverTemplateDir, fabricJarName, connectorPluginJar, baseDir, eventBusConnectionString);
@@ -68,8 +68,8 @@ public sealed class Instance
     private Subscriber? _subscriber = null;
     private RequestHandler? _requestHandler = null;
 
-    private DirectoryInfo _serverWorkDir;
-    private DirectoryInfo _bridgeWorkDir;
+    private DirectoryInfo _serverWorkDir = null!;
+    private DirectoryInfo _bridgeWorkDir = null!;
     private ConsoleProcess? _serverProcess = null;
     private ConsoleProcess? _bridgeProcess = null;
     private bool _shuttingDown = false;
@@ -142,7 +142,7 @@ public sealed class Instance
 
             BuildplateLoadResponse? buildplateLoadResponse = _buildplateSource switch
             {
-                BuildplateSource.PLAYER => await SendEventBusRequestRaw<BuildplateLoadResponse>("load", new BuildplateLoadRequest(_playerId, _buildplateId), true),
+                BuildplateSource.PLAYER => await SendEventBusRequestRaw<BuildplateLoadResponse>("load", new BuildplateLoadRequest(_playerId!, _buildplateId), true),
                 BuildplateSource.SHARED => await SendEventBusRequestRaw<BuildplateLoadResponse>("loadShared", new SharedBuildplateLoadRequest(_buildplateId), true),
                 BuildplateSource.ENCOUNTER => await SendEventBusRequestRaw<BuildplateLoadResponse>("loadEncounter", new EncounterBuildplateLoadRequest(_buildplateId), true),
                 _ => throw new UnreachableException(),
@@ -163,12 +163,14 @@ public sealed class Instance
 
             try
             {
-                _serverWorkDir = await SetupServerFiles(serverData);
-                if (_serverWorkDir is null)
+                var serverWorkDir = await SetupServerFiles(serverData);
+                if (serverWorkDir is null)
                 {
                     _logger.Error("Could not set up files for server");
                     return;
                 }
+
+                _serverWorkDir = serverWorkDir;
             }
             catch (IOException exception)
             {
@@ -178,12 +180,14 @@ public sealed class Instance
 
             try
             {
-                _bridgeWorkDir = SetupBridgeFiles(serverData);
-                if (_bridgeWorkDir is null)
+                var bridgeWorkDir = SetupBridgeFiles(serverData);
+                if (bridgeWorkDir is null)
                 {
                     _logger.Error("Could not set up files for bridge");
                     return;
                 }
+
+                _bridgeWorkDir = bridgeWorkDir;
             }
             catch (IOException exception)
             {
@@ -654,7 +658,9 @@ public sealed class Instance
             if (!warnedMissingServerFiles)
             {
                 _logger.Warning("Server files were not pre-downloaded in server template directory, it is recommended to pre-download all server files to improve instance start-up time and reduce network data usage");
+#pragma warning disable IDE0059 // Unnecessary assignment of a value
                 warnedMissingServerFiles = true;
+#pragma warning restore IDE0059 // Unnecessary assignment of a value
             }
         }
 
@@ -817,7 +823,9 @@ public sealed class Instance
         return dataTag;
     }
 
+#pragma warning disable IDE0060 // Remove unused parameter
     private DirectoryInfo? SetupBridgeFiles(byte[] serverData)
+#pragma warning restore IDE0060 // Remove unused parameter
     {
         var workDir = new DirectoryInfo(Path.Combine(_baseDir.FullName, "bridge"));
         if (!workDir.TryCreate())

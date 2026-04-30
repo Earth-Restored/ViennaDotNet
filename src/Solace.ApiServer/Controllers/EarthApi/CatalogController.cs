@@ -397,6 +397,8 @@ public class CatalogController : SolaceControllerBase
         return new JournalCatalog(items);
     }
 
+#pragma warning disable IDE0060 // Remove unused parameter
     private static NFCBoost[] MakeNFCBoostsCatalogApiResponse(Catalog catalog)
+#pragma warning restore IDE0060 // Remove unused parameter
         => []; // TODO
 }

@@ -12,7 +12,9 @@ internal static class BuildplateLauncher
 
     public const string ServerJarName = "fabric-server-mc.1.20.4-loader.0.15.10-launcher.1.0.1.jar";
 
+#pragma warning disable IDE0060 // Remove unused parameter
     public static bool Check(Settings settings, ILogger logger)
+#pragma warning restore IDE0060 // Remove unused parameter
     {
         string exePath = Path.GetFullPath(Path.Combine(Program.ProgramsDir, ExeName));
         if (!File.Exists(exePath))

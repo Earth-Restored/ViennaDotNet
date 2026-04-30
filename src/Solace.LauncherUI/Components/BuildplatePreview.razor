@@ -217,7 +217,7 @@
             var dbContext = await DbFactory.CreateDbContextAsync();
             var previewData = IsTemplate
                 ? await importer.GetTemplateLauncherPreviewAsync(BuildplateId, dbContext, ResourcePackManager, getFromCache: getFromCache)
-                : await importer.GetPlayerBuildplateLauncherPreviewAsync(PlayerId, BuildplateId, dbContext, ResourcePackManager, getFromCache:
+                : await importer.GetPlayerBuildplateLauncherPreviewAsync(PlayerId!, BuildplateId, dbContext, ResourcePackManager, getFromCache:
 getFromCache);
 
             if (previewData is null)

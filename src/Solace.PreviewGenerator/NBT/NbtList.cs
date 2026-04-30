@@ -12,10 +12,12 @@ public class NbtList : IList
     [JsonInclude, JsonPropertyName("array")]
     public readonly Array _array;
 #pragma warning disable IDE0044 // Add readonly modifier
+#pragma warning disable CS0169
     [JsonIgnore]
     private bool hashCodeGenerated;
     [JsonIgnore]
     private int hashCode;
+#pragma warning restore CS0169
 #pragma warning restore IDE0044 // Add readonly modifier
 
     public bool IsFixedSize => true;
@@ -45,7 +47,7 @@ public class NbtList : IList
         _array = (Array)array.Clone();
     }
 
-    public NbtType GetType()
+    public new NbtType GetType()
         => _type;
 
     public object Get(int index)

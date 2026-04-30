@@ -138,7 +138,7 @@ public class CatalogController : SolaceControllerBase
                 .ToArray()
                 .Select(item => ToResponse(item, Request));
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             items = [];
         }

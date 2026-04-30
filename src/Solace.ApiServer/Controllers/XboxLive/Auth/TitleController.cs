@@ -33,7 +33,9 @@ public class TitleController : SolaceControllerBase
     );
 
     [HttpPost]
+#pragma warning disable IDE0060 // Remove unused parameter
     public ContentHttpResult Authenticate([FromBody] AuthenticateRequest request)
+#pragma warning restore IDE0060 // Remove unused parameter
     {
         var tokenValidity = ValidityDatePair.Create(config.XboxLive.TokenValidityMinutes);
         var token = new Tokens.Xbox.TitleToken()

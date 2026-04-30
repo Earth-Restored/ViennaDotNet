@@ -50,7 +50,7 @@ public class NbtMap// : IDictionary<string, object>
     }
 
     public object Get(string key)
-        => NbtUtils.Copy(_map.GetOrDefault(key));
+        => NbtUtils.Copy(_map.GetOrDefault(key)!);
 
     public ICollection<string> KeySet()
         => _map.Keys;

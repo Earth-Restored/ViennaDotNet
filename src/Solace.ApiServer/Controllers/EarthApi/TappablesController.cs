@@ -234,10 +234,12 @@ public class TappablesController : SolaceControllerBase
         // TODO
 
         var encounterStates = new Dictionary<string, EncounterState>();
+#pragma warning disable IDE0059 // Unnecessary assignment of a value
         foreach (var (encounterId, tileId) in requestedIds)
         {
             encounterStates[encounterId] = new EncounterState(EncounterState.ActiveEncounterStateE.PRISTINE);
         }
+#pragma warning restore IDE0059 // Unnecessary assignment of a value
 
         return EarthJson(encounterStates);
     }

@@ -16,6 +16,7 @@ internal static class ResourcePackManagerSingleton
         return resourcePackManager;
     }
 
+#pragma warning disable CS8774 // Member must have a non-null value when exiting.
     [MemberNotNull(nameof(resourcePackManager))]
     private static async Task EnsureResourcePackLoadedAsync()
     {
@@ -23,7 +24,7 @@ internal static class ResourcePackManagerSingleton
         {
             return;
         }
-    
+
         await resourcePackLock.WaitAsync();
 
         try
@@ -51,4 +52,5 @@ internal static class ResourcePackManagerSingleton
             resourcePackLock.Release();
         }
     }
+#pragma warning restore CS8774 // Member must have a non-null value when exiting.
 }

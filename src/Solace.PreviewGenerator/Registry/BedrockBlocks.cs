@@ -73,15 +73,11 @@ public static class BedrockBlocks
                 }
 
                 var blockNameAndState = new BlockNameAndState(name, state);
-                if (stateToIdMap.ContainsKey(blockNameAndState))
+                if (!stateToIdMap.TryAdd(blockNameAndState, id))
                     Log.Warning($"Duplicate Bedrock block name/state {name}", StringComparison.Ordinal);
-                else
-                    stateToIdMap.Add(blockNameAndState, id);
-
-                if (idToStateMap.ContainsKey(id))
+                    
+                if (!idToStateMap.TryAdd(id, blockNameAndState))
                     Log.Warning($"Duplicate Bedrock block ID {id}", StringComparison.Ordinal);
-                else
-                    idToStateMap.Add(id, blockNameAndState);
             }
         });
 

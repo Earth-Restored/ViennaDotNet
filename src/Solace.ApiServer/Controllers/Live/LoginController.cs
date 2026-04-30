@@ -207,8 +207,10 @@ public partial class LoginController : SolaceControllerBase
         if (request.SelectSingleNode("/S:Envelope/S:Body/wst:RequestSecurityToken", nsmgr) is not null)
         {
             // device token request
+#pragma warning disable IDE0059 // Unnecessary assignment of a value
             string? username = request.SelectSingleNode("/S:Envelope/S:Header/wsse:Security/wsse:UsernameToken/wsse:Username/text()", nsmgr)?.Value;
             string? password = request.SelectSingleNode("/S:Envelope/S:Header/wsse:Security/wsse:UsernameToken/wsse:Password/text()", nsmgr)?.Value;
+#pragma warning restore IDE0059 // Unnecessary assignment of a value
 
             string? requestType = request.SelectSingleNode("/S:Envelope/S:Body/wst:RequestSecurityToken/wst:RequestType/text()", nsmgr)?.Value;
             string? requestAppliesTo = request.SelectSingleNode("/S:Envelope/S:Body/wst:RequestSecurityToken/wsp:AppliesTo/wsa:EndpointReference/wsa:Address/text()", nsmgr)?.Value;
@@ -393,7 +395,9 @@ public partial class LoginController : SolaceControllerBase
             }
 
             var userToken = JwtUtils.Verify<Tokens.Live.UserToken>(userTokenString, config.Login.UserTokenSecretBytes, allowExpired: true);
+#pragma warning disable IDE0059 // Unnecessary assignment of a value
             var deviceToken = JwtUtils.Verify<Tokens.Live.DeviceToken>(deviceTokenString, config.Login.DeviceTokenSecretBytes, allowExpired: true);
+#pragma warning restore IDE0059 // Unnecessary assignment of a value
 
             if (userToken is null || userToken.Expired is true)
             {

@@ -116,7 +116,9 @@ public sealed class TappablesManager
         return null;
     }
 
+#pragma warning disable IDE0060 // Remove unused parameter
     public bool IsTappableValidFor(Tappable tappable, long requestTime, float lat, float lon)
+#pragma warning restore IDE0060 // Remove unused parameter
     {
         if (tappable.SpawnTime - GRACE_PERIOD > requestTime || tappable.SpawnTime + tappable.ValidFor + GRACE_PERIOD <= requestTime)
         {
@@ -129,7 +131,9 @@ public sealed class TappablesManager
     }
 
     // TODO: actually use this
+#pragma warning disable IDE0060 // Remove unused parameter
     public bool IsEncounterValidFor(Encounter encounter, long requestTime, float lat, float lon)
+#pragma warning restore IDE0060 // Remove unused parameter
     {
         if (encounter.SpawnTime - GRACE_PERIOD > requestTime || encounter.SpawnTime + encounter.ValidFor <= requestTime) // no grace period when checking end time because the buildplate instance shutdown does not include the grace period anyway
         {

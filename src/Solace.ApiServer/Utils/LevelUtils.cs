@@ -7,7 +7,9 @@ namespace Solace.ApiServer.Utils;
 
 public sealed class LevelUtils
 {
+#pragma warning disable IDE0060 // Remove unused parameter
     public static EarthDB.Query CheckAndHandlePlayerLevelUp(string playerId, long currentTime, StaticData.StaticData staticData)
+#pragma warning restore IDE0060 // Remove unused parameter
     {
         var getQuery = new EarthDB.Query(true);
         getQuery.Get("profile", playerId, typeof(Profile));

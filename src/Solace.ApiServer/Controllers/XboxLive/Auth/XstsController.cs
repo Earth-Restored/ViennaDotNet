@@ -44,7 +44,7 @@ public class XstsController : SolaceControllerBase
         var titleTokenAuth = JwtUtils.Verify<Tokens.Xbox.AuthToken>(request.Properties.TitleToken, config.XboxLive.AuthTokenSecretBytes)?.Data;
         var userTokenAuth = JwtUtils.Verify<Tokens.Xbox.AuthToken>(request.Properties.UserTokens[0], config.XboxLive.AuthTokenSecretBytes)?.Data;
 
-        if (deviceTokenAuth is not Tokens.Xbox.DeviceToken deviceToken || titleTokenAuth is not Tokens.Xbox.TitleToken titleToken || userTokenAuth is not Tokens.Xbox.UserToken userToken)
+        if (deviceTokenAuth is not Tokens.Xbox.DeviceToken || titleTokenAuth is not Tokens.Xbox.TitleToken || userTokenAuth is not Tokens.Xbox.UserToken userToken)
         {
             return TypedResults.Unauthorized();
         }

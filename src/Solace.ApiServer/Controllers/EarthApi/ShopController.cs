@@ -273,7 +273,6 @@ public class ShopController : SolaceControllerBase
                     break;
             }
 
-
             if (rubies is null)
             {
                 return null;

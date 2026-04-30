@@ -44,12 +44,12 @@ public sealed class BuildplateInstancesManager
     {
         if (playerId is null && type is not InstanceType.ENCOUNTER)
         {
-            throw new ArgumentException();
+            throw new ArgumentException($"{nameof(playerId)} cannot be null when {nameof(type)} is not {nameof(InstanceType.ENCOUNTER)}.");
         }
 
         if (encounterId is not null && type is not InstanceType.ENCOUNTER)
         {
-            throw new ArgumentException();
+            throw new ArgumentException($"{nameof(encounterId)} can only be set when {nameof(type)} is {nameof(InstanceType.ENCOUNTER)}.");
         }
 
         if (playerId is not null && encounterId is not null)

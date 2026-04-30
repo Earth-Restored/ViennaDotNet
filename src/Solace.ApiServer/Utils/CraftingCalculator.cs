@@ -87,7 +87,7 @@ public static class CraftingCalculator
     public static FinishPrice CalculateFinishPrice(int remainingTime)
     {
         if (remainingTime < 0)
-            throw new ArgumentException(nameof(remainingTime));
+            throw new ArgumentException($"{nameof(remainingTime)} is negative.", nameof(remainingTime));
 
         int periods = remainingTime / 10000;
         if (remainingTime % 10000 > 0)
