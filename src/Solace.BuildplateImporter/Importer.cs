@@ -341,7 +341,7 @@ public sealed class Importer : IAsyncDisposable
         {
             await new EarthDB.Query(true)
                 .Update("buildplates", playerId, playerBuildplates)
-                .ExecuteAsync(EarthDB);
+                .ExecuteAsync(EarthDB, cancellationToken);
 
             if (!string.IsNullOrEmpty(oldPreviewObjectId))
             {

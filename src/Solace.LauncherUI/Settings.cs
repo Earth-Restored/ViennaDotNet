@@ -104,26 +104,22 @@ public sealed class Settings
             }
         }
 
-        bool anyErrors = false;
         if (settings.ApiPort is null)
         {
             Log.Warning($"Api port is invalid, using default: '{Default.ApiPort}'");
             settings.ApiPort = Default.ApiPort;
-            anyErrors = true;
         }
 
         if (settings.EventBusPort is null)
         {
             Log.Warning($"EventBus port is invalid, using default: '{Default.EventBusPort}'");
             settings.EventBusPort = Default.EventBusPort;
-            anyErrors = true;
         }
 
         if (settings.ObjectStorePort is null)
         {
             Log.Warning($"ObjectStore port is invalid, using default: '{Default.ObjectStorePort}'");
             settings.ObjectStorePort = Default.ObjectStorePort;
-            anyErrors = true;
         }
 
         UriHostNameType nameType = Uri.CheckHostName(settings.IPv4);
@@ -132,28 +128,24 @@ public sealed class Settings
         {
             Log.Warning($"IPv4 is invalid, using default: '{Default.IPv4}' (Change this in Options/IPv4)");
             settings.IPv4 = Default.IPv4;
-            anyErrors = true;
         }
 
         if (string.IsNullOrWhiteSpace(settings.EarthDatabaseConnectionString))
         {
             Log.Warning($"DatabaseConnectionString is invalid, using default: '{Default.EarthDatabaseConnectionString}'");
             settings.EarthDatabaseConnectionString = Default.EarthDatabaseConnectionString;
-            anyErrors = true;
         }
 
         if (string.IsNullOrWhiteSpace(settings.LiveDatabaseConnectionString))
         {
             Log.Warning($"LiveDatabaseConnectionString is invalid, using default: '{Default.LiveDatabaseConnectionString}'");
             settings.LiveDatabaseConnectionString = Default.LiveDatabaseConnectionString;
-            anyErrors = true;
         }
 
         if (settings.EnableTileRenderingLabel is null)
         {
             Log.Warning($"EnableTileRenderingLabel is invalid, using default: '{Default.EnableTileRenderingLabel}'");
             settings.EnableTileRenderingLabel = Default.EnableTileRenderingLabel;
-            anyErrors = true;
         }
 
         if (settings.EnableTileRenderingLabel is true)
@@ -162,14 +154,12 @@ public sealed class Settings
             {
                 Log.Warning($"TileDataSource is invalid, using default: '{Default.TileDataSource}'");
                 settings.TileDataSource = Default.TileDataSource;
-                anyErrors = true;
             }
 
             if (string.IsNullOrWhiteSpace(settings.MapTilerApiKey))
             {
                 Log.Warning($"MapTilerApiKey is invalid, using default: '{Default.MapTilerApiKey}'");
                 settings.MapTilerApiKey = Default.MapTilerApiKey;
-                anyErrors = true;
             }
         }
 
@@ -177,28 +167,24 @@ public sealed class Settings
         {
             Log.Warning($"TileDatabaseConnectionString is invalid, using default: '{Default.TileDatabaseConnectionString}'");
             settings.TileDatabaseConnectionString = Default.TileDatabaseConnectionString;
-            anyErrors = true;
         }
 
         if (settings.GeneratePreviewOnImport is null)
         {
             Log.Warning($"Generate preview on import is invalid, using default: '{Default.GeneratePreviewOnImport}'");
             settings.GeneratePreviewOnImport = Default.GeneratePreviewOnImport;
-            anyErrors = true;
         }
 
         if (settings.SkipFileChecks is null)
         {
             Log.Warning($"Skip file checks is invalid, using default: '{Default.SkipFileChecks}'");
             settings.SkipFileChecks = Default.SkipFileChecks;
-            anyErrors = true;
         }
 
         if (string.IsNullOrWhiteSpace(settings.StaticDataPath))
         {
             Log.Warning($"StaticData path is invalid, using default: '{Default.StaticDataPath}'");
             settings.StaticDataPath = Default.StaticDataPath;
-            anyErrors = true;
         }
 
         Log.Information("Loaded settings");

@@ -28,7 +28,7 @@ public partial class AddBuildplatePreview : Migration
         migrationBuilder.CreateIndex(
             name: "IX_Player_Buildplate",
             table: "BuildplatePreviews",
-            columns: new[] { "PlayerId", "BuildplateId" },
+            columns: ["PlayerId", "BuildplateId"],
             unique: true);
     }
 

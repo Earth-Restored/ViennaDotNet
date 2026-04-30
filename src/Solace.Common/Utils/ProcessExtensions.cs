@@ -82,7 +82,7 @@ public static partial class ProcessExtensions
                 return false;
             }
 
-            await killProcess.WaitForExitAsync();
+            await killProcess.WaitForExitAsync(cancellationToken);
             var exitCode = killProcess.ExitCode;
 
             if (exitCode is 0)
