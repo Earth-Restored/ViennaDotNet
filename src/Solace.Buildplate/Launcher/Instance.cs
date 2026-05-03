@@ -678,6 +678,7 @@ public sealed class Instance
             .Append("enforce-secure-profile=false\n")
             .Append("sync-chunk-writes=false\n")
             .Append("spawn-protection=0\n")
+            .Append("enable-command-block=true\n")
             .Append(CultureInfo.InvariantCulture, $"server-port={_serverInternalPort.ToString(CultureInfo.InvariantCulture)}\n")
             .Append(CultureInfo.InvariantCulture, $"gamemode={(_survival ? "survival" : "creative")}\n")
             .Append(CultureInfo.InvariantCulture, $"vienna-event-bus-address={_eventBusAddress}\n")
