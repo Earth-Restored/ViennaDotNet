@@ -21,22 +21,22 @@
             <div class="row">
                 <div class="col-md-3 border-end">
                     <h6 class="text-muted">Total Space Used</h6>
-                    <h3 class="text-primary">@($"{_totalSpaceGB:F2} GB")</h3>
+                    <h3 class="text-primary">@FormatBytes(_totalSpaceGB)</h3>
                 </div>
                 <div class="col-md-9">
                     <h6 class="text-muted">Storage Split</h6>
                     <ul class="list-group list-group-flush">
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             <span><i class="bi bi-globe"></i> earth.db</span>
-                            <span class="badge bg-secondary rounded-pill">@($"{_earthDbGB:F2} GB")</span>
+                            <span class="badge bg-secondary rounded-pill">@FormatBytes(_earthDbGB)</span>
                         </li>
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             <span><i class="bi bi-activity"></i> live.db</span>
-                            <span class="badge bg-secondary rounded-pill">@($"{_liveDbGB:F2} GB")</span>
+                            <span class="badge bg-secondary rounded-pill">@FormatBytes(_liveDbGB)</span>
                         </li>
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             <span><i class="bi bi-folder"></i> object_store</span>
-                            <span class="badge bg-secondary rounded-pill">@($"{_objectStoreGB:F2} GB")</span>
+                            <span class="badge bg-secondary rounded-pill">@FormatBytes(_objectStoreGB)</span>
                         </li>
                     </ul>
                 </div>
@@ -44,7 +44,7 @@
         </div>
     </div>
 
-   @if (HasPermission(Permissions.ExportData))
+    @if (HasPermission(Permissions.ExportData))
     {
         <div class="card mb-4">
             <div class="card-header bg-light">
@@ -70,7 +70,7 @@
                     <h6><i class="bi bi-file-earmark-zip"></i> Import Data</h6>
                     <p class="small text-muted">
                         Merge an existing dataset. Supported structures (zip these files/folders): <br />
-                        <strong>Solace:</strong> <code>earth.db</code>, <code>live.db</code>, <code>object_store/</code> | 
+                        <strong>Solace:</strong> <code>earth.db</code>, <code>live.db</code>, <code>object_store/</code> |
                         <strong>Vienna:</strong> <code>db/</code>, <code>objects/</code>
                     </p>
 
@@ -95,7 +95,8 @@
                 <section class="mt-4">
                     <h6 class="text-danger"><i class="bi bi-exclamation-triangle"></i> Danger Zone</h6>
                     <p class="small text-muted">
-                        Deleting all server data is a permanent action and cannot be undone. This will wipe the databases and the object store.
+                        Deleting all server data is a permanent action and cannot be undone. This will wipe the databases
+                        and the object store.
                     </p>
 
                     @if (!_isConfirmingDelete)
@@ -126,48 +127,48 @@
             </div>
         </div>
     }
-    </div>
+</div>
 
-    @if (_showImportWarning)
-    {
-        <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header bg-warning">
-                        <h5 class="modal-title"><i class="bi bi-exclamation-triangle"></i> Merge Warning</h5>
-                        <button type="button" class="btn-close" @onclick="CancelImport"></button>
-                    </div>
-                    <div class="modal-body">
-                        <p>Data already exists on this server. Importing a new dataset will <strong>merge</strong> the incoming
-                            data with the existing records.</p>
-                            <p class="mb-0 text-muted small">Conflicts will be resolved by keeping the newest records. Do you wish
-                                to proceed?</p>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" @onclick="CancelImport">Cancel</button>
-                                <button type="button" class="btn btn-warning" @onclick="ConfirmImport">Proceed with Merge</button>
-                            </div>
+@if (_showImportWarning)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title"><i class="bi bi-exclamation-triangle"></i> Merge Warning</h5>
+                    <button type="button" class="btn-close" @onclick="CancelImport"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Data already exists on this server. Importing a new dataset will <strong>merge</strong> the incoming
+                        data with the existing records.</p>
+                        <p class="mb-0 text-muted small">Conflicts will be resolved by keeping the newest records. Do you wish
+                            to proceed?</p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" @onclick="CancelImport">Cancel</button>
+                            <button type="button" class="btn btn-warning" @onclick="ConfirmImport">Proceed with Merge</button>
                         </div>
                     </div>
                 </div>
-            }
+            </div>
+        }
 
-            @if (_isProcessing)
-            {
-                <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.7); z-index: 1060;">
-                    <div class="modal-dialog modal-dialog-centered modal-sm">
-                        <div class="modal-content bg-transparent border-0 text-center">
-                            <div class="modal-body text-white">
-                                <div class="spinner-border text-light mb-3" role="status" style="width: 3rem; height: 3rem;">
-                                    <span class="visually-hidden">Loading...</span>
-                                </div>
-                                <h5>@_processingAction...</h5>
-                                <p class="small text-light opacity-75">Please do not close this page.</p>
+        @if (_isProcessing)
+        {
+            <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.7); z-index: 1060;">
+                <div class="modal-dialog modal-dialog-centered modal-sm">
+                    <div class="modal-content bg-transparent border-0 text-center">
+                        <div class="modal-body text-white">
+                            <div class="spinner-border text-light mb-3" role="status" style="width: 3rem; height: 3rem;">
+                                <span class="visually-hidden">Loading...</span>
                             </div>
+                            <h5>@_processingAction...</h5>
+                            <p class="small text-light opacity-75">Please do not close this page.</p>
                         </div>
                     </div>
                 </div>
-            }
+            </div>
+        }
 
 @code {
     private ClaimsPrincipal? _user;
@@ -185,18 +186,22 @@
     // import
     private IBrowserFile? _selectedFile;
     private string? _uploadError;
-    private long _maxAllowedSize = 1024 * 1024 * 500; // 500 MB limit (Adjust as needed)
+    private long _maxAllowedSize = 1024 * 1024 * 500;
 
     // Mock Data
-    private double _totalSpaceGB => _earthDbGB + _liveDbGB + _objectStoreGB;
-    private double _earthDbGB = 14.2;
-    private double _liveDbGB = 2.8;
-    private double _objectStoreGB = 45.5;
+    private long _totalSpaceGB => long.Max(_earthDbGB + _liveDbGB + _objectStoreGB, -1);
+    private long _earthDbGB = -1;
+    private long _liveDbGB = -1;
+    private long _objectStoreGB = -1;
 
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         _user = authState.User;
+
+        _earthDbGB = new FileInfo(Settings.Instance.EarthDatabaseConnectionString!).SafeLength;
+        _liveDbGB = new FileInfo(Settings.Instance.LiveDatabaseConnectionString!).SafeLength;
+        _objectStoreGB = new DirectoryInfo(Path.Combine(Program.DataDirRelative, Program.ObjectStoreDirName)).SafeLength;
     }
 
     private bool HasPermission(string permission)
@@ -256,9 +261,6 @@
         
         if (_processingAction == "Importing Data")
         {
-            _earthDbGB += 2.5;
-            _liveDbGB += 0.4;
-            _objectStoreGB += 10.1;
         }
 
         _isProcessing = false;
@@ -359,5 +361,31 @@
         {
             _uploadError = $"Error processing file: {ex.Message}";
         }
+    }
+
+    private static readonly string[] SizeUnits = ["B", "KB", "MB", "GB", "TB", "PB"];
+
+    private string FormatBytes(long bytes)
+    {
+        if (bytes is -1)
+        {
+            return "? B";
+        }
+
+        if (bytes is <= 0)
+        {
+            return "0 B";
+        }
+
+        int unitIndex = 0;
+        double displaySize = bytes;
+
+        while (displaySize >= 1024 && unitIndex < SizeUnits.Length - 1)
+        {
+            displaySize /= 1024;
+            unitIndex++;
+        }
+
+        return $"{displaySize:n2} {SizeUnits[unitIndex]}";
     }
 }

@@ -27,6 +27,7 @@ public partial class Program
     public static readonly string StaticDataDir = Path.GetFullPath(Path.Combine("..", "staticdata"));
     public static readonly string DataDirRelative = Path.Combine("..", "data");
     public static readonly string DataDir = Path.GetFullPath(DataDirRelative);
+    public static readonly string ObjectStoreDirName = "object_store";
 
     public static string Address { get; private set; } = "";
 
