@@ -41,11 +41,11 @@ internal static class Permissions
     [PermissionInfo("Data", "View server data - space usage")]
     public const string ViewData = "data.view";
 
-    [PermissionInfo("Data", "Import/Export server data")]
-    public const string ImportExportData = "data.import_export";
+    [PermissionInfo("Data", "Export server data")]
+    public const string ExportData = "data.export";
 
-    [PermissionInfo("Data", "Delete all server data")]
-    public const string DeleteData = "data.delete";
+    [PermissionInfo("Data", "Upload and delete all server data")]
+    public const string EditData = "data.edit";
 
     public static readonly ImmutableArray<string> All;
     public static readonly ImmutableArray<PermissionDescriptor> AllWithInfo;

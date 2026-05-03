@@ -2,6 +2,7 @@
 @rendermode InteractiveServer
 @using Microsoft.AspNetCore.Authorization
 @using System.Security.Claims
+@using Solace.Common.Utils
 @using Solace.LauncherUI.Utils
 @using System.IO.Compression
 @attribute [Authorize(Policy = Permissions.ViewData)]
@@ -43,27 +44,36 @@
         </div>
     </div>
 
-    @if (HasPermission(Permissions.ImportExportData))
+   @if (HasPermission(Permissions.ExportData))
     {
         <div class="card mb-4">
             <div class="card-header bg-light">
-                <h5 class="mb-0">Import & Export</h5>
+                <h5 class="mb-0">Export Data</h5>
             </div>
             <div class="card-body">
-                <p class="text-muted mb-3">Backup your current server data or merge an existing dataset.</p>
-                <button class="btn btn-outline-primary me-2" @onclick="InitiateExport">
+                <p class="text-muted mb-3">Backup your current server data.</p>
+                <button class="btn btn-outline-primary" @onclick="InitiateExport">
                     <i class="bi bi-download"></i> Export Data
                 </button>
+            </div>
+        </div>
+    }
 
-                <div class="mt-4 p-3 border rounded bg-light">
+    @if (HasPermission(Permissions.EditData))
+    {
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">Edit Data</h5>
+            </div>
+            <div class="card-body">
+                <section class="mb-5">
                     <h6><i class="bi bi-file-earmark-zip"></i> Import Data</h6>
                     <p class="small text-muted">
-                        Supported structures (zip these files/folders): <br />
-                        <strong>Solace:</strong> <code>earth.db</code>, <code>live.db</code>, <code>object_store/</code>
-                        <br />
+                        Merge an existing dataset. Supported structures (zip these files/folders): <br />
+                        <strong>Solace:</strong> <code>earth.db</code>, <code>live.db</code>, <code>object_store/</code> | 
                         <strong>Vienna:</strong> <code>db/</code>, <code>objects/</code>
                     </p>
-    
+
                     <div class="input-group">
                         <InputFile OnChange="HandleFileSelected" class="form-control" accept=".zip" />
                         @if (_selectedFile != null)
@@ -73,29 +83,24 @@
                             </button>
                         }
                     </div>
-    
+
                     @if (!string.IsNullOrEmpty(_uploadError))
                     {
                         <div class="text-danger small mt-2">@_uploadError</div>
                     }
-                </div>
-            </div>
-        </div>
-    }
+                </section>
 
-    @if (HasPermission(Permissions.DeleteData))
-    {
-        <div class="card border-danger mb-4">
-            <div class="card-header bg-danger text-white">
-                <h5 class="mb-0">Danger Zone</h5>
-            </div>
-            <div class="card-body">
-                <p>Deleting all server data is a permanent action and cannot be undone. This will wipe the databases and the
-                    object store.</p>
-                
+                <hr />
+
+                <section class="mt-4">
+                    <h6 class="text-danger"><i class="bi bi-exclamation-triangle"></i> Danger Zone</h6>
+                    <p class="small text-muted">
+                        Deleting all server data is a permanent action and cannot be undone. This will wipe the databases and the object store.
+                    </p>
+
                     @if (!_isConfirmingDelete)
                     {
-                        <button class="btn btn-outline-danger" @onclick="InitiateDelete">
+                        <button class="btn btn-outline-danger btn-sm" @onclick="InitiateDelete">
                             Delete All Data
                         </button>
                     }
@@ -106,20 +111,21 @@
                                 <strong>Are you absolutely sure?</strong>
                                 @if (!_canConfirmDelete)
                                 {
-                                    <span> Please wait @_countdown seconds...</span>
+                                    <span class="ms-1 text-dark"> Please wait @_countdown seconds...</span>
                                 }
                             </div>
                             <div>
-                                <button class="btn btn-secondary me-2" @onclick="CancelDelete">Cancel</button>
-                                <button class="btn btn-danger" disabled="@(!_canConfirmDelete)" @onclick="ExecuteDelete">
+                                <button class="btn btn-sm btn-secondary me-2" @onclick="CancelDelete">Cancel</button>
+                                <button class="btn btn-sm btn-danger" disabled="@(!_canConfirmDelete)" @onclick="ExecuteDelete">
                                     Yes, Delete Everything
                                 </button>
                             </div>
                         </div>
                     }
-                </div>
+                </section>
             </div>
-        }
+        </div>
+    }
     </div>
 
     @if (_showImportWarning)
@@ -216,7 +222,8 @@
         }
         else
         {
-            ConfirmImport();
+            ConfirmImport()
+                .Forget();
         }
     }
 
@@ -227,7 +234,7 @@
 
     private async Task ConfirmImport()
     {
-        if (_selectedFile == null)
+        if (_selectedFile is null)
         {
             return;
         }
