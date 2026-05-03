@@ -1,5 +1,6 @@
 # TODO
 
+- Use EFCore for earth DB, migrations are way easier that way, but also need to write an initial migration from the current schema
 - Make it easier to update, deleting data/staticdata is kinda bad UX
 - Launcher buildplate preview - liquid rendering
 - Shop management
@@ -30,3 +31,5 @@
 - Get rid of LinkedList
 - Use Guid instead of string
 - Load static data types only when needed
+- Generated regex
+- Use new extension syntax

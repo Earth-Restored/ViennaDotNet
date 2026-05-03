@@ -7,17 +7,17 @@ namespace Solace.ApiServer.Controllers.XboxLive.Auth;
 
 [Route("title/authenticate")]
 [Route("title.auth.xboxlive.com/title/authenticate")]
-public class TitleController : SolaceControllerBase
+internal sealed class TitleController : SolaceControllerBase
 {
     private static Config config => Program.config;
 
-    public sealed record AuthenticateRequest(
+    internal sealed record AuthenticateRequest(
         AuthenticateRequest.PropertiesR Properties,
         string RelyingParty,
         string TokenType
     )
     {
-        public sealed record PropertiesR(
+        internal sealed record PropertiesR(
             string AuthMethod,
             string DeviceToken,
             string RpsTicket,
@@ -33,7 +33,9 @@ public class TitleController : SolaceControllerBase
     );
 
     [HttpPost]
+#pragma warning disable IDE0060 // Remove unused parameter
     public ContentHttpResult Authenticate([FromBody] AuthenticateRequest request)
+#pragma warning restore IDE0060 // Remove unused parameter
     {
         var tokenValidity = ValidityDatePair.Create(config.XboxLive.TokenValidityMinutes);
         var token = new Tokens.Xbox.TitleToken()

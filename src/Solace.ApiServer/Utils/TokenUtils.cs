@@ -8,14 +8,14 @@ public static class TokenUtils
 {
     public static EarthDB.Query AddToken(string playerId, Tokens.Token token)
     {
-        EarthDB.Query getQuery = new EarthDB.Query(true);
+        var getQuery = new EarthDB.Query(true);
         getQuery.Get("tokens", playerId, typeof(Tokens));
         getQuery.Then(results =>
         {
             Tokens tokens = results.Get<Tokens>("tokens");
             string id = U.RandomUuid().ToString();
             tokens.AddToken(id, token);
-            EarthDB.Query updateQuery = new EarthDB.Query(true);
+            var updateQuery = new EarthDB.Query(true);
             updateQuery.Update("tokens", playerId, tokens);
             updateQuery.Extra("tokenId", id);
             return updateQuery;
@@ -26,17 +26,17 @@ public static class TokenUtils
     // does not handle redeeming the token itself (removing it from the list of tokens belonging to the player)
     public static EarthDB.Query DoActionsOnRedeemedToken(Tokens.Token token, string playerId, long currentTime, StaticData.StaticData staticData)
     {
-        EarthDB.Query getQuery = new EarthDB.Query(true);
+        var getQuery = new EarthDB.Query(true);
 
         switch (token.Type)
         {
             case Tokens.Token.TypeE.LEVEL_UP:
                 {
-                    Tokens.LevelUpToken levelUpToken = (Tokens.LevelUpToken)token;
+                    var levelUpToken = (Tokens.LevelUpToken)token;
 
                     getQuery.Then(results =>
                     {
-                        EarthDB.Query updateQuery = new EarthDB.Query(true);
+                        var updateQuery = new EarthDB.Query(true);
 
                         updateQuery.Then(ActivityLogUtils.AddEntry(playerId, new ActivityLog.LevelUpEntry(currentTime, levelUpToken.Level)));
 
@@ -49,10 +49,10 @@ public static class TokenUtils
                 break;
             case Tokens.Token.TypeE.JOURNAL_ITEM_UNLOCKED:
                 {
-                    Tokens.JournalItemUnlockedToken journalItemUnlockedToken = (Tokens.JournalItemUnlockedToken)token;
+                    var journalItemUnlockedToken = (Tokens.JournalItemUnlockedToken)token;
                     getQuery.Then(results =>
                     {
-                        EarthDB.Query updateQuery = new EarthDB.Query(true);
+                        var updateQuery = new EarthDB.Query(true);
 
                         updateQuery.Then(ActivityLogUtils.AddEntry(playerId, new ActivityLog.JournalItemUnlockedEntry(currentTime, journalItemUnlockedToken.ItemId)));
 

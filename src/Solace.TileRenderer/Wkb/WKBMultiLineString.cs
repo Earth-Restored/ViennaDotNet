@@ -37,7 +37,7 @@ internal sealed class WKBMultiLineString : IWKBObject
         }
 
         int numWKBLineStrings = reader.ReadInt32();
-        WKBLineString[] wkbLineStrings = new WKBLineString[numWKBLineStrings];
+        var wkbLineStrings = new WKBLineString[numWKBLineStrings];
         for (int i = 0; i < numWKBLineStrings; i++)
         {
             wkbLineStrings[i] = (WKBLineString)WKBLineString.Load(reader);

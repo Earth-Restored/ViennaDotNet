@@ -22,7 +22,7 @@ namespace Solace.ApiServer.Controllers.EarthApi;
 [Authorize]
 [ApiVersion("1.1")]
 [Route("1/api/v{version:apiVersion}")]
-public class CatalogController : SolaceControllerBase
+internal sealed class CatalogController : SolaceControllerBase
 {
     private static Catalog catalog => Program.staticData.Catalog;
 
@@ -397,9 +397,8 @@ public class CatalogController : SolaceControllerBase
         return new JournalCatalog(items);
     }
 
+#pragma warning disable IDE0060 // Remove unused parameter
     private static NFCBoost[] MakeNFCBoostsCatalogApiResponse(Catalog catalog)
-    {
-        // TODO
-        return [];
-    }
+#pragma warning restore IDE0060 // Remove unused parameter
+        => []; // TODO
 }

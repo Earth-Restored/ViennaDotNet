@@ -9,7 +9,7 @@ using Solace.Common.Utils;
 
 namespace Solace.EventBus.Server;
 
-public sealed class NetworkServer
+public sealed class NetworkServer : IDisposable
 {
     private readonly Server _server;
     private readonly TcpListener _serverSocket;
@@ -19,6 +19,13 @@ public sealed class NetworkServer
     {
         _server = server;
         _serverSocket = new TcpListener(IPAddress.Loopback, port);
+    }
+
+    public void Dispose()
+    {
+        Stop();
+        _serverSocket.Dispose();
+        _server.Dispose();
     }
 
     public async Task RunAsync()
@@ -97,7 +104,10 @@ public sealed class NetworkServer
 
                     reader.AdvanceTo(buffer.Start, buffer.End);
 
-                    if (result.IsCompleted) break;
+                    if (result.IsCompleted)
+                    {
+                        break;
+                    }
                 }
             }
             catch (Exception ex)
@@ -136,6 +146,7 @@ public sealed class NetworkServer
                     byte[] bytes = Encoding.ASCII.GetBytes(message + "\n");
                     await writer.WriteAsync(bytes);
                 }
+
                 await writer.CompleteAsync();
             }
             catch (Exception ex)
@@ -285,7 +296,7 @@ public sealed class NetworkServer
     private sealed class PublisherChannel : ChannelHandler
     {
         private readonly Server.Publisher _publisher;
-        private bool _error = false;
+        private bool _error;
 
         public PublisherChannel(Connection connection, int channelId, NetworkServer networkServer)
             : base(connection, channelId)
@@ -388,8 +399,8 @@ public sealed class NetworkServer
     {
         private readonly Server.RequestSender _requestSender;
         // TODO: should they be volatile?
-        private volatile Task<string?>? _currentPendingResponse = null;
-        private volatile bool _error = false;
+        private volatile Task<string?>? _currentPendingResponse;
+        private volatile bool _error;
 
         public RequestSenderChannel(Connection connection, int channelId, NetworkServer networkServer)
             : base(connection, channelId)
@@ -485,7 +496,7 @@ public sealed class NetworkServer
         private readonly Server.RequestHandler _requestHandler;
         private readonly Dictionary<int, TaskCompletionSource<string?>> _pendingResponses = [];
         private int _nextRequestId = 1;
-        private bool _error = false;
+        private bool _error;
 
         public RequestHandlerChannel(Connection connection, int channelId, string queueName, NetworkServer networkServer)
             : base(connection, channelId)
@@ -514,12 +525,7 @@ public sealed class NetworkServer
                     return;
                 }
 
-                int requestId;
-                try
-                {
-                    requestId = int.Parse(fields[0]);
-                }
-                catch (FormatException)
+                if (!int.TryParse(fields[0], out var requestId))
                 {
                     Error();
                     return;
@@ -540,12 +546,7 @@ public sealed class NetworkServer
             }
             else if (parts[0] is "NREP")
             {
-                int requestId;
-                try
-                {
-                    requestId = int.Parse(parts[1]);
-                }
-                catch (FormatException)
+                if (!int.TryParse(parts[1], out var requestId))
                 {
                     Error();
                     return;

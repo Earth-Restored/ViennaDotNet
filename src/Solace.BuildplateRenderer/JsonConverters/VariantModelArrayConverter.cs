@@ -15,7 +15,9 @@ public class VariantModelArrayConverter : JsonConverter<VariantModel[]>
             while (reader.Read())
             {
                 if (reader.TokenType == JsonTokenType.EndArray)
+                {
                     return [.. list];
+                }
 
                 var item = JsonSerializer.Deserialize<VariantModel>(ref reader, options)!;
                 list.Add(item);

@@ -92,11 +92,13 @@ public sealed record ItemsCatalog(
             float Hoe,
             float Axe,
             float Shovel,
+#pragma warning disable CA1707 // Identifiers should not contain underscores
             float Pickaxe_1,
             float Pickaxe_2,
             float Pickaxe_3,
             float Pickaxe_4,
             float Pickaxe_5,
+#pragma warning restore CA1707 // Identifiers should not contain underscores
             float Sword,
             float Sheers
         );

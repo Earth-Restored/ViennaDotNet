@@ -11,7 +11,7 @@ namespace Solace.ApiServer.Controllers.PlayfabApi;
 
 [Route("Client")]
 [Route("20CA2.playfabapi.com/Client")]
-public partial class LoginController : SolaceControllerBase
+internal sealed partial class LoginController : SolaceControllerBase
 {
     private static Config config => Program.config;
 

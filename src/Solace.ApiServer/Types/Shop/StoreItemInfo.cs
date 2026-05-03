@@ -3,7 +3,7 @@ using Solace.ApiServer.Types.Buildplates;
 
 namespace Solace.ApiServer.Types.Shop;
 
-public sealed record StoreItemInfo(
+internal sealed record StoreItemInfo(
     Guid Id,
     StoreItemInfo.StoreItemTypeE StoreItemType,
     StoreItemInfo.StoreItemStatus? Status,
@@ -16,14 +16,14 @@ public sealed record StoreItemInfo(
 )
 {
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    public enum StoreItemTypeE
+    internal enum StoreItemTypeE
     {
         Buildplates,
         Items
     }
 
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    public enum StoreItemStatus
+    internal enum StoreItemStatus
     {
         Found,
         NotFound,

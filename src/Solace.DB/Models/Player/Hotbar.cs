@@ -1,4 +1,5 @@
-﻿using Solace.Common.Utils;
+﻿using BitcoderCZ.Utils;
+using Solace.Common.Utils;
 
 namespace Solace.DB.Models.Player;
 
@@ -13,6 +14,8 @@ public sealed class Hotbar
 
     public void LimitToInventory(Inventory inventory)
     {
+        ThrowHelper.ThrowIfNull(inventory);
+
         Dictionary<string, int?> usedStackableItemCounts = [];
         Dictionary<string, HashSet<string>> usedNonStackableItemInstances = [];
 

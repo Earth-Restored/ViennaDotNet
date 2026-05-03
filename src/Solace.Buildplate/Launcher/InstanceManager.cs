@@ -14,8 +14,8 @@ public sealed class InstanceManager
 
     private readonly Publisher _publisher;
     private RequestHandler _requestHandler = null!;
-    private int _runningInstanceCount = 0;
-    private bool _shuttingDown = false;
+    private int _runningInstanceCount;
+    private bool _shuttingDown;
     private readonly Lock _lock = new Lock();
 
     [JsonConverter(typeof(JsonStringEnumConverter))]

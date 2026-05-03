@@ -8,7 +8,7 @@ namespace Solace.ApiServer.Controllers.EarthApi;
 [ApiVersion("1.1")]
 [Route("cdn/tile/16/{_}/{tilePos1}_{tilePos2}_16.png")]
 [ResponseCache(Duration = 11200)]
-public class CdnTileController : SolaceControllerBase
+internal sealed class CdnTileController : SolaceControllerBase
 {
     [HttpGet]
     public async Task<Results<EmptyHttpResult, NotFound>> GetTile(int _, int tilePos1, int tilePos2, CancellationToken cancellationToken) // _ used because we dont care :|

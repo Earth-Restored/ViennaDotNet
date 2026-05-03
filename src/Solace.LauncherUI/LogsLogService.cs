@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Globalization;
 using Serilog;
 using Serilog.Configuration;
 using Serilog.Core;
@@ -44,7 +45,7 @@ public class LogsLogService : ILogEventSink
             {
                 Timestamp = logEvent.Timestamp.UtcDateTime,
                 Level = logEvent.Level.ToString(),
-                RenderedMessage = logEvent.RenderMessage(),
+                RenderedMessage = logEvent.RenderMessage(CultureInfo.InvariantCulture),
                 Properties = new LogEventProperties { ComponentName = "Launcher" }
             });
 

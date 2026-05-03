@@ -1,7 +1,7 @@
 ﻿namespace Solace.ApiServer.Types.Buildplates;
 
 // TODO: record struct?
-public sealed record Offset(
+internal sealed record Offset(
     int X,
     int Y,
     int Z

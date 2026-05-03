@@ -16,10 +16,15 @@ public static class JavaLocator
         {
             javaHome = Environment.GetEnvironmentVariable("JAVA_HOME", EnvironmentVariableTarget.User);
             if (string.IsNullOrWhiteSpace(javaHome))
+            {
                 javaHome = Environment.GetEnvironmentVariable("JAVA_HOME", EnvironmentVariableTarget.Machine);
+            }
         }
         else
+        {
             javaHome = Environment.GetEnvironmentVariable("JAVA_HOME");
+        }
+
         if (!string.IsNullOrEmpty(javaHome))
         {
             logger.Information("Trying JAVA_HOME");

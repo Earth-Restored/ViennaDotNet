@@ -10,7 +10,9 @@ internal sealed class JsonNbtConverter
     {
         Dictionary<string, JsonNbtTag> value = [];
         foreach (var entry in tag.EntrySet())
+        {
             value[entry.Key] = Convert(entry.Value);
+        }
 
         return new CompoundJsonNbtTag(value);
     }
@@ -19,7 +21,9 @@ internal sealed class JsonNbtConverter
     {
         LinkedList<JsonNbtTag> value = new();
         foreach (object item in tag)
+        {
             value.AddLast(Convert(item));
+        }
 
         return new ListJsonNbtTag([.. value]);
     }
@@ -27,19 +31,33 @@ internal sealed class JsonNbtConverter
     private static JsonNbtTag Convert(object tag)
     {
         if (tag is NbtMap map)
+        {
             return Convert(map);
+        }
         else if (tag is NbtList list)
+        {
             return Convert(list);
+        }
         else if (tag is int i)
+        {
             return new IntJsonNbtTag(i);
+        }
         else if (tag is byte b)
+        {
             return new ByteJsonNbtTag(b);
+        }
         else if (tag is float f)
+        {
             return new FloatJsonNbtTag(f);
+        }
         else if (tag is string s)
+        {
             return new StringJsonNbtTag(s);
+        }
         else
+        {
             throw new UnsupportedOperationException($"Cannot convert tag of type {tag.GetType().Name}");
+        }
     }
 
     public abstract class JsonNbtTag

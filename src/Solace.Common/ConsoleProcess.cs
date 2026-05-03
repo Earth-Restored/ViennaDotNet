@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Globalization;
 using System.Runtime.InteropServices;
 using Serilog;
 using Solace.Common.Utils;
@@ -41,7 +42,7 @@ public sealed class ConsoleProcess : IDisposable
         }
     }
 
-    public string ExitCodeText => ExitCode is { } exitCode ? exitCode.ToString() : "Unknown"; // TODO 
+    public string ExitCodeText => ExitCode is { } exitCode ? exitCode.ToString(CultureInfo.InvariantCulture) : "Unknown"; // TODO 
 
     public int Id => _actualAppPid is null ? Process.Id : _actualAppPid.Value;
 
@@ -176,7 +177,7 @@ public sealed class ConsoleProcess : IDisposable
                 return "\"\"";
             }
 
-            if (a.Contains(" ") || a.Contains("{") || a.Contains("\""))
+            if (a.Contains(' ') || a.Contains('{') || a.Contains('"'))
             {
                 return $"\"{a.Replace("\"", "\\\"")}\"";
             }

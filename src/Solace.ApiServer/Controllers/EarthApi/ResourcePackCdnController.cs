@@ -11,7 +11,7 @@ namespace Solace.ApiServer.Controllers.EarthApi;
 //Wheres the resource pack?
 [ApiVersion("1.1")]
 [Route("api/v{version:apiVersion}/resourcepacks/2020.1217.02/default")]
-public class ResourcePackController : ControllerBase
+internal sealed class ResourcePackController : ControllerBase
 {
     [HttpGet]
     public ContentResult Get()

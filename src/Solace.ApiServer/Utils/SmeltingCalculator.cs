@@ -259,7 +259,7 @@ public static class SmeltingCalculator
     {
         if (remainingTime < 0)
         {
-            throw new ArgumentException(nameof(remainingTime));
+            throw new ArgumentException($"{nameof(remainingTime)} is negative.", nameof(remainingTime));
         }
 
         int periods = remainingTime / 10000;

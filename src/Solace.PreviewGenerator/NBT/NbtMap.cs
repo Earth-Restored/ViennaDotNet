@@ -4,7 +4,9 @@ using Solace.Common.Utils;
 
 namespace Solace.PreviewGenerator.NBT;
 
-public class NbtMap// : IDictionary<string, object>
+#pragma warning disable CA1708 // Identifiers should differ by more than case
+public sealed class NbtMap// : IDictionary<string, object>
+#pragma warning restore CA1708 // Identifiers should differ by more than case
 {
     public static readonly NbtMap EMPTY = new NbtMap();
 
@@ -32,11 +34,11 @@ public class NbtMap// : IDictionary<string, object>
         _map = map;
     }
 
-    public static NbtMapBuilder builder() => [];
+    public static NbtMapBuilder Builder() => [];
 
-    public static NbtMap fromMap(IDictionary<string, object> map) => new NbtMap(map.AsReadOnly());
+    public static NbtMap FromMap(IDictionary<string, object> map) => new NbtMap(map.AsReadOnly());
 
-    public NbtMapBuilder toBuilder() => NbtMapBuilder.From(this);
+    public NbtMapBuilder ToBuilder() => NbtMapBuilder.From(this);
 
     public bool ContainsKey(string key)
         => _map.ContainsKey(key);
@@ -44,13 +46,17 @@ public class NbtMap// : IDictionary<string, object>
     public bool ContainsKey(string key, NbtType type)
     {
         if (_map.TryGetValue(key, out object? o))
+        {
             return o.GetType() == type.TagType;
+        }
         else
+        {
             return false;
+        }
     }
 
     public object Get(string key)
-        => NbtUtils.Copy(_map.GetOrDefault(key));
+        => NbtUtils.Copy(_map.GetOrDefault(key)!);
 
     public ICollection<string> KeySet()
         => _map.Keys;
@@ -68,7 +74,9 @@ public class NbtMap// : IDictionary<string, object>
     {
         object? tag = _map.GetOrDefault(key);
         if (tag is byte b)
+        {
             return b != 0;
+        }
 
         return defaultValue;
     }
@@ -79,7 +87,9 @@ public class NbtMap// : IDictionary<string, object>
     {
         object? tag = _map.GetOrDefault(key);
         if (tag is byte b)
+        {
             return b;
+        }
 
         return defaultValue;
     }
@@ -90,7 +100,9 @@ public class NbtMap// : IDictionary<string, object>
     {
         object? tag = _map.GetOrDefault(key);
         if (tag is short s)
+        {
             return s;
+        }
 
         return defaultValue;
     }
@@ -101,7 +113,9 @@ public class NbtMap// : IDictionary<string, object>
     {
         object? tag = _map.GetOrDefault(key);
         if (tag is int i)
+        {
             return i;
+        }
 
         return defaultValue;
     }
@@ -112,7 +126,9 @@ public class NbtMap// : IDictionary<string, object>
     {
         object? tag = _map.GetOrDefault(key);
         if (tag is long l)
+        {
             return l;
+        }
 
         return defaultValue;
     }
@@ -123,7 +139,9 @@ public class NbtMap// : IDictionary<string, object>
     {
         object? tag = _map.GetOrDefault(key);
         if (tag is float f)
+        {
             return f;
+        }
 
         return defaultValue;
     }
@@ -134,7 +152,9 @@ public class NbtMap// : IDictionary<string, object>
     {
         object? tag = _map.GetOrDefault(key);
         if (tag is double d)
+        {
             return d;
+        }
 
         return defaultValue;
     }
@@ -145,7 +165,9 @@ public class NbtMap// : IDictionary<string, object>
     {
         object? tag = _map.GetOrDefault(key);
         if (tag is string s)
+        {
             return s;
+        }
 
         return defaultValue;
     }
@@ -156,7 +178,9 @@ public class NbtMap// : IDictionary<string, object>
     {
         object? tag = _map.GetOrDefault(key);
         if (tag is byte[] bytes)
+        {
             return (byte[])bytes.Clone();
+        }
 
         return defaultValue;
     }
@@ -167,7 +191,9 @@ public class NbtMap// : IDictionary<string, object>
     {
         object? tag = _map.GetOrDefault(key);
         if (tag is int[] ints)
+        {
             return (int[])ints.Clone();
+        }
 
         return defaultValue;
     }
@@ -178,7 +204,9 @@ public class NbtMap// : IDictionary<string, object>
     {
         object? tag = _map.GetOrDefault(key);
         if (tag is long[] longs)
+        {
             return (long[])longs.Clone();
+        }
 
         return defaultValue;
     }
@@ -189,7 +217,9 @@ public class NbtMap// : IDictionary<string, object>
     {
         object? tag = _map.GetOrDefault(key);
         if (tag is NbtMap nm)
+        {
             return nm;
+        }
 
         return defaultValue;
     }
@@ -223,18 +253,27 @@ public class NbtMap// : IDictionary<string, object>
     //        return defaultValue;
     //    }
 
-    public override bool Equals(object? o)
+    public override bool Equals(object? obj)
     {
-        if (o == this)
+        if (obj == this)
+        {
             return true;
+        }
 
-        if (o is not NbtMap m)
+        if (obj is not NbtMap m)
+        {
             return false;
+        }
+
         if (m.Count != Count)
+        {
             return false;
+        }
 
-        if (hashCodeGenerated && m.hashCodeGenerated && hashCode != ((NbtMap)o).hashCode)
+        if (hashCodeGenerated && m.hashCodeGenerated && hashCode != ((NbtMap)obj).hashCode)
+        {
             return false;
+        }
 
         try
         {
@@ -245,12 +284,16 @@ public class NbtMap// : IDictionary<string, object>
                 if (value is null)
                 {
                     if (!(m.Get(key) is null && m.ContainsKey(key)))
+                    {
                         return false;
+                    }
                 }
                 else
                 {
                     if (!ObjectExtensions.DeepEquals(value, m.Get(key)))
+                    {
                         return false;
+                    }
                 }
             }
         }
@@ -265,11 +308,15 @@ public class NbtMap// : IDictionary<string, object>
     public override int GetHashCode()
     {
         if (hashCodeGenerated)
+        {
             return hashCode;
+        }
 
         int h = 0;
         foreach (var stringobjectEntry in _map)
+        {
             h += stringobjectEntry.GetHashCode();
+        }
 
         hashCode = h;
         hashCodeGenerated = true;
@@ -282,9 +329,11 @@ public class NbtMap// : IDictionary<string, object>
     internal static string MapToString(IDictionary<string, object> map)
     {
         if (map.Count == 0)
+        {
             return "{}";
+        }
 
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
         sb.Append('{').Append('\n');
 
         IEnumerator<KeyValuePair<string, object>> enumerator = map.GetEnumerator();
@@ -298,7 +347,10 @@ public class NbtMap// : IDictionary<string, object>
             string str = NbtUtils.Indent("\"" + key + "\": " + value);
             sb.Append(str);
             if (!enumerator.MoveNext())
+            {
                 return sb.Append('\n').Append('}').ToString();
+            }
+
             sb.Append(',').Append('\n');
         }
     }

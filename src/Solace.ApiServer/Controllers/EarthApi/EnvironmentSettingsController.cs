@@ -12,7 +12,7 @@ namespace Solace.ApiServer.Controllers.EarthApi;
 [Authorize]
 [ApiVersion("1.1")]
 [Route("1/api/v{version:apiVersion}")]
-public class EnvironmentSettingsController : ControllerBase
+internal sealed class EnvironmentSettingsController : ControllerBase
 {
     [HttpGet("features")]
     public ContentHttpResult Features()

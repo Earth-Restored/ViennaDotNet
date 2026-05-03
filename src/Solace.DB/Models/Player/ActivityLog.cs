@@ -19,7 +19,7 @@ public sealed class ActivityLog
 
     public ActivityLog Copy()
     {
-        ActivityLog activityLog = new ActivityLog();
+        var activityLog = new ActivityLog();
         activityLog._entries.AddRange(_entries);
         return activityLog;
     }
@@ -59,12 +59,14 @@ public sealed class ActivityLog
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public enum TypeE
         {
+#pragma warning disable CA1707 // Identifiers should not contain underscores
             LEVEL_UP,
             TAPPABLE,
             JOURNAL_ITEM_UNLOCKED,
             CRAFTING_COMPLETED,
             SMELTING_COMPLETED,
             BOOST_ACTIVATED,
+#pragma warning restore CA1707 // Identifiers should not contain underscores
         }
     }
 

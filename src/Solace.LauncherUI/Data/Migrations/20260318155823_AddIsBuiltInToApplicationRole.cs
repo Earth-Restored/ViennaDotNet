@@ -2,28 +2,23 @@
 
 #nullable disable
 
-namespace Solace.LauncherUI.Migrations
+namespace Solace.LauncherUI.Migrations;
+
+/// <inheritdoc />
+public partial class AddIsBuiltInToApplicationRole : Migration
 {
     /// <inheritdoc />
-    public partial class AddIsBuiltInToApplicationRole : Migration
-    {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.AddColumn<bool>(
-                name: "IsBuiltIn",
-                table: "AspNetRoles",
-                type: "INTEGER",
-                nullable: false,
-                defaultValue: false);
-        }
+    protected override void Up(MigrationBuilder migrationBuilder)
+        => migrationBuilder.AddColumn<bool>(
+            name: "IsBuiltIn",
+            table: "AspNetRoles",
+            type: "INTEGER",
+            nullable: false,
+            defaultValue: false);
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropColumn(
-                name: "IsBuiltIn",
-                table: "AspNetRoles");
-        }
-    }
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
+        => migrationBuilder.DropColumn(
+            name: "IsBuiltIn",
+            table: "AspNetRoles");
 }

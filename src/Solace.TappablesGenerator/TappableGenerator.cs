@@ -31,7 +31,7 @@ public class TappableGenerator
         _random = new Random();
     }
 
-    public long GetMaxTappableLifetime()
+    public static long GetMaxTappableLifetime()
         => MAX_DELAY + MAX_DURATION + 30 * 1000;
 
     public Tappable[] GenerateTappables(int tileX, int tileY, long currentTime)
@@ -82,7 +82,7 @@ public class TappableGenerator
 
             Tappable.RarityE rarity = Enum.Parse<Tappable.RarityE>(items.Select(item => _staticData.Catalog.ItemsCatalog.GetItem(item.Id)!.Rarity).Max().ToString());
 
-            Tappable tappable = new Tappable(
+            var tappable = new Tappable(
                 U.RandomUuid().ToString(),
                 lat,
                 lon,

@@ -2,16 +2,16 @@
 
 namespace Solace.EventBus.Client;
 
-public sealed class RequestSender
+public sealed class RequestSender : IAsyncDisposable
 {
     private readonly EventBusClient _client;
     private readonly int _channelId;
     private readonly SemaphoreSlim _lock = new(1, 1);
     
-    private bool _closed = false;
+    private bool _closed;
     private readonly Queue<string> _queuedRequests = new();
     private readonly Queue<TaskCompletionSource<string?>> _queuedRequestResponses = new();
-    private TaskCompletionSource<string?>? _currentPendingResponse = null;
+    private TaskCompletionSource<string?>? _currentPendingResponse;
 
     internal RequestSender(EventBusClient client, int channelId)
     {
@@ -28,9 +28,20 @@ public sealed class RequestSender
 
     public async Task<string?> RequestAsync(string queueName, string type, string data)
     {
-        if (!ValidateQueueName(queueName)) throw new ArgumentException("Queue name contains invalid characters");
-        if (!ValidateType(type)) throw new ArgumentException("Type contains invalid characters");
-        if (!ValidateData(data)) throw new ArgumentException("Data contains invalid characters");
+        if (!ValidateQueueName(queueName))
+        {
+            throw new ArgumentException("Queue name contains invalid characters");
+        }
+
+        if (!ValidateType(type))
+        {
+            throw new ArgumentException("Type contains invalid characters");
+        }
+
+        if (!ValidateData(data))
+        {
+            throw new ArgumentException("Data contains invalid characters");
+        }
 
         string requestMessage = $"REQ {queueName}:{type}:{data}";
         var tcs = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -83,6 +94,12 @@ public sealed class RequestSender
         }
     }
 
+    public async ValueTask DisposeAsync()
+    {
+        await FlushAsync();
+        await CloseAsync();
+    }
+
     internal async Task<bool> HandleMessageAsync(string message)
     {
         if (message == "ERR")
@@ -101,12 +118,20 @@ public sealed class RequestSender
         
         if (parts[0] == "NREP")
         {
-            if (parts.Length != 1) return false;
+            if (parts.Length != 1)
+            {
+                return false;
+            }
+
             response = null;
         }
         else if (parts[0] == "REP")
         {
-            if (parts.Length != 2) return false;
+            if (parts.Length != 2)
+            {
+                return false;
+            }
+
             response = parts[1];
         }
         else
@@ -126,8 +151,10 @@ public sealed class RequestSender
                 {
                     await SendNextRequestAsync();
                 }
+
                 return true;
             }
+
             return false;
         }
         finally
@@ -149,12 +176,8 @@ public sealed class RequestSender
         try
         {
             _closed = true;
-
-            if (_currentPendingResponse != null)
-            {
-                _currentPendingResponse.TrySetResult(null);
-                _currentPendingResponse = null;
-            }
+            _currentPendingResponse?.TrySetResult(null);
+            _currentPendingResponse = null;
 
             while (_queuedRequestResponses.Count > 0)
             {
@@ -170,23 +193,17 @@ public sealed class RequestSender
     }
 
     private static bool ValidateQueueName(string queueName)
-    {
-        return !string.IsNullOrEmpty(queueName) && 
-               !queueName.Any(c => c < 32 || c >= 127) && 
-               !Regex.IsMatch(queueName, "^[^A-Za-z0-9_\\-]$") && 
-               !Regex.IsMatch(queueName, "^[^A-Za-z0-9]$");
-    }
+        => !string.IsNullOrEmpty(queueName) &&
+            !queueName.Any(c => c < 32 || c >= 127) &&
+            !Regex.IsMatch(queueName, "^[^A-Za-z0-9_\\-]$") &&
+            !Regex.IsMatch(queueName, "^[^A-Za-z0-9]$");
 
     private static bool ValidateType(string type)
-    {
-        return !string.IsNullOrEmpty(type) && 
-               !type.Any(c => c < 32 || c >= 127) && 
-               !Regex.IsMatch(type, "^[^A-Za-z0-9_\\-]$") && 
-               !Regex.IsMatch(type, "^[^A-Za-z0-9]$");
-    }
+        => !string.IsNullOrEmpty(type) &&
+            !type.Any(c => c < 32 || c >= 127) &&
+            !Regex.IsMatch(type, "^[^A-Za-z0-9_\\-]$") &&
+            !Regex.IsMatch(type, "^[^A-Za-z0-9]$");
 
     private static bool ValidateData(string data)
-    {
-        return !data.Any(c => c < 32 || c >= 127);
-    }
+        => !data.Any(c => c < 32 || c >= 127);
 }

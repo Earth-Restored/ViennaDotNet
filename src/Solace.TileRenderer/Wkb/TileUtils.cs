@@ -27,20 +27,16 @@ internal static class TileUtils
     }
 
     public static Point LonLatToSphereMerc(Point lonLat)
-    {
-        return new Point(
+        => new Point(
             DegToRad(lonLat.X) * EarthRadius,
             double.Log(double.Tan(DegToRad(lonLat.Y) / 2 + (Pi / 4))) * EarthRadius
         );
-    }
 
     public static Point SphereMercToLonLat(Point sphereMerc)
-    {
-        return new Point(
+        => new Point(
             RadToDeg(sphereMerc.X / EarthRadius),
             RadToDeg(2 * double.Atan(double.Exp(sphereMerc.Y / EarthRadius)) - Pi / 2)
         );
-    }
 
     public static Point SphereMercToSlippy(Point sphereMerc, int zoom)
         => LonLatToSlippy(SphereMercToLonLat(sphereMerc), zoom);

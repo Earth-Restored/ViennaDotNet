@@ -16,7 +16,7 @@ namespace Solace.ApiServer.Controllers.EarthApi;
 [Authorize]
 [ApiVersion("1.1")]
 [Route("1/api/v{version:apiVersion}/player")]
-public class ProfileController : ControllerBase
+internal sealed class ProfileController : ControllerBase
 {
     private static EarthDB earthDB => Program.DB;
     private static StaticData.StaticData staticData => Program.staticData;
@@ -49,11 +49,11 @@ public class ProfileController : ControllerBase
         }
 
         string resp = Json.Serialize(new EarthApiResponse(new Types.Profile.Profile(
-            Java.IntStream.Range(0, levels.Length).Collect(() => new Dictionary<int, Types.Profile.Profile.LevelR>(), (hashMap, levelIndex) =>
+            Enumerable.Range(0, levels.Length).Select(levelIndex =>
             {
-                PlayerLevels.Level level = levels[levelIndex];
-                hashMap[levelIndex + 1] = new Types.Profile.Profile.LevelR(level.ExperienceRequired, LevelUtils.MakeLevelRewards(level).ToApiResponse());
-            }, DictionaryExtensions.AddRange),
+                var level = levels[levelIndex];
+                return new KeyValuePair<int, Types.Profile.Profile.LevelR>(levelIndex + 1, new(level.ExperienceRequired, LevelUtils.MakeLevelRewards(level).ToApiResponse()));
+            }).ToDictionary(),
             profile.Experience,
             profile.Level,
             currentLevelExperience,

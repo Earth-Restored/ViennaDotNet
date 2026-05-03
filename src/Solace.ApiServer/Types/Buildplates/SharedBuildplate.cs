@@ -2,14 +2,14 @@
 
 namespace Solace.ApiServer.Types.Buildplates;
 
-public sealed record SharedBuildplate(
+internal sealed record SharedBuildplate(
     string PlayerId,
     string SharedOn,
     SharedBuildplate.BuildplateDataR BuildplateData,
-    Inventory.Inventory inventory
+    Inventory.Inventory Inventory
 )
 {
-    public sealed record BuildplateDataR(
+    internal sealed record BuildplateDataR(
         Dimension Dimension,
         Offset Offset,
         int BlocksPerMeter,
@@ -20,7 +20,7 @@ public sealed record SharedBuildplate(
     )
     {
         [JsonConverter(typeof(JsonStringEnumConverter))]
-        public enum TypeE
+        internal enum TypeE
         {
             [JsonStringEnumMemberName("Survival")] SURVIVAL,
         }

@@ -6,7 +6,7 @@ namespace Solace.ApiServer.Controllers.XboxLive;
 
 [Route("users")]
 [Route("privacy.xboxlive.com/users")]
-public partial class PrivacyController : SolaceControllerBase
+internal sealed partial class PrivacyController : SolaceControllerBase
 {
     private sealed record PeopleResponse(
         object[] Users

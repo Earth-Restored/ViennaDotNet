@@ -19,7 +19,7 @@ namespace Solace.ApiServer.Controllers.EarthApi;
 [Authorize]
 [ApiVersion("1.1")]
 [Route("1/api/v{version:apiVersion}/inventory/survival")]
-public class InventoryController : ControllerBase
+internal sealed class InventoryController : ControllerBase
 {
     private static EarthDB earthDB => Program.DB;
     private static Catalog catalog => Program.staticData.Catalog;
@@ -57,14 +57,18 @@ public class InventoryController : ControllerBase
         foreach (var item in hotbarModel.Items)
         {
             if (item is not null)
+            {
                 hotbarItemCounts[item.Uuid] = hotbarItemCounts.GetOrDefault(item.Uuid, 0) + item.Count;
+            }
         }
 
         HashSet<string> hotbarItemInstances = [];
         foreach (var item in hotbarModel.Items)
         {
             if (item is not null && item.InstanceId is not null)
+            {
                 hotbarItemInstances.Add(item.InstanceId);
+            }
         }
 
         var inventory = new Types.Inventory.Inventory(

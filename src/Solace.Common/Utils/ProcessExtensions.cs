@@ -1,5 +1,6 @@
 ﻿using Serilog;
 using System.Diagnostics;
+using System.Globalization;
 using System.Reflection;
 using System.Runtime.InteropServices;
 
@@ -68,7 +69,7 @@ public static partial class ProcessExtensions
 
         string exePath = Path.GetFullPath("Solace.KillHelper.exe");
 
-        var startInfo = new ProcessStartInfo(exePath, [process.Id.ToString()])
+        var startInfo = new ProcessStartInfo(exePath, [process.Id.ToString(CultureInfo.InvariantCulture)])
         {
             UseShellExecute = true,
             CreateNoWindow = false
@@ -82,7 +83,7 @@ public static partial class ProcessExtensions
                 return false;
             }
 
-            await killProcess.WaitForExitAsync();
+            await killProcess.WaitForExitAsync(cancellationToken);
             var exitCode = killProcess.ExitCode;
 
             if (exitCode is 0)

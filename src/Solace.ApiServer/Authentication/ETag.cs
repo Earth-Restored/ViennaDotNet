@@ -47,14 +47,20 @@ public class ETagMiddleware
     private static bool IsEtagSupported(HttpResponse response)
     {
         if (response.StatusCode != StatusCodes.Status200OK)
+        {
             return false;
+        }
 
         // The 20kb length limit is not based in science. Feel free to change
         if (response.Body.Length > 20 * 1024)
+        {
             return false;
+        }
 
         if (response.Headers.ContainsKey(HeaderNames.ETag))
+        {
             return false;
+        }
 
         return true;
     }
@@ -63,12 +69,14 @@ public class ETagMiddleware
     {
         string checksum = "";
 
+#pragma warning disable CA5350 // Do Not Use Weak Cryptographic Algorithms - ok for etag
         using (var algo = SHA1.Create())
         {
             ms.Position = 0;
             byte[] bytes = algo.ComputeHash(ms);
             checksum = $"\"{WebEncoders.Base64UrlEncode(bytes)}\"";
         }
+#pragma warning restore CA5350 // Do Not Use Weak Cryptographic Algorithms
 
         return checksum;
     }
@@ -77,7 +85,5 @@ public class ETagMiddleware
 public static class ApplicationBuilderExtensions
 {
     public static void UseETagger(this IApplicationBuilder app)
-    {
-        app.UseMiddleware<ETagMiddleware>();
-    }
+        => app.UseMiddleware<ETagMiddleware>();
 }

@@ -16,7 +16,7 @@ namespace Solace.ApiServer.Controllers.EarthApi;
 [Authorize]
 [ApiVersion("1.1")]
 [Route("1/api/v{version:apiVersion}/player/tokens")]
-public class TokensController : SolaceControllerBase
+internal sealed class TokensController : SolaceControllerBase
 {
     private static EarthDB earthDB => Program.DB;
     private static StaticData.StaticData staticData => Program.staticData;
@@ -39,10 +39,7 @@ public class TokensController : SolaceControllerBase
         {
             {
                 "tokens",
-                tokens.GetTokens().Collect(() => new Dictionary<string, Token>(), (hashmap, token) =>
-                {
-                    hashmap[token.Id] = TokenToApiResponse(token.Token);
-                }, DictionaryExtensions.AddRange)
+                tokens.GetTokens().Select(token => new KeyValuePair<string, Token>(token.Id, TokenToApiResponse(token.Token))).ToDictionary()
             }
         }, null);
     }

@@ -53,7 +53,7 @@ public class EncounterGenerator
             float lat = _random.NextSingle(tileBounds[1], tileBounds[0]);
             float lon = _random.NextSingle(tileBounds[2], tileBounds[3]);
 
-            Encounter encounter = new Encounter(
+            var encounter = new Encounter(
                 U.RandomUuid().ToString(),
                 lat,
                 lon,

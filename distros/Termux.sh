@@ -420,7 +420,7 @@ case "$CHOICE" in
 "Start/Stop Server") toggle_server ;;
 "Process Explorer") process_viewer ;;
 "Open Admin Panel") open_admin_panel ;;
-"Update Solace) update_solace ;;
+"Update Solace") update_solace ;;
 "Information") info_panel ;;
 "Exit") exit 0 ;;
 esac

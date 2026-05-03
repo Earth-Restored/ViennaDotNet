@@ -10,7 +10,7 @@ namespace Solace.ApiServer.Controllers.PlayfabApi;
 
 [Route("Client")]
 [Route("20CA2.playfabapi.com/Client")]
-public partial class ClientController : SolaceControllerBase
+internal sealed partial class ClientController : SolaceControllerBase
 {
     private static Config config => Program.config;
 
@@ -19,7 +19,7 @@ public partial class ClientController : SolaceControllerBase
         string[] Keys
     )
     {
-        public sealed record EntityR(
+        internal sealed record EntityR(
             string Id,
             string Type
         );
@@ -162,8 +162,7 @@ public partial class ClientController : SolaceControllerBase
 
     [HttpPost("WritePlayerEvent")]
     public ContentHttpResult WritePlayerEvent()
-    {
-        return JsonPascalCase(new PlayfabOkResponse(
+        => JsonPascalCase(new PlayfabOkResponse(
             200,
             "OK",
             new Dictionary<string, object>()
@@ -171,7 +170,6 @@ public partial class ClientController : SolaceControllerBase
                 ["EventId"] = Guid.NewGuid().ToString("N"),
             }
         ));
-    }
 
     [GeneratedRegex("^[0-9A-F]{16}-(.*)$")]
     private static partial Regex GetAuthRegex();

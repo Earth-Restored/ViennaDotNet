@@ -37,7 +37,7 @@ internal sealed class WKBMultiPolygon : IWKBObject
         }
 
         int numWKBPolygons = reader.ReadInt32();
-        WKBPolygon[] wkbPolygons = new WKBPolygon[numWKBPolygons];
+        var wkbPolygons = new WKBPolygon[numWKBPolygons];
         for (int i = 0; i < numWKBPolygons; i++)
         {
             wkbPolygons[i] = (WKBPolygon)WKBPolygon.Load(reader);

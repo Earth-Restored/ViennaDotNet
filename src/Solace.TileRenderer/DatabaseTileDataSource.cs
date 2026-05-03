@@ -79,7 +79,7 @@ internal sealed class DatabaseTileDataSource : ITileDataSource
                 }
 
                 // Read WKB geometry type (skip endian byte at wkb[0])
-                WkbGeometryType wkbType = (WkbGeometryType)BitConverter.ToUInt32(wkb, 1);
+                var wkbType = (WkbGeometryType)BitConverter.ToUInt32(wkb, 1);
 
                 using var ms = new MemoryStream(wkb);
                 using var bReader = new BinaryReader(ms);
@@ -92,7 +92,7 @@ internal sealed class DatabaseTileDataSource : ITileDataSource
                     WkbGeometryType.Polygon => WKBPolygon.Load(bReader),
                     WkbGeometryType.MultiLineString => WKBMultiLineString.Load(bReader),
                     WkbGeometryType.MultiPolygon => WKBMultiPolygon.Load(bReader),
-                    _ => throw new Exception($"Unknown WKB type: {wkbType}"),
+                    _ => throw new InvalidDataException($"Unknown WKB type: {wkbType}"),
                 };
 
                 if (obj is not null)

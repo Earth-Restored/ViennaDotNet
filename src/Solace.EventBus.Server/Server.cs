@@ -5,7 +5,7 @@ using Solace.Common.Utils;
 
 namespace Solace.EventBus.Server;
 
-public partial class Server
+public sealed partial class Server : IDisposable
 {
     private readonly ReaderWriterLockSlim _subscribersLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
     private readonly Dictionary<string, HashSet<Subscriber>> _subscribers = [];
@@ -38,7 +38,7 @@ public partial class Server
 
         private readonly string _queueName;
         private readonly Action<Message> _consumer;
-        private bool _ended = false;
+        private bool _ended;
 
         internal Subscriber(Server server, string queueName, Action<Message> consumer)
         {
@@ -137,7 +137,7 @@ public partial class Server
     public sealed class Publisher
     {
         private readonly Server _server;
-        private bool _closed = false;
+        private bool _closed;
 
         public Publisher(Server server)
         {
@@ -152,10 +152,7 @@ public partial class Server
 
         public bool Publish(string queueName, long timestamp, string type, string data)
         {
-            if (_closed)
-            {
-                throw new Exception();
-            }
+            ObjectDisposedException.ThrowIf(_closed, this);
 
             if (!ValidateQueueName(queueName))
             {
@@ -205,6 +202,12 @@ public partial class Server
         return handler;
     }
 
+    public void Dispose()
+    {
+        _subscribersLock.Dispose();
+        _requestHandlersLock.Dispose();
+    }
+
     public sealed class RequestHandler
     {
         private readonly Server _server;
@@ -212,7 +215,7 @@ public partial class Server
         private readonly string _queueName;
         private readonly Func<RequestR, TaskCompletionSource<string?>> _requestHandler;
         private readonly Action<ErrorMessage> _errorConsumer;
-        private bool _ended = false;
+        private bool _ended;
 
         internal RequestHandler(Server server, string queueName, Func<RequestR, TaskCompletionSource<string?>> requestHandler, Action<ErrorMessage> errorConsumer)
         {
@@ -311,7 +314,7 @@ public partial class Server
     {
         private readonly Server _server;
 
-        private bool _closed = false;
+        private bool _closed;
 
         internal RequestSender(Server server)
         {
@@ -383,8 +386,12 @@ public partial class Server
     private static bool ValidateData(string str)
     {
         for (int i = 0; i < str.Length; i++)
+        {
             if (str[i] < 32 || str[i] >= 127)
+            {
                 return false;
+            }
+        }
 
         return true;
     }

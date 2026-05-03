@@ -15,7 +15,7 @@ namespace Solace.ApiServer.Controllers.EarthApi;
 [Authorize]
 [ApiVersion("1.1")]
 [Route("1/api/v{version:apiVersion}/player/journal")]
-public class JournalController : ControllerBase
+internal sealed class JournalController : ControllerBase
 {
     private static EarthDB earthDB => Program.DB;
 
@@ -52,9 +52,8 @@ public class JournalController : ControllerBase
             itemJournalEntry.AmountCollected
         ));
 
-        LinkedList<Types.Journal.JournalRecord.ActivityLogEntry> _activityLogList = activityLogModel.Entries
-            .Select(ActivityLogEntryToApiResponse)
-            .Collect(() => new LinkedList<Types.Journal.JournalRecord.ActivityLogEntry>(), (list, val) => list.AddLast(val), (list1, list2) => list1.AddRange(list1));
+        LinkedList<Types.Journal.JournalRecord.ActivityLogEntry> _activityLogList = new(activityLogModel.Entries
+            .Select(ActivityLogEntryToApiResponse));
 
         var activityLogList = _activityLogList.Reverse().ToArray();
         Types.Journal.JournalRecord.ActivityLogEntry[] activityLog = activityLogList;

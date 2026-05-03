@@ -18,7 +18,7 @@ namespace Solace.ApiServer.Controllers.EarthApi;
 [Authorize]
 [ApiVersion("1.1")]
 [Route("1/api/v{version:apiVersion}")]
-public class BoostsController : SolaceControllerBase
+internal sealed class BoostsController : SolaceControllerBase
 {
     private static EarthDB earthDB => Program.DB;
     private static Catalog catalog => Program.staticData.Catalog;

@@ -84,7 +84,7 @@ public sealed class Playfab
                     "/playfab/master_loc_contents.json",
                      "6555.6555.6555",
                      "1.2.0",
-                     Array.Empty<string>(),
+                     [],
                      "resourcebinary"
                 )],
                 [],

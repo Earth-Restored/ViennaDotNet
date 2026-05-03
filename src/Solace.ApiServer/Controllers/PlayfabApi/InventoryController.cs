@@ -6,7 +6,7 @@ namespace Solace.ApiServer.Controllers.PlayfabApi;
 
 [Route("inventory")]
 [Route("20CA2.playfabapi.com/inventory")]
-public class InventoryController : SolaceControllerBase
+internal sealed class InventoryController : SolaceControllerBase
 {
     [HttpPost("GetVirtualCurrencies")]
     public ContentHttpResult GetVirtualCurrencies()

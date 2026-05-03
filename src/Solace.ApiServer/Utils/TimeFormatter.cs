@@ -16,7 +16,7 @@ public static class TimeFormatter
 
     public static string FormatDuration(long duration)
     {
-        TimeSpan timeSpan = TimeSpan.FromMilliseconds(duration);
+        var timeSpan = TimeSpan.FromMilliseconds(duration);
         return FormatDuration(timeSpan);
     }
     public static string FormatDuration(TimeSpan timeSpan)
@@ -26,7 +26,9 @@ public static class TimeFormatter
     {
         string[] parts = duration.Split(':');
         if (parts.Length < 3)
+        {
             throw new ArgumentException("Invalid duration format");
+        }
 
         long hours = long.Parse(parts[0]);
         long minutes = long.Parse(parts[1]);

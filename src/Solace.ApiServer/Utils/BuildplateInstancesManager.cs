@@ -44,12 +44,12 @@ public sealed class BuildplateInstancesManager
     {
         if (playerId is null && type is not InstanceType.ENCOUNTER)
         {
-            throw new ArgumentException();
+            throw new ArgumentException($"{nameof(playerId)} cannot be null when {nameof(type)} is not {nameof(InstanceType.ENCOUNTER)}.");
         }
 
         if (encounterId is not null && type is not InstanceType.ENCOUNTER)
         {
-            throw new ArgumentException();
+            throw new ArgumentException($"{nameof(encounterId)} can only be set when {nameof(type)} is {nameof(InstanceType.ENCOUNTER)}.");
         }
 
         if (playerId is not null && encounterId is not null)
@@ -294,11 +294,13 @@ public sealed class BuildplateInstancesManager
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public enum InstanceType
     {
+#pragma warning disable CA1707 // Identifiers should not contain underscores
         BUILD,
         PLAY,
         SHARED_BUILD,
         SHARED_PLAY,
         ENCOUNTER,
+#pragma warning restore CA1707 // Identifiers should not contain underscores
     }
 
     public sealed record InstanceInfo(

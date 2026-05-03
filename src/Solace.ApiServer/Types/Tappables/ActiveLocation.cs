@@ -19,9 +19,11 @@ public record ActiveLocation(
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public enum TypeE
     {
+#pragma warning disable CA1707 // Identifiers should not contain underscores
         [JsonStringEnumMemberName("Tappable")] TAPPABLE,
         [JsonStringEnumMemberName("Encounter")] ENCOUNTER,
         [JsonStringEnumMemberName("PlayerAdventure")] PLAYER_ADVENTURE,
+#pragma warning restore CA1707 // Identifiers should not contain underscores
     }
 
     public sealed record MetadataR(
@@ -47,6 +49,7 @@ public record ActiveLocation(
         public enum EncounterTypeE
         {
             [JsonStringEnumMemberName("None")] NONE,
+#pragma warning disable CA1707 // Identifiers should not contain underscores
             [JsonStringEnumMemberName("Short4X4Peaceful")] SHORT_4X4_PEACEFUL,
             [JsonStringEnumMemberName("Short4X4Hostile")] SHORT_4X4_HOSTILE,
             [JsonStringEnumMemberName("Short8X8Peaceful")] SHORT_8X8_PEACEFUL,
@@ -59,6 +62,7 @@ public record ActiveLocation(
             [JsonStringEnumMemberName("Tall8X8Hostile")] TALL_8X8_HOSTILE,
             [JsonStringEnumMemberName("Tall16X16Peaceful")] TALL_16X16_PEACEFUL,
             [JsonStringEnumMemberName("Tall16X16Hostile")] TALL_16X16_HOSTILE,
+#pragma warning restore CA1707 // Identifiers should not contain underscores
         }
 
         [JsonConverter(typeof(JsonStringEnumConverter))]

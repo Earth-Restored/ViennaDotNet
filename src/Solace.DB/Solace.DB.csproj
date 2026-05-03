@@ -8,12 +8,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="BitcoderCZ.Utils" Version="1.1.0" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.7" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.7">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Serilog" Version="4.3.1" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.7" />
   </ItemGroup>
 
   <ItemGroup>

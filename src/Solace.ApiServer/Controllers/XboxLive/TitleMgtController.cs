@@ -11,7 +11,7 @@ namespace Solace.ApiServer.Controllers.XboxLive;
 
 [Route("titles")]
 [Route("title.mgt.xboxlive.com/titles")]
-public class TitleMgtController : SolaceControllerBase
+internal sealed class TitleMgtController : SolaceControllerBase
 {
     private static readonly JsonSerializerOptions jsonOptions = new JsonSerializerOptions()
     {

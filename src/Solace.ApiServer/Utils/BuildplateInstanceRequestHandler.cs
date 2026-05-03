@@ -90,7 +90,9 @@ public sealed class BuildplateInstanceRequestHandler
                                Log.Debug("RequestHandler playerConnected");
                                RequestWithInstanceId<PlayerConnectedRequest>? requestWithInstanceId = ReadRequest<PlayerConnectedRequest>(request.Data);
                                if (requestWithInstanceId is null)
+                               {
                                    return null;
+                               }
 
                                PlayerConnectedResponse? playerConnectedResponse = await buildplateInstanceRequestHandler.HandlePlayerConnected(requestWithInstanceId.InstanceId, requestWithInstanceId.Request);
                                return playerConnectedResponse is not null ? Json.Serialize(playerConnectedResponse) : null;
@@ -99,7 +101,9 @@ public sealed class BuildplateInstanceRequestHandler
                            {
                                RequestWithInstanceId<PlayerDisconnectedRequest>? requestWithInstanceId = ReadRequest<PlayerDisconnectedRequest>(request.Data);
                                if (requestWithInstanceId is null)
+                               {
                                    return null;
+                               }
 
                                PlayerDisconnectedResponse? playerDisconnectedResponse = await buildplateInstanceRequestHandler.HandlePlayerDisconnected(requestWithInstanceId.InstanceId, requestWithInstanceId.Request, request.Timestamp);
                                return playerDisconnectedResponse is not null ? Json.Serialize(playerDisconnectedResponse) : null;
@@ -148,7 +152,9 @@ public sealed class BuildplateInstanceRequestHandler
                            {
                                RequestWithInstanceId<InventoryRemoveItemRequest>? requestWithBuildplateId = ReadRequest<InventoryRemoveItemRequest>(request.Data);
                                if (requestWithBuildplateId is null)
+                               {
                                    return null;
+                               }
 
                                object response = await buildplateInstanceRequestHandler.HandleInventoryRemove(requestWithBuildplateId.InstanceId, requestWithBuildplateId.Request);
                                return response is not null ? Json.Serialize(response) : null;
@@ -315,7 +321,9 @@ public sealed class BuildplateInstanceRequestHandler
             .ExecuteAsync(_earthDB);
         Buildplates.Buildplate? buildplateUnsafeForPreviewGenerator = results.Get<Buildplates>("buildplates").GetBuildplate(buildplateId);
         if (buildplateUnsafeForPreviewGenerator is null)
+        {
             return false;
+        }
 
         string? preview = await BuildplateInstancesManager.GetBuildplatePreviewAsync(serverData, buildplateUnsafeForPreviewGenerator.Night);
         if (preview is null)
@@ -485,18 +493,11 @@ public sealed class BuildplateInstanceRequestHandler
                         [.. Enumerable.Concat(
                             sharedBuildplate.Hotbar
                                 .Where(item => item is { Count: > 0, InstanceId: null })
-                                .Collect(() => new Dictionary<string, int>(), (hashMap, hotbarItem) =>
-                                {
-                                    Debug.Assert(hotbarItem is not null);
-
-                                    hashMap[hotbarItem.Uuid] = hashMap.GetOrDefault(hotbarItem.Uuid, 0) + hotbarItem.Count;
-                                }, (hashMap1, hashMap2) =>
-                                {
-                                    foreach (var (uuid, count) in hashMap2)
-                                    {
-                                        hashMap1[uuid] = hashMap1.GetOrDefault(uuid) + count;
-                                    }
-                                })
+                                .GroupBy(item => item!.Uuid)
+                                .ToDictionary(
+                                    group => group.Key, 
+                                    group => group.Sum(item => item!.Count)
+                                )
                                 .Select(entry => new InventoryResponse.Item(entry.Key, entry.Value, null, 0)),
                             sharedBuildplate.Hotbar
                                 .Where(item => item is { Count: > 0, InstanceId: not null })
@@ -542,7 +543,7 @@ public sealed class BuildplateInstanceRequestHandler
 
                             hotbar.LimitToInventory(inventory);
 
-                            InventoryResponse inventoryResponse = new InventoryResponse(
+                            var inventoryResponse = new InventoryResponse(
                             [
                                 .. inventoryResponseStackableItems.Select(entry => new InventoryResponse.Item(entry.Key, entry.Value ?? 1, null, 0)),
                                     .. inventoryResponseNonStackableItems
@@ -569,7 +570,7 @@ public sealed class BuildplateInstanceRequestHandler
                 break;
         }
 
-        PlayerConnectedResponse playerConnectedResponse = new PlayerConnectedResponse(
+        var playerConnectedResponse = new PlayerConnectedResponse(
             true,
             initialInventoryContents
         );
@@ -640,7 +641,7 @@ public sealed class BuildplateInstanceRequestHandler
 
                     }
 
-                    Hotbar hotbar = new Hotbar();
+                    var hotbar = new Hotbar();
                     for (int index = 0; index < 7; index++)
                     {
                         InventoryResponse.HotbarItem? hotbarItem = backpackContents.Hotbar[index];
@@ -669,7 +670,9 @@ public sealed class BuildplateInstanceRequestHandler
         return new PlayerDisconnectedResponse();
     }
 
+#pragma warning disable IDE0060 // Remove unused parameter
     private static bool? HandlePlayerDead(string instanceId, string playerId, long currentTime)
+#pragma warning restore IDE0060 // Remove unused parameter
     {
         BuildplateInstancesManager.InstanceInfo? instanceInfo = BuildplateInstancesManager.GetInstanceInfo(instanceId);
         return instanceInfo is null
@@ -745,7 +748,9 @@ public sealed class BuildplateInstanceRequestHandler
         }
     }
 
+#pragma warning disable IDE0060 // Remove unused parameter
     private async Task<InventoryResponse?> HandleGetInventory(string instanceId, string requestedInventoryPlayerId)
+#pragma warning restore IDE0060 // Remove unused parameter
     {
         EarthDB.Results results = await new EarthDB.Query(false)
             .Get("inventory", requestedInventoryPlayerId, typeof(Inventory))
@@ -766,7 +771,9 @@ public sealed class BuildplateInstanceRequestHandler
         );
     }
 
+#pragma warning disable IDE0060 // Remove unused parameter
     private async Task<bool> HandleInventoryAdd(string instanceId, InventoryAddItemMessage inventoryAddItemMessage, long timestamp)
+#pragma warning restore IDE0060 // Remove unused parameter
     {
         Catalog.ItemsCatalogR.Item? catalogItem = _catalog.ItemsCatalog.GetItem(inventoryAddItemMessage.ItemId);
         if (catalogItem is null)
@@ -895,7 +902,9 @@ public sealed class BuildplateInstanceRequestHandler
                     inventory.AddItems(inventoryUpdateItemWearMessage.ItemId, [new NonStackableItemInstance(inventoryUpdateItemWearMessage.InstanceId, inventoryUpdateItemWearMessage.Wear)]);
                 }
                 else
+                {
                     Log.Warning($"Buildplate instance {instanceId} attempted to update item wear for item {inventoryUpdateItemWearMessage.ItemId} {inventoryUpdateItemWearMessage.InstanceId} player {inventoryUpdateItemWearMessage.PlayerId} that is not in inventory");
+                }
 
                 return new EarthDB.Query(true)
                     .Update("inventory", inventoryUpdateItemWearMessage.PlayerId, inventory);
@@ -904,7 +913,9 @@ public sealed class BuildplateInstanceRequestHandler
         return true;
     }
 
+#pragma warning disable IDE0060 // Remove unused parameter
     private async Task<bool> HandleInventorySetHotbar(string instanceId, InventorySetHotbarMessage inventorySetHotbarMessage)
+#pragma warning restore IDE0060 // Remove unused parameter
     {
         EarthDB.Results results = await new EarthDB.Query(true)
             .Get("inventory", inventorySetHotbarMessage.PlayerId, typeof(Inventory))
@@ -912,7 +923,7 @@ public sealed class BuildplateInstanceRequestHandler
             {
                 Inventory inventory = results1.Get<Inventory>("inventory");
 
-                Hotbar hotbar = new Hotbar();
+                var hotbar = new Hotbar();
                 for (int index = 0; index < hotbar.Items.Length; index++)
                 {
                     InventorySetHotbarMessage.Item item = inventorySetHotbarMessage.Items[index];

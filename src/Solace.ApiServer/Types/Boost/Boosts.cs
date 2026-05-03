@@ -2,7 +2,7 @@
 
 namespace Solace.ApiServer.Types.Boost;
 
-public sealed record Boosts(
+internal sealed record Boosts(
     Boosts.Potion?[] Potions,
     Boosts.MiniFig[] MiniFigs,
     Boosts.ActiveEffect[] ActiveEffects,
@@ -12,30 +12,30 @@ public sealed record Boosts(
     string? Expiration
 )
 {
-    public sealed record Potion(
+    internal sealed record Potion(
         bool Enabled,
         string ItemId,
         string InstanceId,
         string Expiration
     );
 
-    public sealed record MiniFig(
+    internal sealed record MiniFig(
     // TODO
     );
 
-    public sealed record ActiveEffect(
+    internal sealed record ActiveEffect(
         Effect Effect,
         string Expiration
     );
 
-    public sealed record ScenarioBoost(
+    internal sealed record ScenarioBoost(
         bool Enabled,
         string InstanceId,
         Effect[] Effects,
         string Expiration
     );
 
-    public sealed record StatusEffectsR(
+    internal sealed record StatusEffectsR(
         int? TappableInteractionRadius,
         int? ExperiencePointRate,
         int? ItemExperiencePointRates,
@@ -48,7 +48,7 @@ public sealed record Boosts(
         float? FoodHealthRate
     );
 
-    public sealed record MiniFigRecord(
+    internal sealed record MiniFigRecord(
     // TODO
     );
 }

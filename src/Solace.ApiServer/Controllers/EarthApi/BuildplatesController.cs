@@ -25,7 +25,7 @@ namespace Solace.ApiServer.Controllers.EarthApi;
 [Authorize]
 [ApiVersion("1.1")]
 [Route("1/api/v{version:apiVersion}")]
-public class BuildplatesController : SolaceControllerBase
+internal sealed class BuildplatesController : SolaceControllerBase
 {
     private static EarthDB earthDB => Program.DB;
     private static BuildplateInstancesManager buildplateInstancesManager => Program.buildplateInstancesManager;
@@ -347,7 +347,9 @@ public class BuildplatesController : SolaceControllerBase
 
     // TODO: should we restrict this to matching player ID?
     [HttpGet("multiplayer/partitions/{partitionId}/instances/{instanceId}")]
+#pragma warning disable IDE0060 // Remove unused parameter
     public async Task<Results<ContentHttpResult, BadRequest, NotFound>> GetInstanceStatus(string partitionId, string instanceId, CancellationToken cancellationToken)
+#pragma warning restore IDE0060 // Remove unused parameter
     {
         string? playerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(playerId))
@@ -411,7 +413,7 @@ public class BuildplatesController : SolaceControllerBase
         return EarthJson(buildplateInstance);
     }
 
-    private async Task<Results<ContentHttpResult, InternalServerError, NotFound, BadRequest>> GetNewBuildplateInstanceResponse(string playerId, string buildplateId, BuildplateInstancesManager.InstanceType type, CancellationToken cancellationToken)
+    private static async Task<Results<ContentHttpResult, InternalServerError, NotFound, BadRequest>> GetNewBuildplateInstanceResponse(string playerId, string buildplateId, BuildplateInstancesManager.InstanceType type, CancellationToken cancellationToken)
     {
         Buildplates.Buildplate? buildplate;
         
@@ -455,7 +457,7 @@ public class BuildplatesController : SolaceControllerBase
         return EarthJson(buildplateInstance);
     }
 
-    private async Task<Results<ContentHttpResult, NotFound, BadRequest, InternalServerError>> GetNewSharedBuildplateInstanceResponse(string playerId, string sharedBuildplateId, BuildplateInstancesManager.InstanceType type, CancellationToken cancellationToken)
+    private static async Task<Results<ContentHttpResult, NotFound, BadRequest, InternalServerError>> GetNewSharedBuildplateInstanceResponse(string playerId, string sharedBuildplateId, BuildplateInstancesManager.InstanceType type, CancellationToken cancellationToken)
     {
         SharedBuildplates.SharedBuildplate? sharedBuildplate;
         try
@@ -496,7 +498,7 @@ public class BuildplatesController : SolaceControllerBase
         return EarthJson(buildplateInstance);
     }
 
-    private async Task<Results<ContentHttpResult, NotFound, BadRequest, InternalServerError>> GetNewEncounterBuildplateInstanceResponse(string encounterId, string tileId, TappablesManager tappablesManager, CancellationToken cancellationToken)
+    private static async Task<Results<ContentHttpResult, NotFound, BadRequest, InternalServerError>> GetNewEncounterBuildplateInstanceResponse(string encounterId, string tileId, TappablesManager tappablesManager, CancellationToken cancellationToken)
     {
         TappablesManager.Encounter? encounter = tappablesManager.GetEncounterWithId(encounterId, tileId);
         if (encounter is null)

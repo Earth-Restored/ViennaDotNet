@@ -68,7 +68,7 @@ public class TileRenderer
 
         logger.Information("Loading tags");
 
-        using (JsonDocument doc = JsonDocument.Parse(tagMapJson))
+        using (var doc = JsonDocument.Parse(tagMapJson))
         {
             foreach (JsonProperty tagField in doc.RootElement.EnumerateObject())
             {
@@ -107,7 +107,7 @@ public class TileRenderer
 
     public async Task RenderAsync(ITileDataSource dataSource, SKCanvas canvas, int tileX, int tileY, int zoom, ILogger logger, CancellationToken cancellationToken = default)
     {
-        Tile tile = new Tile(new Point(tileX, tileY), zoom, 128);
+        var tile = new Tile(new Point(tileX, tileY), zoom, 128);
 
         canvas.Clear(LayerToColor((int)RenderLayer.LAYER_NONE));
 

@@ -18,9 +18,9 @@ public static class JavaBlocks
     private static readonly Dictionary<string, BedrockMapping> bedrockNonVanillaMap = [];
 
     private static readonly Lock _initLock = new Lock();
-    private static volatile bool _isInitialized = false;
+    private static volatile bool _isInitialized;
 
-     private static void EnsureInitialized()
+    private static void EnsureInitialized()
     {
         if (!_isInitialized)
         {
@@ -28,7 +28,7 @@ public static class JavaBlocks
             {
                 if (!_isInitialized)
                 {
-                    throw new InvalidOperationException("Data has not been initialized."+ new StackFrame().ToString());
+                    throw new InvalidOperationException("Data has not been initialized." + new StackFrame().ToString());
                 }
             }
         }
@@ -36,7 +36,7 @@ public static class JavaBlocks
 
     public static void Initialize(string staticData)
     {
-         if (!_isInitialized)
+        if (!_isInitialized)
         {
             lock (_initLock)
             {
@@ -62,10 +62,10 @@ public static class JavaBlocks
 
                 int id = element["id"]!.GetValue<int>();
                 string name = element["name"]!.GetValue<string>()!;
-                if (map.ContainsKey(id))
+                if (!map.TryAdd(id, name))
+                {
                     Log.Warning($"Duplicate Java block ID {id}");
-                else
-                    map.Add(id, name);
+                }
 
                 try
                 {
@@ -126,10 +126,10 @@ public static class JavaBlocks
                     }
                 }
 
-                if (nonVanillaStatesList.ContainsKey(baseName))
+                if (!nonVanillaStatesList.TryAdd(baseName, stateNames))
+                {
                     Log.Warning($"Duplicate Java non-vanilla block name {baseName}");
-                else
-                    nonVanillaStatesList.Add(baseName, stateNames);
+                }
             }
         });
     }
@@ -137,7 +137,9 @@ public static class JavaBlocks
     private static BedrockMapping? ReadBedrockMapping(JsonObject bedrockMappingObject, JsonArray? javaBlocksArray)
     {
         if (bedrockMappingObject.TryGetPropertyValue("ignore", out var ignoreToken) && ignoreToken!.GetValue<bool>())
+        {
             return null;
+        }
 
         string name = bedrockMappingObject["name"]!.GetValue<string>()!;
 
@@ -153,13 +155,21 @@ public static class JavaBlocks
                 Debug.Assert(stateElement is not null);
                 var stateElementType = stateElement.GetValueKind();
                 if (stateElementType == JsonValueKind.String)
+                {
                     state[entry.Key] = stateElement.GetValue<string>()!;
+                }
                 else if (stateElementType == JsonValueKind.True)
+                {
                     state[entry.Key] = 1;
+                }
                 else if (stateElementType == JsonValueKind.False)
+                {
                     state[entry.Key] = 0;
+                }
                 else
+                {
                     state[entry.Key] = stateElement.GetValue<int>();
+                }
             }
         }
 
@@ -195,42 +205,50 @@ public static class JavaBlocks
                             string contentsName = contentsToken.GetValue<string>()!;
                             if (javaBlocksArray is not null)
                             {
-                                contents = javaBlocksArray
+                                var element = javaBlocksArray
                                     .Where(element => ((JsonObject)element!)["name"]!.GetValue<string>() == contentsName)
                                     .Select(element => (JsonObject)((JsonObject)element!)["bedrock"]!)
-                                    .Where(element => !element.ContainsKey("ignore") || !element["ignore"]!.GetValue<bool>())
-                                    .FirstOrDefault()!.Map(element =>
+                                    .First(element => !element.ContainsKey("ignore") || !element["ignore"]!.GetValue<bool>());
+
+                                NbtMapBuilder builder = NbtMap.Builder();
+                                builder.PutString("name", element["name"]!.GetValue<string>()!);
+                                if (element.TryGetPropertyValue("state", out var stateToken2))
+                                {
+                                    Debug.Assert(stateToken2 is not null);
+
+                                    NbtMapBuilder stateBuilder = NbtMap.Builder();
+                                    ((JsonObject)stateToken2).ForEach((key, stateElement) =>
                                     {
-                                        NbtMapBuilder builder = NbtMap.builder();
-                                        builder.PutString("name", element["name"]!.GetValue<string>()!);
-                                        if (element.TryGetPropertyValue("state", out var stateToken))
+                                        Debug.Assert(stateElement is not null);
+
+                                        var stateElementType = stateElement.GetValueKind();
+                                        if (stateElementType == JsonValueKind.String)
                                         {
-                                            Debug.Assert(stateToken is not null);
-
-                                            NbtMapBuilder stateBuilder = NbtMap.builder();
-                                            ((JsonObject)stateToken).ForEach((key, stateElement) =>
-                                            {
-                                                Debug.Assert(stateElement is not null);
-
-                                                var stateElementType = stateElement.GetValueKind();
-                                                if (stateElementType == JsonValueKind.String)
-                                                    stateBuilder.PutString(key, stateElement.GetValue<string>()!);
-                                                else if (stateElementType == JsonValueKind.True)
-                                                    stateBuilder.PutInt(key, 1);
-                                                else if (stateElementType == JsonValueKind.False)
-                                                    stateBuilder.PutInt(key, 0);
-                                                else
-                                                    stateBuilder.PutInt(key, stateElement.GetValue<int>());
-                                            });
-                                            builder.PutCompound("states", stateBuilder.Build());
+                                            stateBuilder.PutString(key, stateElement.GetValue<string>()!);
                                         }
-
-                                        return builder.Build();
+                                        else if (stateElementType == JsonValueKind.True)
+                                        {
+                                            stateBuilder.PutInt(key, 1);
+                                        }
+                                        else if (stateElementType == JsonValueKind.False)
+                                        {
+                                            stateBuilder.PutInt(key, 0);
+                                        }
+                                        else
+                                        {
+                                            stateBuilder.PutInt(key, stateElement.GetValue<int>());
+                                        }
                                     });
+                                    builder.PutCompound("states", stateBuilder.Build());
+                                }
+
+                                contents = builder.Build();
                             }
 
                             if (contents is null)
+                            {
                                 throw new BedrockMappingFailException("Could not find contents for flower pot");
+                            }
                         }
 
                         blockEntity = new BedrockMapping.FlowerPotBlockEntity(type, contents);
@@ -288,8 +306,14 @@ public static class JavaBlocks
     {
         EnsureInitialized();
 
-        if (map.Count == 0) return -1;
-        else return map.Keys.Max();
+        if (map.Count == 0)
+        {
+            return -1;
+        }
+        else
+        {
+            return map.Keys.Max();
+        }
     }
 
     public static string[]? GetStatesForNonVanillaBlock(string name)
@@ -300,11 +324,11 @@ public static class JavaBlocks
         return states?.ToArray();
     }
 
-    [Obsolete]
+    // [Obsolete]
     public static string? GetName(int id)
         => GetName(id, null);
 
-    [Obsolete]
+    // [Obsolete]
     public static BedrockMapping? GetBedrockMapping(int javaId)
         => GetBedrockMapping(javaId, null);
 
@@ -315,7 +339,9 @@ public static class JavaBlocks
 
         string? name = map.GetOrDefault(id, null);
         if (name is null && fabricRegistryManager is not null)
+        {
             name = null;//fabricRegistryManager.getBlockName(id);
+        }
 
         return name;
     }
@@ -330,7 +356,9 @@ public static class JavaBlocks
         {
             string? fabricName = null;//fabricRegistryManager.getBlockName(javaId);
             if (fabricName is not null)
+            {
                 bedrockMapping = bedrockNonVanillaMap.GetOrDefault(fabricName, null);
+            }
         }
 
         return bedrockMapping;

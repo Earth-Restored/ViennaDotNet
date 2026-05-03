@@ -6,7 +6,7 @@ namespace Solace.ApiServer.Controllers.XboxLive;
 
 [Route("")]
 [Route("accounts.xboxlive.com")]
-public class AccountsController : SolaceControllerBase
+internal sealed class AccountsController : SolaceControllerBase
 {
     private readonly LiveDbContext _dbContext;
 

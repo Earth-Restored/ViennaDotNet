@@ -17,7 +17,7 @@ namespace Solace.ApiServer.Controllers.EarthApi;
 [Authorize]
 [ApiVersion("1.1")]
 [Route("1/api/v{version:apiVersion}")]
-public class TappablesController : SolaceControllerBase
+internal sealed class TappablesController : SolaceControllerBase
 {
     private static TappablesManager tappablesManager => Program.tappablesManager;
     private static EarthDB earthDB => Program.DB;
@@ -234,10 +234,12 @@ public class TappablesController : SolaceControllerBase
         // TODO
 
         var encounterStates = new Dictionary<string, EncounterState>();
+#pragma warning disable IDE0059 // Unnecessary assignment of a value
         foreach (var (encounterId, tileId) in requestedIds)
         {
             encounterStates[encounterId] = new EncounterState(EncounterState.ActiveEncounterStateE.PRISTINE);
         }
+#pragma warning restore IDE0059 // Unnecessary assignment of a value
 
         return EarthJson(encounterStates);
     }

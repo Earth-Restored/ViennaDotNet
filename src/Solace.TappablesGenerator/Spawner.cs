@@ -28,7 +28,7 @@ public class Spawner
         _encounterGenerator = encounterGenerator;
         _publisher = publisher;
 
-        _maxTappableLifetimeIntervals = (int)(long.Max(_tappableGenerator.GetMaxTappableLifetime(), _encounterGenerator.GetMaxEncounterLifetime()) / SPAWN_INTERVAL + 1);
+        _maxTappableLifetimeIntervals = (int)(long.Max(TappableGenerator.GetMaxTappableLifetime(), _encounterGenerator.GetMaxEncounterLifetime()) / SPAWN_INTERVAL + 1);
 
         _spawnCycleTime = U.CurrentTimeMillis();
         _spawnCycleIndex = _maxTappableLifetimeIntervals;

@@ -544,12 +544,7 @@ public sealed class ResourcePack
     {
         var textureData = await TryGetTextureDataPNGAsync(name, cancellationToken);
 
-        if (textureData is null)
-        {
-            throw new FileNotFoundException();
-        }
-
-        return textureData;
+        return textureData is null ? throw new FileNotFoundException() : textureData;
     }
 
     public async Task<byte[]?> TryGetTextureDataPNGAsync(string name, CancellationToken cancellationToken = default)

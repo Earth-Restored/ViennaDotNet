@@ -1,7 +1,9 @@
 ﻿using System.Text.Json.Serialization;
 using Solace.Common.Utils;
 
+#pragma warning disable CA1716
 namespace Solace.DB.Models.Global;
+#pragma warning restore CA1716
 
 public sealed class EncounterBuildplates
 {

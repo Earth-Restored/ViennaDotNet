@@ -37,7 +37,7 @@ internal sealed class WKBPolygon : IWKBObject
         }
 
         int numRings = reader.ReadInt32();
-        LinearRing[] rings = new LinearRing[numRings];
+        var rings = new LinearRing[numRings];
         for (int i = 0; i < numRings; i++)
         {
             rings[i] = LinearRing.Load(reader);

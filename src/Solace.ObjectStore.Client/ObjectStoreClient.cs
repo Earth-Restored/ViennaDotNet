@@ -7,9 +7,9 @@ using System.Threading.Channels;
 
 namespace Solace.ObjectStore.Client;
 
-public class ObjectStoreClient : IAsyncDisposable
+public sealed class ObjectStoreClient : IAsyncDisposable
 {
-    public class ConnectException : ObjectStoreClientException
+    public sealed class ConnectException : ObjectStoreClientException
     {
         public ConnectException(string? message)
             : base(message)

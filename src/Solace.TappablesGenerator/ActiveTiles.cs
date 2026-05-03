@@ -62,7 +62,9 @@ public sealed class ActiveTiles
                 return string.Empty;
             }
             else
+            {
                 return null;
+            }
         },
         async () =>
         {
@@ -142,10 +144,10 @@ public sealed class ActiveTiles
         public Func<IEnumerable<ActiveTile>, Task>? OnActive;
         public Func<IEnumerable<ActiveTile>, Task>? OnInactive;
 
-        public ActiveTileListener(Func<IEnumerable<ActiveTile>, Task>? _active, Func<IEnumerable<ActiveTile>, Task>? _inactive)
+        public ActiveTileListener(Func<IEnumerable<ActiveTile>, Task>? active, Func<IEnumerable<ActiveTile>, Task>? inactive)
         {
-            OnActive = _active;
-            OnInactive = _inactive;
+            OnActive = active;
+            OnInactive = inactive;
         }
 
         public Task Active(IEnumerable<ActiveTile> activeTiles)

@@ -25,7 +25,7 @@ public sealed class Inventory
 
     public Inventory Copy()
     {
-        Inventory inventory = new Inventory();
+        var inventory = new Inventory();
         inventory._stackableItems.AddRange(_stackableItems);
         Dictionary<string, Dictionary<string, NonStackableItemInstance>> nonStackableItems = [];
         _nonStackableItems.ForEach((id, instances) => nonStackableItems.Add(id, new Dictionary<string, NonStackableItemInstance>(instances)));
@@ -76,7 +76,7 @@ public sealed class Inventory
     {
         if (count < 0)
         {
-            throw new ArgumentException(nameof(count));
+            throw new ArgumentException($"{nameof(count)} is negative.", nameof(count));
         }
 
         _stackableItems[id] = _stackableItems.GetOrDefault(id, 0) + count;
@@ -96,7 +96,7 @@ public sealed class Inventory
     {
         if (count < 0)
         {
-            throw new ArgumentException(nameof(count));
+            throw new ArgumentException($"{nameof(count)} is negative.", nameof(count));
         }
 
         int currentCount = _stackableItems.GetOrDefault(id, 0)!.Value;

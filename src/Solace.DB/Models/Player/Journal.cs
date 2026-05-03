@@ -18,7 +18,7 @@ public sealed class Journal
 
     public Journal Copy()
     {
-        Journal journal = new Journal();
+        var journal = new Journal();
         journal._items.AddRange(_items);
         return journal;
     }

@@ -11,7 +11,7 @@ namespace Solace.ApiServer.Controllers.EarthApi;
 [ApiVersion("1.0")]
 [ApiVersion("1.1")]
 [Route("player/environment")]
-public class LocatorController : ControllerBase
+internal sealed class LocatorController : ControllerBase
 {
     [HttpGet]
     public ContentResult Get()

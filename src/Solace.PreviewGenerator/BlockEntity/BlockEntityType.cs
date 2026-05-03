@@ -2,6 +2,7 @@
 
 public enum BlockEntityType : int
 {
+#pragma warning disable CA1707 // Identifiers should not contain underscores
     FURNACE,
     CHEST,
     TRAPPED_CHEST,
@@ -45,17 +46,22 @@ public enum BlockEntityType : int
     DECORATED_POT,
     CRAFTER,
     TRIAL_SPAWNER
+#pragma warning restore CA1707 // Identifiers should not contain underscores
 }
 
 public static class BlockEntityTypeE
 {
     private static readonly BlockEntityType[] VALUES = Enum.GetValues<BlockEntityType>();
 
-    public static BlockEntityType? from(int id)
+    public static BlockEntityType? From(int id)
     {
         if (id >= 0 && id < VALUES.Length)
+        {
             return VALUES[id];
+        }
         else
+        {
             return null;
+        }
     }
 }

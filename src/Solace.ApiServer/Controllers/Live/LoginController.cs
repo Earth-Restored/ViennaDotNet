@@ -17,7 +17,7 @@ namespace Solace.ApiServer.Controllers.Live;
 
 [Route("")]
 [Route("login.live.com")]
-public partial class LoginController : SolaceControllerBase
+internal sealed partial class LoginController : SolaceControllerBase
 {
     private static readonly RandomNumberGenerator _rng = RandomNumberGenerator.Create();
 
@@ -48,15 +48,11 @@ public partial class LoginController : SolaceControllerBase
 
     [HttpGet("ppsecure/InlineConnect.srf")]
     public VirtualFileHttpResult GetLoginPage()
-    {
-        return TypedResults.VirtualFile("/login.html", "text/html");
-    }
+        => TypedResults.VirtualFile("/login.html", "text/html");
 
     [HttpGet("ppsecure/reauthenticateStart")]
     public VirtualFileHttpResult GetReauthenticatePage()
-    {
-        return TypedResults.VirtualFile("/reauthenticate.html", "text/html");
-    }
+        => TypedResults.VirtualFile("/reauthenticate.html", "text/html");
 
     private sealed record LoginResponse(
         string UserId,
@@ -177,10 +173,7 @@ public partial class LoginController : SolaceControllerBase
 
     [HttpPost("ppsecure/reauthenticate")]
     public async Task<IActionResult> Reauthenticate([FromForm] string userToken, [FromForm] string password, CancellationToken cancellationToken)
-    {
-        // TODO
-        throw new NotImplementedException();
-    }
+        => throw new NotImplementedException(); // TODO
 
     [HttpPost("ppsecure/deviceaddcredential.srf")]
     public ContentHttpResult DeviceAddCredential()
@@ -214,8 +207,10 @@ public partial class LoginController : SolaceControllerBase
         if (request.SelectSingleNode("/S:Envelope/S:Body/wst:RequestSecurityToken", nsmgr) is not null)
         {
             // device token request
+#pragma warning disable IDE0059 // Unnecessary assignment of a value
             string? username = request.SelectSingleNode("/S:Envelope/S:Header/wsse:Security/wsse:UsernameToken/wsse:Username/text()", nsmgr)?.Value;
             string? password = request.SelectSingleNode("/S:Envelope/S:Header/wsse:Security/wsse:UsernameToken/wsse:Password/text()", nsmgr)?.Value;
+#pragma warning restore IDE0059 // Unnecessary assignment of a value
 
             string? requestType = request.SelectSingleNode("/S:Envelope/S:Body/wst:RequestSecurityToken/wst:RequestType/text()", nsmgr)?.Value;
             string? requestAppliesTo = request.SelectSingleNode("/S:Envelope/S:Body/wst:RequestSecurityToken/wsp:AppliesTo/wsa:EndpointReference/wsa:Address/text()", nsmgr)?.Value;
@@ -400,7 +395,9 @@ public partial class LoginController : SolaceControllerBase
             }
 
             var userToken = JwtUtils.Verify<Tokens.Live.UserToken>(userTokenString, config.Login.UserTokenSecretBytes, allowExpired: true);
+#pragma warning disable IDE0059 // Unnecessary assignment of a value
             var deviceToken = JwtUtils.Verify<Tokens.Live.DeviceToken>(deviceTokenString, config.Login.DeviceTokenSecretBytes, allowExpired: true);
+#pragma warning restore IDE0059 // Unnecessary assignment of a value
 
             if (userToken is null || userToken.Expired is true)
             {
@@ -617,7 +614,11 @@ public partial class LoginController : SolaceControllerBase
             var expr = document.CreateNavigator()!.Compile(xpath);
             expr.SetContext(nsmgr);
             object result = document.CreateNavigator()!.Evaluate(expr);
-            if (result is double d) return d;
+            if (result is double d)
+            {
+                return d;
+            }
+
             return 0;
         }
     }
@@ -664,8 +665,8 @@ public partial class LoginController : SolaceControllerBase
         int usernameUTF8Length = Encoding.UTF8.GetBytes(username, usernameUTF8);
         usernameUTF8 = usernameUTF8[..usernameUTF8Length];
 
-        Span<byte> usernameHash = stackalloc byte[16];
-        MD5.HashData(usernameUTF8, usernameHash);
+        Span<byte> usernameHash = stackalloc byte[32];
+        SHA256.HashData(usernameUTF8, usernameHash);
 
         return Convert.ToHexStringLower(usernameHash[..8]);
     }

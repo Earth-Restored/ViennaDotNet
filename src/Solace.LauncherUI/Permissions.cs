@@ -3,7 +3,7 @@ using System.Reflection;
 
 namespace Solace.LauncherUI;
 
-public static class Permissions
+internal static class Permissions
 {
     [PermissionInfo("Server", "Start the server")]
     public const string StartServer = "server.start";
@@ -71,14 +71,14 @@ public static class Permissions
         })];
     }
 
-    public readonly record struct PermissionDescriptor(
+    internal readonly record struct PermissionDescriptor(
         string Name,
         string Category,
         string Description
     );
 
     [AttributeUsage(AttributeTargets.Field)]
-    public class PermissionInfoAttribute : Attribute
+    private sealed class PermissionInfoAttribute : Attribute
     {
         public string Category { get; }
         public string Description { get; }

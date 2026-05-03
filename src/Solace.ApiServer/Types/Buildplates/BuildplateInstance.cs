@@ -4,7 +4,7 @@ using static Solace.ApiServer.Types.Buildplates.BuildplateInstance;
 
 namespace Solace.ApiServer.Types.Buildplates;
 
-public sealed record BuildplateInstance(
+internal sealed record BuildplateInstance(
     string InstanceId,
     string PartitionId,
     string Fqdn,
@@ -20,19 +20,19 @@ public sealed record BuildplateInstance(
 )
 {
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    public enum ApplicationStatusE
+    internal enum ApplicationStatusE
     {
         [JsonStringEnumMemberName("Unknown")] UNKNOWN,
         [JsonStringEnumMemberName("Ready")] READY
     }
 
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    public enum ServerStatusE
+    internal enum ServerStatusE
     {
         [JsonStringEnumMemberName("Running")] RUNNING
     }
 
-    public sealed record GameplayMetadataR(
+    internal sealed record GameplayMetadataR(
         string WorldId,
         string TemplateId,
         string? SpawningPlayerId,
@@ -50,12 +50,14 @@ public sealed record BuildplateInstance(
     )
     {
         [JsonConverter(typeof(JsonStringEnumConverter))]
-        public enum GameplayModeE
+        internal enum GameplayModeE
         {
+#pragma warning disable CA1707 // Identifiers should not contain underscores
             [JsonStringEnumMemberName("Buildplate")] BUILDPLATE,
             [JsonStringEnumMemberName("BuildplatePlay")] BUILDPLATE_PLAY,
             [JsonStringEnumMemberName("SharedBuildplatePlay")] SHARED_BUILDPLATE_PLAY,
             [JsonStringEnumMemberName("Encounter")] ENCOUNTER
+#pragma warning restore CA1707 // Identifiers should not contain underscores
         }
     }
 }

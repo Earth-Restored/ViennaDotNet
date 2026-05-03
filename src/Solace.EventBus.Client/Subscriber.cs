@@ -14,8 +14,8 @@ public sealed class SubscriberListener : ISubscriberListener
         OnError = onError;
     }
 
-    public Task OnEventAsync(SubscriberEvent _event)
-        => OnEvent?.Invoke(_event) ?? Task.CompletedTask;
+    public Task OnEventAsync(SubscriberEvent @event)
+        => OnEvent?.Invoke(@event) ?? Task.CompletedTask;
 
     public Task OnErrorAsync()
         => OnError?.Invoke() ?? Task.CompletedTask;
@@ -23,8 +23,10 @@ public sealed class SubscriberListener : ISubscriberListener
 
 public interface ISubscriberListener
 {
+#pragma warning disable CA1716 // Identifiers should not match keywords
     Task OnEventAsync(SubscriberEvent @event);
-    
+#pragma warning restore CA1716 // Identifiers should not match keywords
+
     Task OnErrorAsync();
 }
 

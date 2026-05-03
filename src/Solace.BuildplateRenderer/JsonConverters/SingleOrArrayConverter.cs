@@ -49,7 +49,7 @@ public class SingleOrArrayConverterFactory : JsonConverterFactory
     public override JsonConverter CreateConverter(Type typeToConvert, JsonSerializerOptions options)
     {
         var itemType = GetItemType(typeToConvert);
-        var converterType = typeof(SingleOrArrayConverter<,>).MakeGenericType(typeToConvert, itemType);
+        var converterType = typeof(SingleOrArrayConverter<,>).MakeGenericType(typeToConvert, itemType!);
         return (JsonConverter)Activator.CreateInstance(converterType, [CanWrite])!;
     }
 

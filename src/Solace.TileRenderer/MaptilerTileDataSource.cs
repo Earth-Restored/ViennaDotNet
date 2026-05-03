@@ -32,12 +32,8 @@ internal sealed class MaptilerTileDataSource : ITileDataSource
         }
 
         var response = await _httpClient.GetAsync($"https://api.maptiler.com/tiles/v3/{zoom}/{tileX}/{tileY}.pbf?key={_apiKey}", cancellationToken);
-
-        if (!response.IsSuccessStatusCode)
-        {
-            throw new Exception($"Failed to fetch tile data from MapTiler API: {response.ReasonPhrase}");
-        }
-
+        response.EnsureSuccessStatusCode();
+        
         try
         {
             var reader = new MapboxTileReader();
@@ -88,7 +84,7 @@ internal sealed class MaptilerTileDataSource : ITileDataSource
                         NetTopologySuite.Geometries.Polygon polygon => ConvertPolygon(polygon),
                         NetTopologySuite.Geometries.MultiLineString multiLineString => new WKBMultiLineString(BitConverter.IsLittleEndian, 5, (uint)multiLineString.SRID, [.. multiLineString.Geometries.Select(lineString => new WKBLineString(BitConverter.IsLittleEndian, 2, (uint)lineString.SRID, [.. lineString.Coordinates.Select(CoordinateToPoint)]))]),
                         NetTopologySuite.Geometries.MultiPolygon multiPolygon => new WKBMultiPolygon(BitConverter.IsLittleEndian, 6, (uint)multiPolygon.SRID, [.. multiPolygon.Geometries.Select(ConvertPolygon)]),
-                        _ => throw new Exception($"Unknown type: {geometry.GetType().FullName}"),
+                        _ => throw new InvalidDataException($"Unknown type: {geometry.GetType().FullName}"),
                     };
 
                     if (obj is not null)

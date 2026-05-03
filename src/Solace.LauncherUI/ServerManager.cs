@@ -26,7 +26,7 @@ public sealed class ServerComponent
     }
 }
 
-public sealed class ServerManager
+public sealed class ServerManager : IDisposable
 {
     public event Action? OnStatusChanged;
 
@@ -278,6 +278,9 @@ public sealed class ServerManager
         AnyOnline = false;
         Status = ServerStatus.Offline;
     }
+
+    public void Dispose()
+        => _operationTokenSource?.Dispose();
 
     private async Task StartInternal(Serilog.ILogger logger, CancellationToken cancellationToken)
     {

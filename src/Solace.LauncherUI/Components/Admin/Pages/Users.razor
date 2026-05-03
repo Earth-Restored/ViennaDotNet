@@ -451,9 +451,9 @@
         await LoadData();
     }
 
-    private void ToggleRole(string roleName, object checkedValue)
+    private void ToggleRole(string roleName, object? checkedValue)
     {
-        if ((bool)checkedValue)
+        if (checkedValue is null ? false : (bool)checkedValue)
         {
             _modelAssignedRoles.Add(roleName);
         }

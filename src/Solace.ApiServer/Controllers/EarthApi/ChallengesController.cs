@@ -13,7 +13,7 @@ namespace Solace.ApiServer.Controllers.EarthApi;
 [Authorize]
 [ApiVersion("1.1")]
 [Route("1/api/v{version:apiVersion}/player/challenges")]
-public class ChallengesController : ControllerBase
+internal sealed class ChallengesController : ControllerBase
 {
     private sealed record ChallengeRecord(
         string ReferenceId,

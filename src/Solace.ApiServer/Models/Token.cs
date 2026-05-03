@@ -1,49 +1,49 @@
 ﻿using System.Text.Json.Serialization;
 namespace Solace.ApiServer.Models;
 
-public sealed record Token<TData>(
+internal sealed record Token<TData>(
     DateTimeOffset Issued,
     DateTimeOffset Expires,
     bool? Expired,
     TData Data
 ) where TData : ITokenData<TData>;
 
-public static class Tokens
+internal static class Tokens
 {
-    public static class Live
+    internal static class Live
     {
-        public sealed record UserToken(
+        internal sealed record UserToken(
             string UserId,
             string Username,
             string PasswordSalt,
             string PasswordHash
         ) : ITokenData<UserToken>;
 
-        public sealed record DeviceToken()
+        internal sealed record DeviceToken()
             : ITokenData<DeviceToken>;
     }
 
-    public static class Xbox
+    internal static class Xbox
     {
         [JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
         [JsonDerivedType(typeof(DeviceToken), "device")]
         [JsonDerivedType(typeof(TitleToken), "title")]
         [JsonDerivedType(typeof(UserToken), "user")]
-        public abstract class AuthToken : ITokenData<AuthToken>
+        internal abstract class AuthToken : ITokenData<AuthToken>
         {
         }
 
-        public sealed class DeviceToken : AuthToken, ITokenData<DeviceToken>
+        internal sealed class DeviceToken : AuthToken, ITokenData<DeviceToken>
         {
             public required string Did { get; init; }
         }
 
-        public sealed class TitleToken : AuthToken, ITokenData<TitleToken>
+        internal sealed class TitleToken : AuthToken, ITokenData<TitleToken>
         {
             public required string Tid { get; init; }
         }
 
-        public sealed class UserToken : AuthToken, ITokenData<UserToken>
+        internal sealed class UserToken : AuthToken, ITokenData<UserToken>
         {
             public required string Xid { get; init; }
 
@@ -54,37 +54,39 @@ public static class Tokens
             public required string Username { get; init; }
         }
 
-        public sealed record XapiToken(
+        internal sealed record XapiToken(
             string UserId,
             string Username
         ) : ITokenData<XapiToken>;
     }
 
-    public static class Playfab
+    internal static class Playfab
     {
-        public sealed record EntityToken(
+        internal sealed record EntityToken(
             string Id,
             string Type
         ) : ITokenData<EntityToken>;
     }
 
-    public static class Shared
+#pragma warning disable CA1716 // Identifiers should not match keywords
+    internal static class Shared
+#pragma warning restore CA1716 // Identifiers should not match keywords
     {
-        public sealed record XboxTicketToken(
+        internal sealed record XboxTicketToken(
             string UserId,
             string Username
         ) : ITokenData<XboxTicketToken>;
 
-        public sealed record PlayfabXboxToken(
+        internal sealed record PlayfabXboxToken(
             string UserId
         ) : ITokenData<PlayfabXboxToken>;
 
-        public sealed record PlayfabSessionTicket(
+        internal sealed record PlayfabSessionTicket(
             string UserId
         ) : ITokenData<PlayfabSessionTicket>;
     }
 }
 
-public interface ITokenData<TSelf> where TSelf : ITokenData<TSelf>
+internal interface ITokenData<TSelf> where TSelf : ITokenData<TSelf>
 {
 }

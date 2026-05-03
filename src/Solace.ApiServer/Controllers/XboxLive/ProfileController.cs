@@ -9,7 +9,7 @@ namespace Solace.ApiServer.Controllers.XboxLive;
 
 [Route("users")]
 [Route("profile.xboxlive.com/users")]
-public partial class ProfileController : SolaceControllerBase
+internal sealed partial class ProfileController : SolaceControllerBase
 {
     private readonly LiveDbContext _dbContext;
 
@@ -29,7 +29,7 @@ public partial class ProfileController : SolaceControllerBase
         bool IsSponsoredUser
     );
 
-    public sealed record BatchProfileSettingsRequest(
+    internal sealed record BatchProfileSettingsRequest(
         string[] Settings,
         string[] UserIds
     );

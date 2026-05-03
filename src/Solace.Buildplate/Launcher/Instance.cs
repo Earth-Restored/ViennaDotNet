@@ -13,15 +13,17 @@ using Solace.EventBus.Client;
 
 namespace Solace.Buildplate.Launcher;
 
+#pragma warning disable CA1001 // Types that own disposable fields should be disposable
 public sealed class Instance
+#pragma warning restore CA1001 // Types that own disposable fields should be disposable
 {
-    private const long HOST_PLAYER_CONNECT_TIMEOUT = 30_000;
+    private const long HOST_PLAYER_CONNECT_TIMEOUT = 120_000;
 
     public static Instance Run(EventBusClient eventBusClient, string? playerId, string buildplateId, BuildplateSource buildplateSource, string instanceId, bool survival, bool night, bool saveEnabled, InventoryType inventoryType, long? shutdownTime, string publicAddress, int port, int serverInternalPort, string javaCmd, FileInfo fountainBridgeJar, DirectoryInfo serverTemplateDir, string fabricJarName, FileInfo connectorPluginJar, DirectoryInfo baseDir, string eventBusConnectionString)
     {
-        if (playerId is null && buildplateSource == BuildplateSource.PLAYER)
+        if (playerId is null && buildplateSource is BuildplateSource.PLAYER)
         {
-            throw new ArgumentException();
+            throw new ArgumentException($"{nameof(playerId)} cannot be null when {nameof(buildplateSource)} is {nameof(BuildplateSource.PLAYER)}");
         }
 
         var instance = new Instance(eventBusClient, playerId, buildplateId, buildplateSource, instanceId, survival, night, saveEnabled, inventoryType, shutdownTime, publicAddress, port, serverInternalPort, javaCmd, fountainBridgeJar, serverTemplateDir, fabricJarName, connectorPluginJar, baseDir, eventBusConnectionString);
@@ -62,20 +64,20 @@ public sealed class Instance
     private readonly SemaphoreSlim _threadStartedSemaphore = new SemaphoreSlim(1, 1);
     private readonly ILogger _logger;
 
-    private Publisher? _publisher = null;
-    private RequestSender? _requestSender = null;
+    private Publisher? _publisher;
+    private RequestSender? _requestSender;
 
-    private Subscriber? _subscriber = null;
-    private RequestHandler? _requestHandler = null;
+    private Subscriber? _subscriber;
+    private RequestHandler? _requestHandler;
 
-    private DirectoryInfo _serverWorkDir;
-    private DirectoryInfo _bridgeWorkDir;
-    private ConsoleProcess? _serverProcess = null;
-    private ConsoleProcess? _bridgeProcess = null;
-    private bool _shuttingDown = false;
+    private DirectoryInfo _serverWorkDir = null!;
+    private DirectoryInfo _bridgeWorkDir = null!;
+    private ConsoleProcess? _serverProcess;
+    private ConsoleProcess? _bridgeProcess;
+    private bool _shuttingDown;
     private readonly ReentrantAsyncLock.ReentrantAsyncLock _subprocessLock = new ReentrantAsyncLock.ReentrantAsyncLock(); // java uses ReentrantLock, Lock cannot be used, because it does not support locking and unlocking on different threads, which happens due to async, SemaphoreSlim does not support multiple locks from the same async context
 
-    private volatile bool _hostPlayerConnected = false;
+    private volatile bool _hostPlayerConnected;
 
     private Instance(EventBusClient eventBusClient, string? playerId, string buildplateId, BuildplateSource buildplateSource, string instanceId, bool survival, bool night, bool saveEnabled, InventoryType inventoryType, long? shutdownTime, string publicAddress, int port, int serverInternalPort, string javaCmd, FileInfo fountainBridgeJar, DirectoryInfo serverTemplateDir, string fabricJarName, FileInfo connectorPluginJar, DirectoryInfo baseDir, string eventBusConnectionString)
     {
@@ -142,7 +144,7 @@ public sealed class Instance
 
             BuildplateLoadResponse? buildplateLoadResponse = _buildplateSource switch
             {
-                BuildplateSource.PLAYER => await SendEventBusRequestRaw<BuildplateLoadResponse>("load", new BuildplateLoadRequest(_playerId, _buildplateId), true),
+                BuildplateSource.PLAYER => await SendEventBusRequestRaw<BuildplateLoadResponse>("load", new BuildplateLoadRequest(_playerId!, _buildplateId), true),
                 BuildplateSource.SHARED => await SendEventBusRequestRaw<BuildplateLoadResponse>("loadShared", new SharedBuildplateLoadRequest(_buildplateId), true),
                 BuildplateSource.ENCOUNTER => await SendEventBusRequestRaw<BuildplateLoadResponse>("loadEncounter", new EncounterBuildplateLoadRequest(_buildplateId), true),
                 _ => throw new UnreachableException(),
@@ -163,12 +165,14 @@ public sealed class Instance
 
             try
             {
-                _serverWorkDir = await SetupServerFiles(serverData);
-                if (_serverWorkDir is null)
+                var serverWorkDir = await SetupServerFiles(serverData);
+                if (serverWorkDir is null)
                 {
                     _logger.Error("Could not set up files for server");
                     return;
                 }
+
+                _serverWorkDir = serverWorkDir;
             }
             catch (IOException exception)
             {
@@ -178,12 +182,14 @@ public sealed class Instance
 
             try
             {
-                _bridgeWorkDir = SetupBridgeFiles(serverData);
-                if (_bridgeWorkDir is null)
+                var bridgeWorkDir = SetupBridgeFiles(serverData);
+                if (bridgeWorkDir is null)
                 {
                     _logger.Error("Could not set up files for bridge");
                     return;
                 }
+
+                _bridgeWorkDir = bridgeWorkDir;
             }
             catch (IOException exception)
             {
@@ -654,7 +660,9 @@ public sealed class Instance
             if (!warnedMissingServerFiles)
             {
                 _logger.Warning("Server files were not pre-downloaded in server template directory, it is recommended to pre-download all server files to improve instance start-up time and reduce network data usage");
+#pragma warning disable IDE0059 // Unnecessary assignment of a value
                 warnedMissingServerFiles = true;
+#pragma warning restore IDE0059 // Unnecessary assignment of a value
             }
         }
 
@@ -670,10 +678,10 @@ public sealed class Instance
             .Append("enforce-secure-profile=false\n")
             .Append("sync-chunk-writes=false\n")
             .Append("spawn-protection=0\n")
-            .Append($"server-port={_serverInternalPort.ToString(CultureInfo.InvariantCulture)}\n")
-            .Append($"gamemode={(_survival ? "survival" : "creative")}\n")
-            .Append($"vienna-event-bus-address={_eventBusAddress}\n")
-            .Append($"vienna-event-bus-queue-name={_eventBusQueueName}\n")
+            .Append(CultureInfo.InvariantCulture, $"server-port={_serverInternalPort.ToString(CultureInfo.InvariantCulture)}\n")
+            .Append(CultureInfo.InvariantCulture, $"gamemode={(_survival ? "survival" : "creative")}\n")
+            .Append(CultureInfo.InvariantCulture, $"vienna-event-bus-address={_eventBusAddress}\n")
+            .Append(CultureInfo.InvariantCulture, $"vienna-event-bus-queue-name={_eventBusQueueName}\n")
             .ToString();
         await File.WriteAllTextAsync(Path.Combine(workDir.FullName, "server.properties"), serverProperties);
 
@@ -817,7 +825,9 @@ public sealed class Instance
         return dataTag;
     }
 
+#pragma warning disable IDE0060 // Remove unused parameter
     private DirectoryInfo? SetupBridgeFiles(byte[] serverData)
+#pragma warning restore IDE0060 // Remove unused parameter
     {
         var workDir = new DirectoryInfo(Path.Combine(_baseDir.FullName, "bridge"));
         if (!workDir.TryCreate())
@@ -961,9 +971,9 @@ public sealed class Instance
                 await _bridgeProcess.ExecuteAsync(_bridgeWorkDir!.FullName,
                 [
                     "-jar", _fountainBridgeJar.FullName,
-                    "-port", Port.ToString(),
+                    "-port", Port.ToString(CultureInfo.InvariantCulture),
                     "-serverAddress", "127.0.0.1",
-                    "-serverPort", _serverInternalPort.ToString(),
+                    "-serverPort", _serverInternalPort.ToString(CultureInfo.InvariantCulture),
                     "-connectorPluginJar", _connectorPluginJar.FullName,
                     "-connectorPluginClass", "micheal65536.vienna.buildplate.connector.plugin.ViennaConnectorPlugin",
                     "-connectorPluginArg", _connectorPluginArgString,

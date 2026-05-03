@@ -4,22 +4,24 @@ namespace Solace.PreviewGenerator.NBT;
 
 public sealed class NbtType
 {
-    public static readonly NbtType END = new NbtType(typeof(void), EnumE.END);
-    public static readonly NbtType BYTE = new NbtType(typeof(byte), EnumE.BYTE);
-    public static readonly NbtType SHORT = new NbtType(typeof(short), EnumE.SHORT);
-    public static readonly NbtType INT = new NbtType(typeof(int), EnumE.INT);
-    public static readonly NbtType LONG = new NbtType(typeof(long), EnumE.LONG);
-    public static readonly NbtType FLOAT = new NbtType(typeof(float), EnumE.FLOAT);
-    public static readonly NbtType DOUBLE = new NbtType(typeof(double), EnumE.DOUBLE);
-    public static readonly NbtType BYTE_ARRAY = new NbtType(typeof(byte[]), EnumE.BYTE_ARRAY);
-    public static readonly NbtType STRING = new NbtType(typeof(string), EnumE.STRING);
+#pragma warning disable CA1720 // Identifier contains type name
+    public static readonly NbtType End = new NbtType(typeof(void), EnumE.End);
+    public static readonly NbtType Byte = new NbtType(typeof(byte), EnumE.Byte);
+    public static readonly NbtType Short = new NbtType(typeof(short), EnumE.Short);
+    public static readonly NbtType Int = new NbtType(typeof(int), EnumE.Int);
+    public static readonly NbtType Long = new NbtType(typeof(long), EnumE.Long);
+    public static readonly NbtType Float = new NbtType(typeof(float), EnumE.Float);
+    public static readonly NbtType Double = new NbtType(typeof(double), EnumE.Double);
+    public static readonly NbtType ByteArray = new NbtType(typeof(byte[]), EnumE.ByteArray);
+    public static readonly NbtType String = new NbtType(typeof(string), EnumE.String);
 
-    public static readonly NbtType LIST = new NbtType(typeof(NbtList), EnumE.LIST);
-    public static readonly NbtType COMPOUND = new NbtType(typeof(NbtMap), EnumE.COMPOUND);
-    public static readonly NbtType INT_ARRAY = new NbtType(typeof(int[]), EnumE.INT_ARRAY);
-    public static readonly NbtType LONG_ARRAY = new NbtType(typeof(long[]), EnumE.LONG_ARRAY);
+    public static readonly NbtType List = new NbtType(typeof(NbtList), EnumE.List);
+    public static readonly NbtType Compound = new NbtType(typeof(NbtMap), EnumE.Compound);
+    public static readonly NbtType IntArray = new NbtType(typeof(int[]), EnumE.IntArray);
+    public static readonly NbtType LongArray = new NbtType(typeof(long[]), EnumE.LongArray);
+#pragma warning restore CA1720 // Identifier contains type name
 
-    private static readonly NbtType[] BY_ID = [END, BYTE, SHORT, INT, LONG, FLOAT, DOUBLE, BYTE_ARRAY, STRING, LIST, COMPOUND, INT_ARRAY, LONG_ARRAY];
+    private static readonly NbtType[] BY_ID = [End, Byte, Short, Int, Long, Float, Double, ByteArray, String, List, Compound, IntArray, LongArray];
 
     private static readonly Dictionary<Type, NbtType> BY_CLASS = [];
 
@@ -56,7 +58,7 @@ public sealed class NbtType
         }
         else
         {
-            throw new IndexOutOfRangeException("Tag type id must be greater than 0 and less than " + (BY_ID.Length - 1));
+            throw new ArgumentOutOfRangeException(nameof(id), "Tag type id must be greater than 0 and less than " + (BY_ID.Length - 1));
         }
     }
 
@@ -68,23 +70,25 @@ public sealed class NbtType
 
     public enum EnumE : int
     {
-        END,
-        BYTE,
-        SHORT,
-        INT,
-        LONG,
-        FLOAT,
-        DOUBLE,
-        BYTE_ARRAY,
-        STRING,
-        LIST,
-        COMPOUND,
-        INT_ARRAY,
-        LONG_ARRAY
+#pragma warning disable CA1720 // Identifier contains type name
+        End,
+        Byte,
+        Short,
+        Int,
+        Long,
+        Float,
+        Double,
+        ByteArray,
+        String,
+        List,
+        Compound,
+        IntArray,
+        LongArray
+#pragma warning restore CA1720 // Identifier contains type name
     }
 }
 
-public static class NbtType_EnumExtensions
+public static class NbtTypeEnumExtensions
 {
     public static string GetName(this NbtType.EnumE e)
         => "TAG_" + Enum.GetName(e);

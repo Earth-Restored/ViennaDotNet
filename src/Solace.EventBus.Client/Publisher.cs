@@ -3,16 +3,16 @@ using Solace.Common.Utils;
 
 namespace Solace.EventBus.Client;
 
-public sealed class Publisher
+public sealed class Publisher : IAsyncDisposable
 {
     private readonly EventBusClient _client;
     private readonly int _channelId;
     private readonly SemaphoreSlim _lock = new(1, 1);
     
-    private bool _closed = false;
+    private bool _closed;
     private readonly LinkedList<string> _queuedEvents = new();
     private readonly LinkedList<TaskCompletionSource<bool>> _queuedEventResults = new();
-    private TaskCompletionSource<bool>? _currentPendingEventResult = null;
+    private TaskCompletionSource<bool>? _currentPendingEventResult;
 
     internal Publisher(EventBusClient client, int channelId)
     {
@@ -29,9 +29,20 @@ public sealed class Publisher
 
     public async Task<bool> PublishAsync(string queueName, string type, string data)
     {
-        if (!ValidateQueueName(queueName)) throw new ArgumentException("Queue name contains invalid characters");
-        if (!ValidateType(type)) throw new ArgumentException("Type contains invalid characters");
-        if (!ValidateData(data)) throw new ArgumentException("Data contains invalid characters");
+        if (!ValidateQueueName(queueName))
+        {
+            throw new ArgumentException("Queue name contains invalid characters");
+        }
+
+        if (!ValidateType(type))
+        {
+            throw new ArgumentException("Type contains invalid characters");
+        }
+
+        if (!ValidateData(data))
+        {
+            throw new ArgumentException("Data contains invalid characters");
+        }
 
         string eventMessage = $"SEND {queueName}:{type}:{data}";
         
@@ -64,6 +75,12 @@ public sealed class Publisher
         return await tcs.Task;
     }
 
+    public async ValueTask DisposeAsync()
+    {
+        await FlushAsync();
+        await CloseAsync();
+    }
+
     public async Task FlushAsync()
     {
         Task<bool>? taskToAwait = null;
@@ -73,7 +90,7 @@ public sealed class Publisher
         {
             taskToAwait = _queuedEventResults.Count == 0 
                 ? _currentPendingEventResult?.Task 
-                : _queuedEventResults.Last.Value.Task;
+                : _queuedEventResults.Last!.Value.Task;
         }
         finally
         {
@@ -102,8 +119,10 @@ public sealed class Publisher
                     {
                         await SendNextEventAsync();
                     }
+
                     return true;
                 }
+
                 return false;
             }
             finally
@@ -123,12 +142,12 @@ public sealed class Publisher
 
     private async Task SendNextEventAsync()
     {
-        string message = _queuedEvents.First.Value;
+        string message = _queuedEvents.First!.Value;
         _queuedEvents.RemoveFirst();
 
         await _client.SendMessageAsync(_channelId, message);
 
-        _currentPendingEventResult = _queuedEventResults.First.Value;
+        _currentPendingEventResult = _queuedEventResults.First!.Value;
         _queuedEventResults.RemoveFirst();
     }
 
@@ -138,12 +157,8 @@ public sealed class Publisher
         try
         {
             _closed = true;
-
-            if (_currentPendingEventResult != null)
-            {
-                _currentPendingEventResult.TrySetResult(false);
-                _currentPendingEventResult = null;
-            }
+            _currentPendingEventResult?.TrySetResult(false);
+            _currentPendingEventResult = null;
 
             foreach (var tcs in _queuedEventResults)
             {
@@ -159,33 +174,18 @@ public sealed class Publisher
         }
     }
 
-    // Note: Emulates Java's String.matches() which applies the regex to the ENTIRE string implicitly
     private static bool ValidateQueueName(string queueName)
-    {
-        if (queueName.Any(c => c < 32 || c >= 127) || 
-            string.IsNullOrEmpty(queueName) || 
-            Regex.IsMatch(queueName, "^[^A-Za-z0-9_\\-]$") || 
-            Regex.IsMatch(queueName, "^^[^A-Za-z0-9]$"))
-        {
-            return false;
-        }
-        return true;
-    }
+        => !queueName.Any(c => c < 32 || c >= 127) &&
+            !string.IsNullOrEmpty(queueName) &&
+            !Regex.IsMatch(queueName, "^[^A-Za-z0-9_\\-]$") &&
+            !Regex.IsMatch(queueName, "^^[^A-Za-z0-9]$");
 
     private static bool ValidateType(string type)
-    {
-        if (type.Any(c => c < 32 || c >= 127) || 
-            string.IsNullOrEmpty(type) || 
-            Regex.IsMatch(type, "^[^A-Za-z0-9_\\-]$") || 
-            Regex.IsMatch(type, "^^[^A-Za-z0-9]$"))
-        {
-            return false;
-        }
-        return true;
-    }
+        => !type.Any(c => c < 32 || c >= 127) &&
+            !string.IsNullOrEmpty(type) &&
+            !Regex.IsMatch(type, "^[^A-Za-z0-9_\\-]$") &&
+            !Regex.IsMatch(type, "^^[^A-Za-z0-9]$");
 
     private static bool ValidateData(string data)
-    {
-        return !data.Any(c => c < 32 || c >= 127);
-    }
+        => !data.Any(c => c < 32 || c >= 127);
 }

@@ -14,7 +14,7 @@ namespace Solace.ApiServer.Controllers.PlayfabApi;
 
 [Route("Catalog")]
 [Route("20CA2.playfabapi.com/Catalog")]
-public class CatalogController : SolaceControllerBase
+internal sealed class CatalogController : SolaceControllerBase
 {
     private static readonly JsonSerializerOptions jsonOptions = new JsonSerializerOptions()
     {
@@ -138,7 +138,7 @@ public class CatalogController : SolaceControllerBase
                 .ToArray()
                 .Select(item => ToResponse(item, Request));
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             items = [];
         }
@@ -167,8 +167,7 @@ public class CatalogController : SolaceControllerBase
 
     [HttpPost("SearchStores")]
     public ContentHttpResult SearchStores()
-    {
-        return JsonPascalCase(new PlayfabOkResponse(
+        => JsonPascalCase(new PlayfabOkResponse(
             200,
             "OK",
             new Dictionary<string, object>()
@@ -178,7 +177,6 @@ public class CatalogController : SolaceControllerBase
                 ["ConfigurationName"] = "DEFAULT",
             }
         ));
-    }
 
     private sealed record GetPublishedItemRequest(
         string? ItemId

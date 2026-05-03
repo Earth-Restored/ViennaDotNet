@@ -41,8 +41,6 @@ internal sealed class JsonConverter_UVCoordinates : JsonConverter<UVCoordinates>
 		}
 	}
 
-	public override void Write(Utf8JsonWriter writer, UVCoordinates value, JsonSerializerOptions options)
-	{
-		throw new NotImplementedException();
-	}
+    public override void Write(Utf8JsonWriter writer, UVCoordinates value, JsonSerializerOptions options)
+		=> throw new NotImplementedException();
 }

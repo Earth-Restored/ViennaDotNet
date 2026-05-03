@@ -14,7 +14,9 @@ using Solace.ObjectStore.Client;
 
 namespace Solace.LauncherUI.Utils;
 
+#pragma warning disable CA1708 // Identifiers should differ by more than case
 public static class ImporterExtensions
+#pragma warning restore CA1708 // Identifiers should differ by more than case
 {
     extension(Importer)
     {
@@ -34,7 +36,7 @@ public static class ImporterExtensions
         {
             var dbBuildplatePreview = await appDbContext.BuildplatePreviews
                 .AsNoTracking()
-                .FirstOrDefaultAsync(preview => preview.PlayerId == null && preview.BuildplateId == templateId);
+                .FirstOrDefaultAsync(preview => preview.PlayerId == null && preview.BuildplateId == templateId, cancellationToken: cancellationToken);
 
             if (dbBuildplatePreview is not null)
             {
@@ -45,7 +47,7 @@ public static class ImporterExtensions
                 else
                 {
                     appDbContext.BuildplatePreviews.Remove(dbBuildplatePreview);
-                    await appDbContext.SaveChangesAsync();
+                    await appDbContext.SaveChangesAsync(cancellationToken);
                 }
             }
 
@@ -93,7 +95,7 @@ public static class ImporterExtensions
 
             var meshGenerator = new BuildplateMeshGenerator(resourcePackManager);
 
-            MeshData? meshData = await meshGenerator.GenerateAsync(worldData);
+            MeshData? meshData = await meshGenerator.GenerateAsync(worldData, cancellationToken);
             if (meshData is null)
             {
                 return null;
@@ -112,7 +114,7 @@ public static class ImporterExtensions
             };
 
             appDbContext.BuildplatePreviews.Add(dbBuildplatePreview);
-            await appDbContext.SaveChangesAsync();
+            await appDbContext.SaveChangesAsync(cancellationToken);
 
             return buffer;
         }
@@ -121,7 +123,7 @@ public static class ImporterExtensions
         {
             var dbBuildplatePreview = await appDbContext.BuildplatePreviews
                 .AsNoTracking()
-                .FirstOrDefaultAsync(preview => preview.PlayerId == playerId && preview.BuildplateId == buildplateId);
+                .FirstOrDefaultAsync(preview => preview.PlayerId == playerId && preview.BuildplateId == buildplateId, cancellationToken: cancellationToken);
 
             if (dbBuildplatePreview is not null)
             {
@@ -132,7 +134,7 @@ public static class ImporterExtensions
                 else
                 {
                     appDbContext.BuildplatePreviews.Remove(dbBuildplatePreview);
-                    await appDbContext.SaveChangesAsync();
+                    await appDbContext.SaveChangesAsync(cancellationToken);
                 }
             }
 
@@ -183,7 +185,7 @@ public static class ImporterExtensions
 
             var meshGenerator = new BuildplateMeshGenerator(resourcePackManager);
 
-            MeshData? meshData = await meshGenerator.GenerateAsync(worldData);
+            MeshData? meshData = await meshGenerator.GenerateAsync(worldData, cancellationToken);
             if (meshData is null)
             {
                 return null;
@@ -202,7 +204,7 @@ public static class ImporterExtensions
             };
 
             appDbContext.BuildplatePreviews.Add(dbBuildplatePreview);
-            await appDbContext.SaveChangesAsync();
+            await appDbContext.SaveChangesAsync(cancellationToken);
 
             return buffer;
         }

@@ -10,7 +10,9 @@ internal static class EventBusServer
     public static readonly string ExeName = "EventBusServer" + (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ".exe" : "");
     public const string DispName = "EventBus server";
 
+#pragma warning disable IDE0060 // Remove unused parameter
     public static bool Check(Settings settings, ILogger logger)
+#pragma warning restore IDE0060 // Remove unused parameter
     {
         string exePath = Path.GetFullPath(Path.Combine(Program.ProgramsDir, ExeName));
         if (!File.Exists(exePath))

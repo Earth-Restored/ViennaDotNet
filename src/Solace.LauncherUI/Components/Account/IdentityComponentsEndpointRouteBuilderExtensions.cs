@@ -11,7 +11,9 @@ using Solace.LauncherUI.Components.Account.Pages;
 using Solace.LauncherUI.Components.Account.Pages.Manage;
 using Solace.LauncherUI.Data;
 
+#pragma warning disable IDE0130 // Namespace does not match folder structure
 namespace Microsoft.AspNetCore.Routing;
+#pragma warning restore IDE0130 // Namespace does not match folder structure
 
 internal static class IdentityComponentsEndpointRouteBuilderExtensions
 {
@@ -111,7 +113,7 @@ internal static class IdentityComponentsEndpointRouteBuilderExtensions
         var loggerFactory = endpoints.ServiceProvider.GetRequiredService<ILoggerFactory>();
         var downloadLogger = loggerFactory.CreateLogger("DownloadPersonalData");
 
-        manageGroup.MapPost("/DownloadPersonalData", async (
+        _ = manageGroup.MapPost("/DownloadPersonalData", async (
             HttpContext context,
             [FromServices] UserManager<ApplicationUser> userManager,
             [FromServices] AuthenticationStateProvider authenticationStateProvider) =>
@@ -123,7 +125,11 @@ internal static class IdentityComponentsEndpointRouteBuilderExtensions
             }
 
             var userId = await userManager.GetUserIdAsync(user);
+#pragma warning disable CA1873 // Avoid potentially expensive logging ???
+#pragma warning disable CA1848 // Use the LoggerMessage delegates
             downloadLogger.LogInformation("User with ID '{UserId}' asked for their personal data.", userId);
+#pragma warning restore CA1848 // Use the LoggerMessage delegates
+#pragma warning restore CA1873 // Avoid potentially expensive logging
 
             // Only include personal data for download
             var personalData = new Dictionary<string, string>();

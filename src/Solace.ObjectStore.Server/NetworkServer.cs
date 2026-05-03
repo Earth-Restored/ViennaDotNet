@@ -8,7 +8,7 @@ using System.Text.RegularExpressions;
 
 namespace Solace.ObjectStore.Server;
 
-public sealed partial class NetworkServer
+public sealed partial class NetworkServer : IDisposable
 {
     private readonly Server _server;
     private readonly TcpListener _serverSocket;
@@ -42,6 +42,12 @@ public sealed partial class NetworkServer
         {
             _serverSocket.Stop();
         }
+    }
+
+    public void Dispose()
+    {
+        _cts.Dispose();
+        _serverSocket.Dispose();
     }
 
     private async Task HandleConnectionAsync(TcpClient client)

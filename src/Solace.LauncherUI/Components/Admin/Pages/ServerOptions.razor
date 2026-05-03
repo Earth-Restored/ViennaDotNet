@@ -73,14 +73,14 @@
                         <div class="mb-3">
                             <label class="form-label">Tile Data Source</label>
                             <InputSelect @bind-Value="SettingsModel.TileDataSource" class="form-select">
-                                @foreach (var source in Enum.GetValues<Settings.TileDataSourceEnum>())
+                                @foreach (var source in Enum.GetValues<Settings.TileDataSourceE>())
                                 {
                                     <option value="@source">@source</option>
                                 }
                             </InputSelect>
                         </div>
 
-                        @if (SettingsModel.TileDataSource == Settings.TileDataSourceEnum.MapTiler)
+                        @if (SettingsModel.TileDataSource == Settings.TileDataSourceE.MapTiler)
                         {
                             <div class="mb-3">
                                 <label class="form-label">MapTiler API Key</label>
@@ -171,7 +171,7 @@
         SettingsModel.EarthDatabaseConnectionString = source.EarthDatabaseConnectionString;
         SettingsModel.LiveDatabaseConnectionString = source.LiveDatabaseConnectionString;
         SettingsModel.EnableTileRendering = source.EnableTileRenderingLabel ?? false;
-        SettingsModel.TileDataSource = source.TileDataSource ?? Settings.TileDataSourceEnum.MapTiler;
+        SettingsModel.TileDataSource = source.TileDataSource ?? Settings.TileDataSourceE.MapTiler;
         SettingsModel.MapTilerApiKey = source.MapTilerApiKey;
         SettingsModel.TileDatabaseConnectionString = source.TileDatabaseConnectionString;
         SettingsModel.GeneratePreviewOnImport = source.GeneratePreviewOnImport ?? false;
@@ -245,7 +245,7 @@
         public string? LiveDatabaseConnectionString { get; set; }
 
         public bool EnableTileRendering { get; set; }
-        public Settings.TileDataSourceEnum TileDataSource { get; set; }
+        public Settings.TileDataSourceE TileDataSource { get; set; }
 
         public string? MapTilerApiKey { get; set; }
         public string? TileDatabaseConnectionString { get; set; }
@@ -269,13 +269,13 @@ nameof(IPv4) });
 
             if (EnableTileRendering)
             {
-                if (TileDataSource is Settings.TileDataSourceEnum.MapTiler && string.IsNullOrWhiteSpace(MapTilerApiKey))
+                if (TileDataSource is Settings.TileDataSourceE.MapTiler && string.IsNullOrWhiteSpace(MapTilerApiKey))
                 {
                     yield return new ValidationResult("MapTiler API Key is required when using MapTiler source.", new[]
 {nameof(MapTilerApiKey) });
                 }
 
-                if (TileDataSource is Settings.TileDataSourceEnum.PostgreSQL && string.IsNullOrWhiteSpace(TileDatabaseConnectionString))
+                if (TileDataSource is Settings.TileDataSourceE.PostgreSQL && string.IsNullOrWhiteSpace(TileDatabaseConnectionString))
                 {
                     yield return new ValidationResult("Tile database connection string is required for PostgreSQL source.", new[]
 {nameof(TileDatabaseConnectionString) });

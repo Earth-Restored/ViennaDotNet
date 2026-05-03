@@ -2,6 +2,7 @@
 
 public enum RenderLayer // Layer order is bottom to top btw, not in same order as Genoa Colours!!!
 {
+#pragma warning disable CA1707 // Identifiers should not contain underscores
     LAYER_BASE_BACKGROUND,
     LAYER_SAND,
     LAYER_OPEN_PUBLIC_AREA,
@@ -19,4 +20,5 @@ public enum RenderLayer // Layer order is bottom to top btw, not in same order a
     LAYER_HIGHWAY_MAJOR,
     LAYER_RESTRICTED_AREA,
     LAYER_NONE // MUST ALWAYS BE LAST!
+#pragma warning restore CA1707 // Identifiers should not contain underscores
 }

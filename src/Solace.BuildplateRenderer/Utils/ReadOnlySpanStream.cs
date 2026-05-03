@@ -11,7 +11,7 @@ internal sealed class ReadOnlySpanStream : Stream
 
     private readonly ReadOnlyMemory<byte> _buffer;
     private int _position;
-    private int _length;
+    private readonly int _length;
     private bool _isOpen;
 
     public ReadOnlySpanStream(ReadOnlyMemory<byte> buffer)

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Claims;
@@ -15,6 +16,7 @@ using Solace.DB;
 using Solace.LauncherUI.Components;
 using Solace.LauncherUI.Components.Account;
 using Solace.LauncherUI.Data;
+using Solace.LauncherUI.Utils;
 using Solace.ObjectStore.Client;
 
 namespace Solace.LauncherUI;
@@ -42,8 +44,8 @@ public partial class Program
         builder.Services.AddSingleton(logsLogService);
 
         var log = new LoggerConfiguration()
-            .WriteTo.Console()
-            .WriteTo.File("logs/launcher/log.txt", rollingInterval: RollingInterval.Day, rollOnFileSizeLimit: true, fileSizeLimitBytes: 8338607, outputTemplate: "{Timestamp:HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
+            .WriteTo.Console(formatProvider: CultureInfo.InvariantCulture)
+            .WriteTo.File("logs/launcher/log.txt", rollingInterval: RollingInterval.Day, rollOnFileSizeLimit: true, fileSizeLimitBytes: 8338607, outputTemplate: "{Timestamp:HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}", formatProvider: CultureInfo.InvariantCulture)
             .WriteTo.LogsLogSink(logsLogService)
             .MinimumLevel.Debug()
             .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
@@ -93,7 +95,11 @@ public partial class Program
 
         builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 
-        builder.Services.AddControllers();
+        builder.Services.AddControllers()
+            .ConfigureApplicationPartManager(manager =>
+            {
+                manager.FeatureProviders.Add(new InternalControllerFeatureProvider());
+            });
 
         var app = builder.Build();
 
@@ -233,7 +239,10 @@ public partial class Program
         public override async Task<AuthorizationPolicy?> GetPolicyAsync(string policyName)
         {
             var policy = await base.GetPolicyAsync(policyName);
-            if (policy != null) return policy;
+            if (policy != null)
+            {
+                return policy;
+            }
 
             return new AuthorizationPolicyBuilder()
                 .AddRequirements(new PermissionRequirement(policyName))

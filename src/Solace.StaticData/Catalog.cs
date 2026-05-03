@@ -99,6 +99,7 @@ public sealed class Catalog
             [JsonConverter(typeof(JsonStringEnumConverter))]
             public enum TypeE
             {
+#pragma warning disable CA1707 // Identifiers should not contain underscores
                 BLOCK,
                 ITEM,
                 TOOL,
@@ -106,11 +107,13 @@ public sealed class Catalog
                 ENVIRONMENT_BLOCK,
                 BOOST,
                 ADVENTURE_SCROLL
+#pragma warning restore CA1707 // Identifiers should not contain underscores
             }
 
             [JsonConverter(typeof(JsonStringEnumConverter))]
             public enum CategoryE
             {
+#pragma warning disable CA1707 // Identifiers should not contain underscores
                 CONSTRUCTION,
                 EQUIPMENT,
                 ITEMS,
@@ -128,6 +131,7 @@ public sealed class Catalog
                 BOOST_SMELTING,
                 BOOST_STRENGTH,
                 BOOST_TAPPABLE_RADIUS
+#pragma warning restore CA1707 // Identifiers should not contain underscores
             }
 
             [JsonConverter(typeof(JsonStringEnumConverter))]
@@ -144,6 +148,7 @@ public sealed class Catalog
             [JsonConverter(typeof(JsonStringEnumConverter))]
             public enum UseTypeE
             {
+#pragma warning disable CA1707 // Identifiers should not contain underscores
                 NONE,
                 BUILD,
                 BUILD_ATTACK,
@@ -152,6 +157,7 @@ public sealed class Catalog
                 DESTROY,
                 USE,
                 CONSUME
+#pragma warning restore CA1707 // Identifiers should not contain underscores
             }
 
             public sealed record BlockInfoR(
@@ -198,8 +204,10 @@ public sealed class Catalog
                 [JsonConverter(typeof(JsonStringEnumConverter))]
                 public enum TypeE
                 {
+#pragma warning disable CA1707 // Identifiers should not contain underscores
                     POTION,
                     INVENTORY_ITEM
+#pragma warning restore CA1707 // Identifiers should not contain underscores
                 }
 
                 public record Effect(
@@ -212,6 +220,7 @@ public sealed class Catalog
                     [JsonConverter(typeof(JsonStringEnumConverter))]
                     public enum TypeE
                     {
+#pragma warning disable CA1707 // Identifiers should not contain underscores
                         ADVENTURE_XP,
                         CRAFTING,
                         DEFENSE,
@@ -226,6 +235,7 @@ public sealed class Catalog
                         SMELTING,
                         STRENGTH,
                         TAPPABLE_RADIUS
+#pragma warning restore CA1707 // Identifiers should not contain underscores
                     }
 
                     [JsonConverter(typeof(JsonStringEnumConverter))]
@@ -249,6 +259,7 @@ public sealed class Catalog
                 [JsonConverter(typeof(JsonStringEnumConverter))]
                 public enum BiomeE
                 {
+#pragma warning disable CA1707 // Identifiers should not contain underscores
                     NONE,
                     OVERWORLD,
                     NETHER,
@@ -269,6 +280,7 @@ public sealed class Catalog
                     SWAMP,
                     TAIGA,
                     WARM_OCEAN
+#pragma warning restore CA1707 // Identifiers should not contain underscores
                 }
 
                 [JsonConverter(typeof(JsonStringEnumConverter))]
@@ -321,11 +333,13 @@ public sealed class Catalog
             float Hoe,
             float Axe,
             float Shovel,
+#pragma warning disable CA1707 // Identifiers should not contain underscores
             [property: JsonPropertyName("pickaxe_1")] float Pickaxe_1,
             [property: JsonPropertyName("pickaxe_2")] float Pickaxe_2,
             [property: JsonPropertyName("pickaxe_3")] float Pickaxe_3,
             [property: JsonPropertyName("pickaxe_4")] float Pickaxe_4,
             [property: JsonPropertyName("pickaxe_5")] float Pickaxe_5,
+#pragma warning restore CA1707 // Identifiers should not contain underscores
             float Sword,
             float Sheers
         );
@@ -372,10 +386,12 @@ public sealed class Catalog
             [JsonConverter(typeof(JsonStringEnumConverter))]
             public enum ParentCollectionE
             {
+#pragma warning disable CA1707 // Identifiers should not contain underscores
                 BLOCKS,
                 ITEMS_CRAFTED,
                 ITEMS_SMELTED,
                 MOBS
+#pragma warning restore CA1707 // Identifiers should not contain underscores
             }
         }
     }

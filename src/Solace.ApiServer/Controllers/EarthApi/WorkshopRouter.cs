@@ -40,7 +40,7 @@ namespace Solace.ApiServer.Controllers.EarthApi;
 [Authorize]
 [ApiVersion("1.1")]
 [Route("1/api/v{version:apiVersion}")]
-public class WorkshopRouter : SolaceControllerBase
+internal sealed class WorkshopRouter : SolaceControllerBase
 {
     private static EarthDB earthDB => Program.DB;
     private static StaticData.StaticData staticData => Program.staticData;
@@ -301,7 +301,7 @@ public class WorkshopRouter : SolaceControllerBase
                         return query;
                     }
 
-                    craftingSlot.ActiveJob = new CraftingSlot.ActiveJobR(startRequest.SessionId, recipe.Id, requestStartedOn, inputItems.Select(inputItems1 => inputItems1.ToArray()).ToArray(), startRequest.Multiplier, 0, false);
+                    craftingSlot.ActiveJob = new CraftingSlot.ActiveJobR(startRequest.SessionId, recipe.Id, requestStartedOn, [.. inputItems.Select(inputItems1 => inputItems1.ToArray())], startRequest.Multiplier, 0, false);
 
                     query.Update("crafting", playerId, craftingSlots).Update("inventory", playerId, inventory).Update("hotbar", playerId, hotbar);
 
@@ -399,7 +399,9 @@ public class WorkshopRouter : SolaceControllerBase
                     if (startRequest.Input.ItemInstanceIds is null || startRequest.Input.ItemInstanceIds.Length == 0)
                     {
                         if (!inventory.TakeItems(startRequest.Input.ItemId, startRequest.Input.Quantity))
+                        {
                             return query;
+                        }
 
                         input = new InputItem(startRequest.Input.ItemId, startRequest.Input.Quantity, []);
                     }
@@ -407,7 +409,9 @@ public class WorkshopRouter : SolaceControllerBase
                     {
                         NonStackableItemInstance[]? instances = inventory.TakeItems(startRequest.Input.ItemId, startRequest.Input.ItemInstanceIds);
                         if (instances is null)
+                        {
                             return query;
+                        }
 
                         input = new InputItem(startRequest.Input.ItemId, startRequest.Input.Quantity, instances);
                     }
@@ -514,10 +518,14 @@ public class WorkshopRouter : SolaceControllerBase
 
                         int quantity = state.AvailableRounds * state.Output.Count;
                         if (quantity > 0)
+                        {
                             rewards.AddItem(state.Output.Id, quantity);
+                        }
 
                         if (state.Completed)
+                        {
                             craftingSlot.ActiveJob = null;
+                        }
                         else
                         {
                             CraftingSlot.ActiveJobR activeJob = craftingSlot.ActiveJob;
@@ -571,18 +579,24 @@ public class WorkshopRouter : SolaceControllerBase
 
                         int quantity = state.AvailableRounds * state.Output.Count;
                         if (quantity > 0)
+                        {
                             rewards.AddItem(state.Output.Id, quantity);
+                        }
 
                         if (state.Completed)
                         {
                             smeltingSlot.ActiveJob = null;
                             if (state.RemainingHeat > 0)
+                            {
                                 smeltingSlot.Burning = new SmeltingSlot.BurningR(
                                     state.CurrentBurningFuel,
                                     state.RemainingHeat
                                 );
+                            }
                             else
+                            {
                                 smeltingSlot.Burning = null;
+                            }
                         }
                         else
                         {
@@ -638,16 +652,22 @@ public class WorkshopRouter : SolaceControllerBase
                     var journal = results1.Get<Journal>("journal");
 
                     if (craftingSlot.ActiveJob is null)
+                    {
                         return query;
+                    }
 
                     CraftingCalculator.State state = CraftingCalculator.CalculateState(requestStartedOn, craftingSlot.ActiveJob, staticData.Catalog);
 
                     foreach (InputItem inputItem in state.Input)
                     {
                         if (inputItem.Instances.Length > 0)
+                        {
                             inventory.AddItems(inputItem.Id, [.. inputItem.Instances.Select(instance => new NonStackableItemInstance(instance.InstanceId, instance.Wear))]);
+                        }
                         else if (inputItem.Count > 0)
+                        {
                             inventory.AddItems(inputItem.Id, inputItem.Count);
+                        }
 
                         journal.AddCollectedItem(inputItem.Id, requestStartedOn, 0);
                     }
@@ -708,23 +728,33 @@ public class WorkshopRouter : SolaceControllerBase
                     var journal = results1.Get<Journal>("journal");
 
                     if (smeltingSlot.ActiveJob is null)
+                    {
                         return query;
+                    }
 
                     SmeltingCalculator.State state = SmeltingCalculator.CalculateState(requestStartedOn, smeltingSlot.ActiveJob, smeltingSlot.Burning, staticData.Catalog);
 
                     if (state.Input.Instances.Length > 0)
+                    {
                         inventory.AddItems(state.Input.Id, [.. state.Input.Instances.Select(instance => new NonStackableItemInstance(instance.InstanceId, instance.Wear))]);
+                    }
                     else if (state.Input.Count > 0)
+                    {
                         inventory.AddItems(state.Input.Id, state.Input.Count);
+                    }
 
                     journal.AddCollectedItem(state.Input.Id, requestStartedOn, 0);
 
                     if (state.RemainingAddedFuel is not null)
                     {
                         if (state.RemainingAddedFuel.Item.Instances.Length > 0)
+                        {
                             inventory.AddItems(state.RemainingAddedFuel.Item.Id, [.. state.RemainingAddedFuel.Item.Instances.Select(instance => new NonStackableItemInstance(instance.InstanceId, instance.Wear))]);
+                        }
                         else if (state.RemainingAddedFuel.Item.Count > 0)
+                        {
                             inventory.AddItems(state.RemainingAddedFuel.Item.Id, state.RemainingAddedFuel.Item.Count);
+                        }
 
                         journal.AddCollectedItem(state.RemainingAddedFuel.Item.Id, requestStartedOn, 0);
                     }
@@ -738,9 +768,13 @@ public class WorkshopRouter : SolaceControllerBase
 
                     smeltingSlot.ActiveJob = null;
                     if (state.RemainingHeat > 0)
+                    {
                         smeltingSlot.Burning = new SmeltingSlot.BurningR(state.CurrentBurningFuel, state.RemainingHeat);
+                    }
                     else
+                    {
                         smeltingSlot.Burning = null;
+                    }
 
                     query.Update("smelting", playerId, smeltingSlots).Update("inventory", playerId, inventory).Update("journal", playerId, journal);
                     query.Then(ActivityLogUtils.AddEntry(playerId, new ActivityLog.SmeltingCompletedEntry(requestStartedOn, rewards.ToDBRewardsModel())), false);
@@ -793,23 +827,33 @@ public class WorkshopRouter : SolaceControllerBase
                     var profile = results1.Get<Profile>("profile");
 
                     if (craftingSlot.ActiveJob is null)
+                    {
                         return query;
+                    }
 
                     CraftingCalculator.State state = CraftingCalculator.CalculateState(requestStartedOn, craftingSlot.ActiveJob, staticData.Catalog);
                     if (state.Completed)
+                    {
                         return query;
+                    }
 
                     int remainingTime = (int)(state.TotalCompletionTime - requestStartedOn);
                     if (remainingTime < 0)
+                    {
                         return query;
+                    }
 
                     CraftingCalculator.FinishPrice finishPrice = CraftingCalculator.CalculateFinishPrice(remainingTime);
 
                     if (expectedPurchasePrice.ExpectedPurchasePrice < finishPrice.Price)
+                    {
                         return query;
+                    }
 
                     if (!profile.Rubies.Spend(finishPrice.Price))
+                    {
                         return query;
+                    }
 
                     CraftingSlot.ActiveJobR activeJob = craftingSlot.ActiveJob;
                     craftingSlot.ActiveJob = new CraftingSlot.ActiveJobR(activeJob.SessionId, activeJob.RecipeId, activeJob.StartTime, activeJob.Input, activeJob.TotalRounds, activeJob.CollectedRounds, true);
@@ -862,23 +906,33 @@ public class WorkshopRouter : SolaceControllerBase
                     var profile = results1.Get<Profile>("profile");
 
                     if (smeltingSlot.ActiveJob is null)
+                    {
                         return query;
+                    }
 
                     SmeltingCalculator.State state = SmeltingCalculator.CalculateState(requestStartedOn, smeltingSlot.ActiveJob, smeltingSlot.Burning, staticData.Catalog);
                     if (state.Completed)
+                    {
                         return query;
+                    }
 
                     int remainingTime = (int)(state.TotalCompletionTime - requestStartedOn);
                     if (remainingTime < 0)
+                    {
                         return query;
+                    }
 
                     SmeltingCalculator.FinishPrice finishPrice = SmeltingCalculator.CalculateFinishPrice(remainingTime);
 
                     if (expectedPurchasePrice.ExpectedPurchasePrice < finishPrice.Price)
+                    {
                         return query;
+                    }
 
                     if (!profile.Rubies.Spend(finishPrice.Price))
+                    {
                         return query;
+                    }
 
                     SmeltingSlot.ActiveJobR activeJob = smeltingSlot.ActiveJob;
                     smeltingSlot.ActiveJob = new SmeltingSlot.ActiveJobR(activeJob.SessionId, activeJob.RecipeId, activeJob.StartTime, activeJob.Input, activeJob.AddedFuel, activeJob.TotalRounds, activeJob.CollectedRounds, true);
@@ -982,15 +1036,21 @@ public class WorkshopRouter : SolaceControllerBase
                     Profile profile = results1.Get<Profile>("profile");
 
                     if (!craftingSlot.Locked)
+                    {
                         return query;
+                    }
 
                     int unlockPrice = CraftingCalculator.CalculateUnlockPrice(slotIndex);
 
                     if (expectedPurchasePrice.ExpectedPurchasePrice != unlockPrice)
+                    {
                         return query;
+                    }
 
                     if (!profile.Rubies.Spend(unlockPrice))
+                    {
                         return query;
+                    }
 
                     craftingSlot.Locked = false;
 
@@ -1037,15 +1097,21 @@ public class WorkshopRouter : SolaceControllerBase
                     Profile profile = results1.Get<Profile>("profile");
 
                     if (!smeltingSlot.Locked)
+                    {
                         return query;
+                    }
 
                     int unlockPrice = SmeltingCalculator.CalculateUnlockPrice(slotIndex);
 
                     if (expectedPurchasePrice.ExpectedPurchasePrice != unlockPrice)
+                    {
                         return query;
+                    }
 
                     if (!profile.Rubies.Spend(unlockPrice))
+                    {
                         return query;
+                    }
 
                     smeltingSlot.Locked = false;
 
@@ -1078,7 +1144,9 @@ public class WorkshopRouter : SolaceControllerBase
     private static Types.Workshop.CraftingSlot CraftingSlotModelToResponse(CraftingSlot craftingSlotModel, long currentTime, int streamVersion)
     {
         if (craftingSlotModel.Locked)
-            throw new ArgumentException(nameof(craftingSlotModel));
+        {
+            throw new ArgumentException($"{nameof(craftingSlotModel)} is locked.", nameof(craftingSlotModel));
+        }
 
         CraftingSlot.ActiveJobR? activeJob = craftingSlotModel.ActiveJob;
         if (activeJob is not null)
@@ -1105,7 +1173,9 @@ public class WorkshopRouter : SolaceControllerBase
             );
         }
         else
+        {
             return new Types.Workshop.CraftingSlot(null, null, null, null, 0, 0, 0, null, null, State.EMPTY, null, null, streamVersion);
+        }
     }
 
     private static Types.Workshop.SmeltingSlot SmeltingSlotModelToResponseIncludingLocked(SmeltingSlot smeltingSlotModel, long currentTime, int streamVersion, int slotIndex)
@@ -1123,7 +1193,9 @@ public class WorkshopRouter : SolaceControllerBase
     private static Types.Workshop.SmeltingSlot SmeltingSlotModelToResponse(SmeltingSlot smeltingSlotModel, long currentTime, int streamVersion)
     {
         if (smeltingSlotModel.Locked)
-            throw new ArgumentException(nameof(smeltingSlotModel));
+        {
+            throw new ArgumentException($"{nameof(smeltingSlotModel)} is locked.", nameof(smeltingSlotModel));
+        }
 
         SmeltingSlot.ActiveJobR? activeJob = smeltingSlotModel.ActiveJob;
         if (activeJob is not null)
@@ -1141,7 +1213,9 @@ public class WorkshopRouter : SolaceControllerBase
                 );
             }
             else
+            {
                 fuel = null;
+            }
 
             var burning = new Types.Workshop.SmeltingSlot.BurningR(
                 !state.Completed ? TimeFormatter.FormatTime(state.BurnStartTime) : null,

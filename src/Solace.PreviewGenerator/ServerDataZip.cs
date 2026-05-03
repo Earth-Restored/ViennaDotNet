@@ -13,14 +13,17 @@ internal sealed class ServerDataZip
 
     private ServerDataZip(Stream inputStream)
     {
-        using ZipArchive archive = new ZipArchive(inputStream);
+        using var archive = new ZipArchive(inputStream);
 
         foreach (var entry in archive.Entries)
         {
-            if (entry.IsDirectory) continue;
+            if (entry.IsDirectory)
+            {
+                continue;
+            }
 
             using (Stream entryStream = entry.Open())
-            using (MemoryStream ms = new MemoryStream())
+            using (var ms = new MemoryStream())
             {
                 entryStream.CopyTo(ms);
                 _files.Add(entry.FullName, ms.ToArray());
@@ -36,8 +39,8 @@ internal sealed class ServerDataZip
         int chunkZ = z & 31;
         int chunkIndex = (chunkZ << 5) | chunkX;
 
-        using MemoryStream ms = new MemoryStream(_files[$"region/r.{regionX}.{regionZ}.mca"]);
-        using BinaryReader reader = new BinaryReader(ms);
+        using var ms = new MemoryStream(_files[$"region/r.{regionX}.{regionZ}.mca"]);
+        using var reader = new BinaryReader(ms);
 
         ms.Seek(chunkIndex * 4, SeekOrigin.Begin);
         int offset = (int)(reader.ReadUInt32BE() >> 8);
@@ -53,8 +56,8 @@ internal sealed class ServerDataZip
         {
             case 1:
                 {
-                    using GZipStream gZipStream = new GZipStream(new MemoryStream(compressed), CompressionMode.Decompress, false);
-                    using MemoryStream resultStream = new MemoryStream();
+                    using var gZipStream = new GZipStream(new MemoryStream(compressed), CompressionMode.Decompress, false);
+                    using var resultStream = new MemoryStream();
                     gZipStream.CopyTo(resultStream);
                     uncompressed = resultStream.ToArray();
                 }
@@ -62,8 +65,8 @@ internal sealed class ServerDataZip
                 break;
             case 2:
                 {
-                    using ZLibStream deflateStream = new ZLibStream(new MemoryStream(compressed), CompressionMode.Decompress, false);
-                    using MemoryStream resultStream = new MemoryStream();
+                    using var deflateStream = new ZLibStream(new MemoryStream(compressed), CompressionMode.Decompress, false);
+                    using var resultStream = new MemoryStream();
                     deflateStream.CopyTo(resultStream);
                     uncompressed = resultStream.ToArray();
                 }
@@ -78,8 +81,8 @@ internal sealed class ServerDataZip
                 throw new IOException($"Invalid compression type {compressionType}");
         }
 
-        using (MemoryStream tagStream = new MemoryStream(uncompressed))
-        using (TagReader tagReader = new TagReader(tagStream, FormatOptions.Java, false))
+        using (var tagStream = new MemoryStream(uncompressed))
+        using (var tagReader = new TagReader(tagStream, FormatOptions.Java, false))
         {
             CompoundTag tag = tagReader.ReadTag<CompoundTag>();
 

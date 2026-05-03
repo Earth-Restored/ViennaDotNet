@@ -226,25 +226,27 @@
             _ => "status-offline"
         };
 
-    private string GetShortLevel(string level) => level switch
-    {
-        "Verbose" => "VRB",
-        "Debug" => "DBG",
-        "Information" => "INF",
-        "Warning" => "WRN",
-        "Error" => "ERR",
-        "Fatal" => "FTL",
-        _ => level?.Length >= 3 ? level.Substring(0, 3).ToUpper() : "UNK"
-    };
+    private string GetShortLevel(string? level)
+        => level switch
+        {
+            "Verbose" => "VRB",
+            "Debug" => "DBG",
+            "Information" => "INF",
+            "Warning" => "WRN",
+            "Error" => "ERR",
+            "Fatal" => "FTL",
+            _ => level?.Length >= 3 ? level.Substring(0, 3).ToUpperInvariant() : "UNK"
+        };
 
-    private string GetLogLevelClass(string level) => level switch
-    {
-        "Verbose" => "log-vrb",
-        "Debug" => "log-dbg",
-        "Information" => "log-inf",
-        "Warning" => "log-wrn",
-        "Error" => "log-err",
-        "Fatal" => "log-ftl",
-        _ => ""
-    };
+    private string GetLogLevelClass(string? level)
+        => level switch
+        {
+            "Verbose" => "log-vrb",
+            "Debug" => "log-dbg",
+            "Information" => "log-inf",
+            "Warning" => "log-wrn",
+            "Error" => "log-err",
+            "Fatal" => "log-ftl",
+            _ => ""
+        };
 }

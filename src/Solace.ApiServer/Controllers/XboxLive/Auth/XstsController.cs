@@ -7,17 +7,17 @@ namespace Solace.ApiServer.Controllers.XboxLive.Auth;
 
 [Route("xsts/authorize")]
 [Route("xsts.auth.xboxlive.com/xsts/authorize")]
-public class XstsController : SolaceControllerBase
+internal sealed class XstsController : SolaceControllerBase
 {
     private static Config config => Program.config;
 
-    public sealed record AuthenticateRequest(
+    internal sealed record AuthenticateRequest(
         AuthenticateRequest.PropertiesR Properties,
         string RelyingParty,
         string TokenType
     )
     {
-        public sealed record PropertiesR(
+        internal sealed record PropertiesR(
             string SandboxId,
             string DeviceToken,
             string TitleToken,
@@ -44,7 +44,7 @@ public class XstsController : SolaceControllerBase
         var titleTokenAuth = JwtUtils.Verify<Tokens.Xbox.AuthToken>(request.Properties.TitleToken, config.XboxLive.AuthTokenSecretBytes)?.Data;
         var userTokenAuth = JwtUtils.Verify<Tokens.Xbox.AuthToken>(request.Properties.UserTokens[0], config.XboxLive.AuthTokenSecretBytes)?.Data;
 
-        if (deviceTokenAuth is not Tokens.Xbox.DeviceToken deviceToken || titleTokenAuth is not Tokens.Xbox.TitleToken titleToken || userTokenAuth is not Tokens.Xbox.UserToken userToken)
+        if (deviceTokenAuth is not Tokens.Xbox.DeviceToken || titleTokenAuth is not Tokens.Xbox.TitleToken || userTokenAuth is not Tokens.Xbox.UserToken userToken)
         {
             return TypedResults.Unauthorized();
         }

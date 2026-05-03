@@ -7,14 +7,16 @@ namespace Solace.ApiServer.Utils;
 
 public sealed class LevelUtils
 {
+#pragma warning disable IDE0060 // Remove unused parameter
     public static EarthDB.Query CheckAndHandlePlayerLevelUp(string playerId, long currentTime, StaticData.StaticData staticData)
+#pragma warning restore IDE0060 // Remove unused parameter
     {
-        EarthDB.Query getQuery = new EarthDB.Query(true);
+        var getQuery = new EarthDB.Query(true);
         getQuery.Get("profile", playerId, typeof(Profile));
         getQuery.Then(results =>
         {
             Profile profile = results.Get<Profile>("profile");
-            EarthDB.Query updateQuery = new EarthDB.Query(true);
+            var updateQuery = new EarthDB.Query(true);
             bool changed = false;
             while (profile.Level - 1 < staticData.Levels.Levels.Length && profile.Experience >= staticData.Levels.Levels[profile.Level - 1].ExperienceRequired)
             {
@@ -25,7 +27,9 @@ public sealed class LevelUtils
             }
 
             if (changed)
+            {
                 updateQuery.Update("profile", playerId, profile);
+            }
 
             return updateQuery;
         });
@@ -35,7 +39,7 @@ public sealed class LevelUtils
 
     public static Rewards MakeLevelRewards(PlayerLevels.Level level)
     {
-        Rewards rewards = new Rewards();
+        var rewards = new Rewards();
         if (level.Rubies > 0)
         {
             rewards.AddRubies(level.Rubies);

@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Serilog;
 using Serilog.Events;
 using Solace.ApiServer.Authentication;
+using Solace.ApiServer.Utils;
 
 namespace Solace.ApiServer;
 
@@ -20,8 +21,11 @@ public class Startup
     // This method gets called by the runtime. Use this method to add services to the container.
     public void ConfigureServices(IServiceCollection services)
     {
-        //services.AddRazorPages();
-        services.AddControllers();
+        services.AddControllers()
+            .ConfigureApplicationPartManager(manager =>
+            {
+                manager.FeatureProviders.Add(new InternalControllerFeatureProvider());
+            });;
 
         services.AddResponseCompression(options =>
         {
@@ -44,7 +48,9 @@ public class Startup
     }
 
     // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
+#pragma warning disable IDE0060 // Remove unused parameter
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+#pragma warning restore IDE0060 // Remove unused parameter
     {
         app.Use(async (context, next) =>
         {

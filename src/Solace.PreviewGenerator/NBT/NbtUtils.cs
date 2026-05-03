@@ -4,8 +4,8 @@ namespace Solace.PreviewGenerator.NBT;
 
 public static class NbtUtils
 {
-    public static readonly int MAX_DEPTH = 16;
-    public static readonly long MAX_READ_SIZE = 0; // Disabled by default
+    public static readonly int MaxDepth = 16;
+    public static readonly long MaxReadSize; // Disabled by default
 
     public static string ToString(object o)
     {
@@ -56,18 +56,24 @@ public static class NbtUtils
     public static object Copy(object val)
     {
         if (val is byte[] byteArr)
+        {
             return byteArr.Clone();
+        }
         else if (val is int[] intArr)
+        {
             return intArr.Clone();
+        }
         else if (val is long[] longArr)
+        {
             return longArr.Clone();
+        }
 
         return val;
     }
 
     public static string Indent(string str)
     {
-        StringBuilder builder = new StringBuilder("  " + str);
+        var builder = new StringBuilder("  " + str);
         for (int i = 2; i < builder.Length; i++)
         {
             if (builder[i] == '\n')
@@ -84,7 +90,7 @@ public static class NbtUtils
 
     public static string ToHexString(byte[] data)
     {
-        StringBuilder r = new StringBuilder(data.Length << 1);
+        var r = new StringBuilder(data.Length << 1);
         foreach (byte b in data)
         {
             r.Append(HEX_CODE[(b >> 4) & 0xF]);

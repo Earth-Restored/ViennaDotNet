@@ -21,7 +21,7 @@ namespace Solace.ApiServer.Controllers.EarthApi;
 [Authorize]
 [ApiVersion("1.1")]
 [Route("1/api/v{version:apiVersion}/commerce")]
-public class ShopController : SolaceControllerBase
+internal sealed class ShopController : SolaceControllerBase
 {
     private static StaticData.StaticData staticData => Program.staticData;
     private static EarthDB earthDB => Program.DB;
@@ -272,7 +272,6 @@ public class ShopController : SolaceControllerBase
                     Log.Warning($"Shop item '{itemId}' has unknown {nameof(Playfab.Item.ItemData)}");
                     break;
             }
-
 
             if (rubies is null)
             {

@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Solace.EventBus.Client;
 using Solace.StaticData;
+using System.Globalization;
 
 namespace Solace.TileRenderer;
 
@@ -60,8 +61,8 @@ internal static class Program
         }
 
         var loggerConfig = new LoggerConfiguration()
-                 .WriteTo.Console()
-                 .WriteTo.File("logs/tile_renderer/log.txt", rollingInterval: RollingInterval.Day, rollOnFileSizeLimit: true, fileSizeLimitBytes: 8338607, outputTemplate: "{Timestamp:HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
+                 .WriteTo.Console(formatProvider: CultureInfo.InvariantCulture)
+                 .WriteTo.File("logs/tile_renderer/log.txt", rollingInterval: RollingInterval.Day, rollOnFileSizeLimit: true, fileSizeLimitBytes: 8338607, outputTemplate: "{Timestamp:HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}", formatProvider: CultureInfo.InvariantCulture)
                  .Enrich.WithProperty("ComponentName", "TileRenderer");
 
         if (!string.IsNullOrWhiteSpace(options.LoggerUrl))
@@ -86,7 +87,7 @@ internal static class Program
         {
             Log.Information("Verifying maptiler api key");
 
-            HttpClient httpClient = new HttpClient();
+            var httpClient = new HttpClient();
             HttpResponseMessage response;
             try
             {
@@ -139,6 +140,7 @@ internal static class Program
                 {
                     Log.Information($"The provided connection string is: '{options.TileDatabaseConnectionString}', make sure that it is in the correct format");
                 }
+
                 Log.CloseAndFlush();
                 return 1;
             }

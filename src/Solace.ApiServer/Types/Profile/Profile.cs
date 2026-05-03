@@ -2,7 +2,7 @@
 
 namespace Solace.ApiServer.Types.Profile;
 
-public sealed record Profile(
+internal sealed record Profile(
     Dictionary<int, Profile.LevelR> LevelDistribution,
     int TotalExperience,
     int Level,
@@ -12,7 +12,7 @@ public sealed record Profile(
     float HealthPercentage
 )
 {
-    public sealed record LevelR(
+    internal sealed record LevelR(
         int ExperienceRequired,
         Rewards Rewards
     );

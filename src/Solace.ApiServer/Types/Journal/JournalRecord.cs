@@ -25,12 +25,14 @@ public sealed record JournalRecord(
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public enum Type
         {
+#pragma warning disable CA1707 // Identifiers should not contain underscores
             [JsonStringEnumMemberName("LevelUp")] LEVEL_UP,
             [JsonStringEnumMemberName("TappableCollected")] TAPPABLE,
             [JsonStringEnumMemberName("JournalContentCollected")] JOURNAL_ITEM_UNLOCKED,
             [JsonStringEnumMemberName("CraftingJobCompleted")] CRAFTING_COMPLETED,
             [JsonStringEnumMemberName("SmeltingJobCompleted")] SMELTING_COMPLETED,
             [JsonStringEnumMemberName("BoostActivated")] BOOST_ACTIVATED,
+#pragma warning restore CA1707 // Identifiers should not contain underscores
         }
     }
 }

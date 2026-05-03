@@ -2,7 +2,7 @@
 
 namespace Solace.ApiServer.Types.Buildplates;
 
-public sealed record OwnedBuildplate(
+internal sealed record OwnedBuildplate(
     string Id,
     string TemplateId,
     Dimension Dimension,
@@ -21,7 +21,7 @@ public sealed record OwnedBuildplate(
 )
 {
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    public enum TypeE
+    internal enum TypeE
     {
         [JsonStringEnumMemberName("Survival")] SURVIVAL
     }

@@ -8,7 +8,7 @@ public readonly struct Union<TA, TB>
 {
     private readonly object _value;
 
-    private Union(object value, bool isB)
+    internal Union(object value, bool isB)
     {
         _value = value;
         IsB = isB;
@@ -22,15 +22,22 @@ public readonly struct Union<TA, TB>
 
     public TB? B => (TB)_value;
 
-    public static Union<TA, TB> CreateA(TA value)
-        => new Union<TA, TB>(value, false);
-
-    public static Union<TA, TB> CreateB(TB value)
-        => new Union<TA, TB>(value, true);
-
     public static implicit operator Union<TA, TB>(TA value)
-        => CreateA(value);
+        => Union.CreateA<TA, TB>(value);
 
     public static implicit operator Union<TA, TB>(TB value)
-        => CreateB(value);
+        => Union.CreateB<TA, TB>(value);
+}
+
+public static class Union
+{
+    public static Union<TA, TB> CreateA<TA, TB>(TA value)
+        where TA : notnull
+        where TB : notnull
+        => new Union<TA, TB>(value, false);
+
+    public static Union<TA, TB> CreateB<TA, TB>(TB value)
+        where TA : notnull
+        where TB : notnull
+        => new Union<TA, TB>(value, true);
 }

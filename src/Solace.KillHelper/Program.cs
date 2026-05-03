@@ -1,13 +1,14 @@
 ﻿using System.Diagnostics;
+using System.Globalization;
 using System.Runtime.InteropServices;
 
-internal partial class Program
+internal static partial class Program
 {
     private static int Main(string[] args)
     {
         Debug.Assert(RuntimeInformation.IsOSPlatform(OSPlatform.Windows));
 
-        int processId = int.Parse(args[0]);
+        int processId = int.Parse(args[0], CultureInfo.InvariantCulture);
 
         FreeConsole(); // free our console
         if (AttachConsole((uint)processId))

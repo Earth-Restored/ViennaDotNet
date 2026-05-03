@@ -47,7 +47,7 @@ public sealed class RequestHandler
     private readonly int _channelId;
     private readonly string _queueName;
     private readonly IRequestHandlerLister _handler;
-    private volatile bool _closed = false;
+    private volatile bool _closed;
 
     internal RequestHandler(EventBusClient client, int channelId, string queueName, IRequestHandlerLister handler)
     {

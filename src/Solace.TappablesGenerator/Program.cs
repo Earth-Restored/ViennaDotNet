@@ -3,6 +3,7 @@ using Serilog;
 using System.Diagnostics;
 using Solace.EventBus.Client;
 using Solace.StaticData;
+using System.Globalization;
 
 namespace Solace.TappablesGenerator;
 
@@ -38,22 +39,32 @@ internal static class Program
 
         Options options;
         if (res is Parsed<Options> parsed)
+        {
             options = parsed.Value;
+        }
         else if (res is NotParsed<Options> notParsed)
         {
             if (res.Errors.Any(error => error is HelpRequestedError))
+            {
                 return 0;
+            }
             else if (res.Errors.Any(error => error is VersionRequestedError))
+            {
                 return 0;
+            }
             else
+            {
                 return 1;
+            }
         }
         else
+        {
             return 1;
+        }
 
         var loggerConfig = new LoggerConfiguration()
-            .WriteTo.Console()
-            .WriteTo.File("logs/tappable_generator/log.txt", rollingInterval: RollingInterval.Day, rollOnFileSizeLimit: true, fileSizeLimitBytes: 8338607, outputTemplate: "{Timestamp:HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
+            .WriteTo.Console(formatProvider: CultureInfo.InvariantCulture)
+            .WriteTo.File("logs/tappable_generator/log.txt", rollingInterval: RollingInterval.Day, rollOnFileSizeLimit: true, fileSizeLimitBytes: 8338607, outputTemplate: "{Timestamp:HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}", formatProvider: CultureInfo.InvariantCulture)
             .Enrich.WithProperty("ComponentName", "TappableGenerator");
 
         if (!string.IsNullOrWhiteSpace(options.LoggerUrl))
@@ -96,9 +107,9 @@ internal static class Program
 
         Log.Information("Connected to event bus");
 
-        TappableGenerator tappableGenerator = new TappableGenerator(staticData);
-        EncounterGenerator encounterGenerator = new EncounterGenerator(staticData);
-        Spawner[] spawner = new Spawner[1];
+        var tappableGenerator = new TappableGenerator(staticData);
+        var encounterGenerator = new EncounterGenerator(staticData);
+        var spawner = new Spawner[1];
         ActiveTiles activeTiles = await ActiveTiles.CreateAsync(eventBusClient, new ActiveTiles.ActiveTileListener(
             async activeTiles =>
             {

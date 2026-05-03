@@ -34,8 +34,8 @@ internal sealed class Chunk
         ChunkX = chunkTag.Get<IntTag>("xPos");
         ChunkZ = chunkTag.Get<IntTag>("zPos");
 
-        JavaBlocks.BedrockMapping.BlockEntityR?[] blockEntityMappings = new JavaBlocks.BedrockMapping.BlockEntityR[16 * 256 * 16];
-        JavaBlocks.BedrockMapping.ExtraDataR?[] extraDatas = new JavaBlocks.BedrockMapping.ExtraDataR[16 * 256 * 16];
+        var blockEntityMappings = new JavaBlocks.BedrockMapping.BlockEntityR?[16 * 256 * 16];
+        var extraDatas = new JavaBlocks.BedrockMapping.ExtraDataR?[16 * 256 * 16];
 
         Array.Fill(Blocks, BedrockBlocks.AirId);
         Array.Fill(BlockEntities, null);
@@ -46,29 +46,37 @@ internal sealed class Chunk
         for (int subchunkY = 0; subchunkY < 16; subchunkY++)
         {
             int sectionIndex = subchunkY + 4 + 1; // Java world height starts at -64, plus one section for bottommost lighting
-            CompoundTag sectionTag = (CompoundTag)chunkTag.Get<ListTag>("sections")[sectionIndex];
+            var sectionTag = (CompoundTag)chunkTag.Get<ListTag>("sections")[sectionIndex];
 
             CompoundTag blockStatesTag = sectionTag.Get<CompoundTag>("block_states");
 
             ListTag paletteTag = blockStatesTag.Get<ListTag>("palette");
             List<string> javaPalette = new(paletteTag.Count);
             foreach (Tag paletteEntryTag in paletteTag)
+            {
                 javaPalette.Add(ReadPaletteEntry((CompoundTag)paletteEntryTag));
+            }
 
             int[] javaBlocks;
             if (javaPalette.Count == 0)
+            {
                 throw new IOException("Chunk section has empty palette");
+            }
 
             if (!blockStatesTag.ContainsKey("data"))
             {
                 if (javaPalette.Count > 1)
+                {
                     throw new IOException("Chunk section has palette with more than one entry and no data");
+                }
 
                 javaBlocks = new int[4096];
                 Array.Fill(javaBlocks, 0);
             }
             else
+            {
                 javaBlocks = ReadBitArray(blockStatesTag.Get<LongArrayTag>("data"), javaPalette.Count);
+            }
 
             for (int x = 0; x < 16; x++)
             {
@@ -82,7 +90,9 @@ internal sealed class Chunk
                         if (bedrockMapping is null)
                         {
                             if (alreadyNotifiedMissingBlocks.Add(javaName))
+                            {
                                 Log.Warning($"Chunk contained block with no mapping {javaName}");
+                            }
                         }
 
                         // TODO: how to handle waterlogged blocks???
@@ -92,7 +102,9 @@ internal sealed class Chunk
                         JavaBlocks.BedrockMapping.BlockEntityR? blockEntityMapping = bedrockMapping is not null && bedrockMapping.BlockEntity is not null ? bedrockMapping.BlockEntity : null;
                         NbtMap? bedrockBlockEntityData = blockEntityMapping is not null ? BlockEntityTranslator.TranslateBlockEntity(blockEntityMapping, null) : null;
                         if (bedrockBlockEntityData is not null)
-                            bedrockBlockEntityData = bedrockBlockEntityData.toBuilder().PutInt("x", x + ChunkX * 16).PutInt("y", y + subchunkY * 16).PutInt("z", z + ChunkZ * 16).PutBoolean("isMovable", false).Build();
+                        {
+                            bedrockBlockEntityData = bedrockBlockEntityData.ToBuilder().PutInt("x", x + ChunkX * 16).PutInt("y", y + subchunkY * 16).PutInt("z", z + ChunkZ * 16).PutBoolean("isMovable", false).Build();
+                        }
 
                         BlockEntities[(x * 256 + y + subchunkY * 16) * 16 + z] = bedrockBlockEntityData;
                         blockEntityMappings[(x * 256 + y + subchunkY * 16) * 16 + z] = blockEntityMapping;
@@ -105,20 +117,24 @@ internal sealed class Chunk
 
         foreach (Tag blockEntityTag in chunkTag.Get<ListTag>("block_entities"))
         {
-            CompoundTag blockEntityCompoundTag = (CompoundTag)blockEntityTag;
+            var blockEntityCompoundTag = (CompoundTag)blockEntityTag;
             int x = GetChunkBlockOffset(blockEntityCompoundTag.Get<IntTag>("x").Value);
             int y = blockEntityCompoundTag.Get<IntTag>("y").Value;
             int z = GetChunkBlockOffset(blockEntityCompoundTag.Get<IntTag>("z").Value);
             string type = blockEntityCompoundTag.Get<StringTag>("id").Value;
-            BlockEntityInfo blockEntityInfo = new BlockEntityInfo(x, y, z, BlockEntityType.FURNACE, blockEntityCompoundTag);    // TODO: use proper type (currently this doesn't matter for any of our translator implementations)
+            var blockEntityInfo = new BlockEntityInfo(x, y, z, BlockEntityType.FURNACE, blockEntityCompoundTag);    // TODO: use proper type (currently this doesn't matter for any of our translator implementations)
 
             JavaBlocks.BedrockMapping.BlockEntityR? blockEntityMapping = blockEntityMappings[(x * 256 + y) * 16 + z];
             if (blockEntityMapping is null)
+            {
                 Log.Debug($"Ignoring block entity of type {type}");
+            }
 
             NbtMap? bedrockBlockEntityData = blockEntityMapping is not null ? BlockEntityTranslator.TranslateBlockEntity(blockEntityMapping, blockEntityInfo) : null;
             if (bedrockBlockEntityData is not null)
-                bedrockBlockEntityData = bedrockBlockEntityData.toBuilder().PutInt("x", x + ChunkX * 16).PutInt("y", y).PutInt("z", z + ChunkZ * 16).PutBoolean("isMovable", false).Build();
+            {
+                bedrockBlockEntityData = bedrockBlockEntityData.ToBuilder().PutInt("x", x + ChunkX * 16).PutInt("y", y).PutInt("z", z + ChunkZ * 16).PutBoolean("isMovable", false).Build();
+            }
 
             BlockEntities[(x * 256 + y) * 16 + z] = bedrockBlockEntityData;
         }
@@ -155,7 +171,7 @@ internal sealed class Chunk
 
         long[] @in = longArrayTag;
         int inIndex = 0;
-        int inSubIndex = 0;
+        int inSubIndex;
 
         int bits = 64;
         for (int bits1 = 4; bits1 <= 64; bits1++)
