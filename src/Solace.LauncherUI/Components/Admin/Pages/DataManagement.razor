@@ -5,6 +5,7 @@
 @using Solace.Common.Utils
 @using Solace.LauncherUI.Utils
 @using System.IO.Compression
+@using System.Diagnostics
 @attribute [Authorize(Policy = Permissions.ViewData)]
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
@@ -346,9 +347,13 @@
 
             // Detect Structure
             if (archive.Entries.Any(e => e.FullName.Equals("earth.db", StringComparison.OrdinalIgnoreCase)))
+            {
                 isSolace = true;
+            }
             else if (archive.Entries.Any(e => e.FullName.StartsWith("db/earth.db", StringComparison.OrdinalIgnoreCase)))
+            {
                 isVienna = true;
+            }
 
             if (!isSolace && !isVienna)
             {
@@ -359,13 +364,35 @@
             _processingAction = isSolace ? "Processing Solace Format" : "Processing Vienna Format";
             StateHasChanged();
 
-            // Logic to move files to your storage location
+            if (_totalSpaceB > 0)
+            {
+                _uploadError = "Merging data is not yet supported.";
+                return;
+            }
+
+            string earthDbFile = isSolace ? "earth.db" : "db/earth.db";
+            string? liveDbFile = isSolace ? "live.db" : null;
+            string objectsDir = isSolace ? "object_store" : "objects";
+
+            var earthDbEntry = archive.GetEntry(earthDbFile);
+            if (earthDbEntry is not null)
+            {
+                // todo: merge
+                await earthDbEntry.ExtractToFileAsync(_earthDB.FullName, overwrite: false);
+            }
+
+            var liveDbEntry = liveDbFile is null ? null : archive.GetEntry(liveDbFile);
+            if (liveDbEntry is not null)
+            {
+                // todo: merge
+                await liveDbEntry.ExtractToFileAsync(_liveDB.FullName, overwrite: false);
+            }
+
             foreach (var entry in archive.Entries)
             {
-                // Example: Extracting GUID files from object stores
-                if (entry.FullName.Contains("object_store/") || entry.FullName.Contains("objects/"))
+                if (entry.FullName.StartsWith(objectsDir))
                 {
-                    // Logic to write entry.Open() to your destination path
+                    await entry.ExtractToFileAsync(Path.Combine(_objectStore.FullName, Path.GetRelativePath(objectsDir, entry.FullName)));
                 }
             }
 
