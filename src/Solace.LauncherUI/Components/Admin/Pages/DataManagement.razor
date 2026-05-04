@@ -7,6 +7,7 @@
 @using System.IO.Compression
 @attribute [Authorize(Policy = Permissions.ViewData)]
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
 
 <PageTitle>Data - Solace</PageTitle>
 
@@ -21,22 +22,22 @@
             <div class="row">
                 <div class="col-md-3 border-end">
                     <h6 class="text-muted">Total Space Used</h6>
-                    <h3 class="text-primary">@FormatBytes(_totalSpaceGB)</h3>
+                    <h3 class="text-primary">@FormatBytes(_totalSpaceB)</h3>
                 </div>
                 <div class="col-md-9">
                     <h6 class="text-muted">Storage Split</h6>
                     <ul class="list-group list-group-flush">
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             <span><i class="bi bi-globe"></i> earth.db</span>
-                            <span class="badge bg-secondary rounded-pill">@FormatBytes(_earthDbGB)</span>
+                            <span class="badge bg-secondary rounded-pill">@FormatBytes(_earthDbB)</span>
                         </li>
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             <span><i class="bi bi-activity"></i> live.db</span>
-                            <span class="badge bg-secondary rounded-pill">@FormatBytes(_liveDbGB)</span>
+                            <span class="badge bg-secondary rounded-pill">@FormatBytes(_liveDbB)</span>
                         </li>
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             <span><i class="bi bi-folder"></i> object_store</span>
-                            <span class="badge bg-secondary rounded-pill">@FormatBytes(_objectStoreGB)</span>
+                            <span class="badge bg-secondary rounded-pill">@FormatBytes(_objectStoreB)</span>
                         </li>
                     </ul>
                 </div>
@@ -52,7 +53,7 @@
             </div>
             <div class="card-body">
                 <p class="text-muted mb-3">Backup your current server data.</p>
-                <button class="btn btn-outline-primary" @onclick="InitiateExport">
+                <button class="btn btn-outline-primary" @onclick="ExportData">
                     <i class="bi bi-download"></i> Export Data
                 </button>
             </div>
@@ -173,6 +174,10 @@
 @code {
     private ClaimsPrincipal? _user;
 
+    private FileInfo _earthDB = null!;
+    private FileInfo _liveDB = null!;
+    private DirectoryInfo _objectStore = null!;
+
     // View states - Delete
     private bool _isConfirmingDelete = false;
     private bool _canConfirmDelete = false;
@@ -188,40 +193,57 @@
     private string? _uploadError;
     private long _maxAllowedSize = 1024 * 1024 * 500;
 
-    // Mock Data
-    private long _totalSpaceGB => long.Max(_earthDbGB + _liveDbGB + _objectStoreGB, -1);
-    private long _earthDbGB = -1;
-    private long _liveDbGB = -1;
-    private long _objectStoreGB = -1;
+    // Size
+    private long _totalSpaceB => long.Max(_earthDbB + _liveDbB + _objectStoreB, -1);
+    private long _earthDbB = -1;
+    private long _liveDbB = -1;
+    private long _objectStoreB = -1;
 
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         _user = authState.User;
 
-        _earthDbGB = new FileInfo(Settings.Instance.EarthDatabaseConnectionString!).SafeLength;
-        _liveDbGB = new FileInfo(Settings.Instance.LiveDatabaseConnectionString!).SafeLength;
-        _objectStoreGB = new DirectoryInfo(Path.Combine(Program.DataDirRelative, Program.ObjectStoreDirName)).SafeLength;
+        _earthDB = new FileInfo(Settings.Instance.EarthDatabaseConnectionString!);
+        _liveDB = new FileInfo(Settings.Instance.LiveDatabaseConnectionString!);
+        _objectStore = new DirectoryInfo(Path.Combine(Program.DataDirRelative, Program.ObjectStoreDirName));
+
+        LoadSizes();
+    }
+
+    private void LoadSizes()
+    {
+        _earthDbB = _earthDB.SafeLength;
+        _liveDbB = _liveDB.SafeLength;
+        _objectStoreB = _objectStore.SafeLength;
     }
 
     private bool HasPermission(string permission)
         => _user?.HasPermission(permission) ?? false;
 
-    private void InitiateExport()
+    private async Task ExportData()
     {
         _processingAction = "Exporting Data";
         _isProcessing = true;
-        _ = ProcessMockActionAsync();
+        
+        try
+        {
+            NavigationManager.NavigateTo("api/data/export", forceLoad: true);
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
     }
 
     private void InitiateImport()
     {
-        if (_selectedFile == null)
+        if (_selectedFile is null)
         {
             return;
         }
 
-        if (_totalSpaceGB > 0)
+        if (_totalSpaceB > 0)
         {
             _showImportWarning = true;
         }
@@ -248,23 +270,16 @@
         _isProcessing = true;
         _processingAction = "Uploading";
 
-        await ProcessZipFileAsync(_selectedFile);
-
-        _isProcessing = false;
-        _selectedFile = null;
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private async Task ProcessMockActionAsync()
-    {
-        await Task.Delay(3000);
-        
-        if (_processingAction == "Importing Data")
+        try
         {
+            await ProcessZipFileAsync(_selectedFile);
+            _selectedFile = null;
         }
-
-        _isProcessing = false;
-        await InvokeAsync(StateHasChanged);
+        finally
+        {
+            _isProcessing = false;
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     private async Task InitiateDelete()
@@ -295,9 +310,9 @@
 
     private async Task ExecuteDelete()
     {
-        _earthDbGB = 0;
-        _liveDbGB = 0;
-        _objectStoreGB = 0;
+        _earthDbB = 0;
+        _liveDbB = 0;
+        _objectStoreB = 0;
         
         _isConfirmingDelete = false;
         _canConfirmDelete = false;
@@ -354,8 +369,7 @@
                 }
             }
 
-            // Mock success update
-            await ProcessMockActionAsync();
+            LoadSizes();
         }
         catch (Exception ex)
         {
