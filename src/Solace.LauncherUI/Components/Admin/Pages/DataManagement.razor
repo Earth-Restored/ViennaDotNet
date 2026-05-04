@@ -77,7 +77,7 @@
                     </p>
 
                     <div class="input-group">
-                        <InputFile OnChange="HandleFileSelected" class="form-control" accept=".zip" />
+                        <InputFile @key="_inputFileId" OnChange="HandleFileSelected" class="form-control" accept=".zip" />
                         @if (_selectedFile != null)
                         {
                             <button class="btn btn-primary" @onclick="InitiateImport">
@@ -189,6 +189,8 @@
     private bool _isProcessing = false;
     private string _processingAction = "";
 
+    private Guid _inputFileId = Guid.NewGuid();
+
     // import
     private IBrowserFile? _selectedFile;
     private string? _uploadError;
@@ -214,6 +216,10 @@
 
     private void LoadSizes()
     {
+        _earthDB.Refresh();
+        _liveDB.Refresh();
+        _objectStore.Refresh();
+        
         _earthDbB = _earthDB.SafeLength;
         _liveDbB = _liveDB.SafeLength;
         _objectStoreB = _objectStore.SafeLength;
@@ -275,10 +281,12 @@
         {
             await ProcessZipFileAsync(_selectedFile);
             _selectedFile = null;
+            _inputFileId = Guid.NewGuid();
         }
         finally
         {
             _isProcessing = false;
+            LoadSizes();
             await InvokeAsync(StateHasChanged);
         }
     }
@@ -311,12 +319,16 @@
 
     private async Task ExecuteDelete()
     {
-        _earthDbB = 0;
-        _liveDbB = 0;
-        _objectStoreB = 0;
+        _earthDB.SafeDelete();
+        _liveDB.SafeDelete();
+        _objectStore.SafeDelete(recursive: true);
+
+        LoadSizes();
         
         _isConfirmingDelete = false;
         _canConfirmDelete = false;
+
+        StateHasChanged();
     }
 
     private void HandleFileSelected(InputFileChangeEventArgs e)
@@ -392,11 +404,11 @@
             {
                 if (entry.FullName.StartsWith(objectsDir))
                 {
-                    await entry.ExtractToFileAsync(Path.Combine(_objectStore.FullName, Path.GetRelativePath(objectsDir, entry.FullName)));
+                    string destinationFileName = Path.Combine(_objectStore.FullName, Path.GetRelativePath(objectsDir, entry.FullName));
+                    Directory.CreateDirectory(Path.GetDirectoryName(destinationFileName)!);
+                    await entry.ExtractToFileAsync(destinationFileName);
                 }
             }
-
-            LoadSizes();
         }
         catch (Exception ex)
         {

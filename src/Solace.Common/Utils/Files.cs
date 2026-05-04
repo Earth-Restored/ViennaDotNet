@@ -15,6 +15,18 @@ public static class Files
         public FileStream OpenWriteNew()
            => File.Open(file.FullName, FileMode.Create, FileAccess.Write, FileShare.Read);
 
+        public void SafeDelete()
+        {
+            try
+            {
+                file.Delete();
+            }
+            catch (DirectoryNotFoundException)
+            {
+
+            }
+        }
+
         public long SafeLength
         {
             get
@@ -31,6 +43,30 @@ public static class Files
 
     extension(DirectoryInfo directory)
     {
+        public void SafeDelete()
+        {
+            try
+            {
+                directory.Delete();
+            }
+            catch (DirectoryNotFoundException)
+            {
+
+            }
+        }
+
+        public void SafeDelete(bool recursive)
+        {
+            try
+            {
+                directory.Delete(recursive);
+            }
+            catch (DirectoryNotFoundException)
+            {
+
+            }
+        }
+
         public long Length => directory.EnumerateFiles("*", SearchOption.AllDirectories).Sum(file => file.Length);
 
         public long SafeLength
