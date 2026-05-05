@@ -1,5 +1,3 @@
-![Banner](src/Solace.LauncherUI/wwwroot/banner.png)
-
 ![GitHub License](https://img.shields.io/github/license/Earth-Restored/Solace?style=flat-square)
 ![GitHub Repo stars](https://img.shields.io/github/stars/Earth-Restored/Solace?style=flat-square)
 ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/Earth-Restored/Solace/total?style=flat-square)
