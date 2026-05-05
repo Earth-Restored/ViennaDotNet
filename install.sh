@@ -155,7 +155,7 @@ print_step "4. CREATING EARTH COMMAND"
 
 mkdir -p "$PREFIX/bin"
 
-curl -fsSL https://raw.githubusercontent.com/FroquaCubez/Solace/refs/heads/main/distros/Termux.sh -o "$PREFIX/bin/earth"
+curl -fsSL https://raw.githubusercontent.com/Earth-Restored/Solace/refs/heads/main/distros/Termux.sh -o "$PREFIX/bin/earth"
 
 chmod +x "$PREFIX/bin/earth"
 
