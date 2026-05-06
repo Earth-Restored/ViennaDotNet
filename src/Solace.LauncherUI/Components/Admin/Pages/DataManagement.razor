@@ -2,12 +2,14 @@
 @rendermode InteractiveServer
 @using Microsoft.AspNetCore.Authorization
 @using System.Security.Claims
+@using Microsoft.Data.Sqlite
 @using Serilog
 @using Solace.Common.Utils
 @using Solace.DB
 @using Solace.LauncherUI.Utils
 @using System.IO.Compression
 @using System.Diagnostics
+@using System.Numerics
 @attribute [Authorize(Policy = Permissions.ViewData)]
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
@@ -149,10 +151,6 @@
                         Data already exists on this server. Importing a new dataset will <strong>merge</strong> the incoming
                         data with the existing records.
                     </p>
-                    <p class="mb-0 text-muted small">
-                        Conflicts will be resolved by keeping the newest records. Do you wish
-                        to proceed?
-                    </p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" @onclick="CancelImport">Cancel</button>
@@ -204,18 +202,17 @@
 
                     <div class="bg-light p-3 rounded border">
                         <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" id="alwaysApplyCheck"
-                                   @bind="_alwaysApplyChoice" />
+                            <input class="form-check-input" type="checkbox" id="alwaysApplyCheck" @bind="_alwaysApplyChoice" />
                             <label class="form-check-label user-select-none" for="alwaysApplyCheck">
                                 Always apply my choice to future conflicts
                             </label>
                         </div>
 
-                        @if (_alwaysApplyChoice && _supportsNewest)
+                        @if (_alwaysApplyChoice && _supportsAutomatic)
                         {
                             <div class="mt-3 p-2 border-start border-3 border-warning">
                                 <label class="small text-muted mb-1">
-                                    If you choose 'Newest', but 'Newest' is unavailable in a
+                                    If you choose 'Automatic', but 'Automatic' is unavailable in a
                                     future conflict, fallback to:
                                 </label>
                                 <select class="form-select form-select-sm" @bind="_fallbackAction">
@@ -228,18 +225,16 @@
                 </div>
                 <div class="modal-footer d-flex">
                     <div class="flex-fill text-start">
-                        <button type="button" class="btn btn-outline-secondary"
-                                @onclick="() => ResolveConflict(MergeAction.KeepCurrent)">
+                        <button type="button" class="btn btn-outline-secondary" @onclick="() => ResolveConflict(MergeAction.KeepCurrent)">
                             Keep Current
                         </button>
                     </div>
 
                     <div class="flex-fill text-center">
-                        @if (_supportsNewest)
+                        @if (_supportsAutomatic)
                         {
-                            <button type="button" class="btn btn-success"
-                                    @onclick="() => ResolveConflict(MergeAction.KeepNewest)">
-                                Keep Newest
+                            <button type="button" class="btn btn-success" @onclick="() => ResolveConflict(MergeAction.Auto)">
+                                Automatic
                             </button>
                         }
                         else
@@ -249,8 +244,7 @@
                     </div>
 
                     <div class="flex-fill text-end">
-                        <button type="button" class="btn btn-outline-primary"
-                                @onclick="() => ResolveConflict(MergeAction.KeepIncoming)">
+                        <button type="button" class="btn btn-outline-primary" @onclick="() => ResolveConflict(MergeAction.KeepIncoming)">
                             Keep Incoming
                         </button>
                     </div>
@@ -286,11 +280,11 @@
 
     // merge conflict
     private TaskCompletionSource<MergeAction>? _mergeConflictTcs;
-    
+
     private string _conflictContext = "";
     private string _currentValueDisplay = "";
     private string _incomingValueDisplay = "";
-    private bool _supportsNewest = false;
+    private bool _supportsAutomatic = false;
     private bool _alwaysApplyChoice = false;
     private MergeAction _fallbackAction = MergeAction.KeepIncoming;
 
@@ -333,7 +327,7 @@
     {
         _processingAction = "Exporting Data";
         _isProcessing = true;
-        
+
         try
         {
             NavigationManager.NavigateTo("api/data/export", forceLoad: true);
@@ -440,7 +434,7 @@
         _objectStore.SafeDelete(recursive: true);
 
         LoadSizes();
-        
+
         _isConfirmingDelete = false;
         _canConfirmDelete = false;
 
@@ -469,7 +463,7 @@
             ms.Seek(0, SeekOrigin.Begin);
 
             using var archive = new ZipArchive(ms, ZipArchiveMode.Read);
-            
+
             bool isSolace = false;
             bool isVienna = false;
 
@@ -511,7 +505,7 @@
 
             foreach (var entry in archive.Entries)
             {
-                if (entry.FullName.StartsWith(objectsDir))
+                if (!entry.IsDirectory && entry.FullName.StartsWith(objectsDir))
                 {
                     string destinationFileName = Path.Combine(_objectStore.FullName, Path.GetRelativePath(objectsDir, entry.FullName));
                     Directory.CreateDirectory(Path.GetDirectoryName(destinationFileName)!);
@@ -533,14 +527,322 @@
             await earthDbEntry.ExtractToFileAsync(_earthDB.FullName, overwrite: false);
         }
 
+        using var currentDb = EarthDB.Open(Settings.Instance.EarthDatabaseConnectionString!);
+        using var liveDb = DataUtils.OpenLiveDB(Settings.Instance);
+
         var importDbPath = Path.GetTempFileName();
         await earthDbEntry.ExtractToFileAsync(importDbPath, overwrite: true);
+        using var importDb = new SqliteConnection("Data Source=" + importDbPath);
+        await importDb.OpenAsync();
 
-        var importDb = EarthDB.Open(importDbPath);
+        try
+        {
+            // todo: sharedBuildplates SharedBuildplates id: "", encounterBuildplates EncounterBuildplates id: ""
+            // reset preference after each one?
+            await ImportTypeSame<Solace.DB.Models.Player.Profile>("profile", async (userId, current, import, query) =>
+            {
+                current.Health = await AutoMergeNumber(current.Health, import.Health, nameof(current.Health), userId);
+                current.Experience = await AutoMergeNumber(current.Experience, import.Experience, nameof(current.Experience), userId);
+                current.Level = await AutoMergeNumber(current.Level, import.Level, nameof(current.Level), userId);
+                current.Rubies.Purchased = await AutoMergeNumber(current.Rubies.Purchased, import.Rubies.Purchased, "Purchased rubies", userId);
+                current.Rubies.Earned = await AutoMergeNumber(current.Rubies.Earned, import.Rubies.Earned, "Earned rubies", userId);
 
+                query.Update("profile", userId, current);
+            });
 
+            await ImportTypeSame<Solace.DB.Models.Player.Journal>("journal", async (userId, current, import, query) =>
+            {
+                foreach (var item in import.Items)
+                {
+                    if (!current.Items.TryGetValue(item.Key, out var currentValue))
+                    {
+                        current.Items.Add(item.Key, item.Value);
+                    }
+                    else
+                    {
+                        currentValue = currentValue with
+                        {
+                            FirstSeen = await AutoMerge(currentValue.FirstSeen, item.Value.FirstSeen, $"Journal item first seen '{item.Key}'", userId, long.Min),
+                            LastSeen = await AutoMergeNumber(currentValue.LastSeen, item.Value.LastSeen, $"Journal item last seen '{item.Key}'", userId),
+                            AmountCollected = await AutoMergeNumber(currentValue.AmountCollected, item.Value.AmountCollected, $"Journal item amount collected '{item.Key}'", userId),
+                        };
+                        current.Items[item.Key] = currentValue;
+                    }
+                }
+                
+                query.Update("journal", userId, current);
+            });
 
-        File.Delete(importDbPath);
+            await ImportTypeSame<Solace.DB.Models.Player.Hotbar>("hotbar", async (userId, current, import, query) =>
+            {
+                for (var i = 0; i < current.Items.Length; i++)
+                {
+                    current.Items[i] = await AutoMerge(current.Items[i], import.Items[i], $"Hotbar slot {i + 1}", userId, null);
+                }
+
+                query.Update("hotbar", userId, current);
+            });
+
+            await ImportTypeSame<Solace.DB.Models.Player.Inventory>("inventory", async (userId, current, import, query) =>
+            {
+                foreach (var item in import.StackableItems)
+                {
+                    if (!current._stackableItems.TryGetValue(item.Id, out var currentValue))
+                    {
+                        current._stackableItems.Add(item.Id, item.Count);
+                    }
+                    else
+                    {
+                        // todo: resolve name
+                        current._stackableItems[item.Id] = await AutoMergeNumber(currentValue ?? 0, item.Count ?? 0, $"Inventory item '{item.Id}'", userId);
+                    }
+                }
+
+                foreach (var item in import._nonStackableItems)
+                {
+                    if (!current._nonStackableItems.TryGetValue(item.Key, out var currentValue))
+                    {
+                        current._nonStackableItems.Add(item.Key, item.Value);
+                    }
+                    else
+                    {
+                        foreach (var item2 in item.Value)
+                        {
+                            currentValue[item2.Key] = item2.Value;
+                        }
+                    }
+                }
+
+                query.Update("inventory", userId, current);
+            });
+        
+            await ImportTypeSame<Solace.DB.Models.Player.Tokens>("tokens", async (userId, current, import, query) =>
+            {
+                foreach (var item in import._tokens)
+                {
+                    current._tokens[item.Key] = item.Value;
+                }
+
+                query.Update("tokens", userId, current);
+            });
+
+            await ImportTypeSame<Solace.DB.Models.Player.Workshop.CraftingSlots>("crafting", async (userId, current, import, query) =>
+            {
+                for (var i = 0; i < import.Slots.Length; i++)
+                {
+                    var importSlot = import.Slots[i];
+                    var slot = current.Slots[i];
+
+                    slot.Locked = await AutoMerge(slot.Locked, importSlot.Locked, $"Crafting slot {i + 1} unlocked", userId, null);
+
+                    if (slot.ActiveJob is null)
+                    {
+                        slot.ActiveJob = importSlot.ActiveJob;
+                    }
+                    else if (importSlot.ActiveJob is not null)
+                    {
+                        slot.ActiveJob = (await AutoMerge(slot.ActiveJob.RecipeId, importSlot.ActiveJob.RecipeId, $"Crafting slot {i + 1} recipe", userId, null)) == slot.ActiveJob.RecipeId ? slot.ActiveJob : importSlot.ActiveJob;
+                    }
+                }
+
+                query.Update("crafting", userId, current);
+            });
+
+            await ImportTypeSame<Solace.DB.Models.Player.Workshop.SmeltingSlots>("smelting", async (userId, current, import, query) =>
+            {
+                for (var i = 0; i < import.Slots.Length; i++)
+                {
+                    var importSlot = import.Slots[i];
+                    var slot = current.Slots[i];
+
+                    slot.Locked = await AutoMerge(slot.Locked, importSlot.Locked, $"Smelting slot {i + 1} unlocked", userId, null);
+
+                    if (slot.ActiveJob is null)
+                    {
+                        slot.ActiveJob = importSlot.ActiveJob;
+                    }
+                    else if (importSlot.ActiveJob is not null)
+                    {
+                        slot.ActiveJob = (await AutoMerge(slot.ActiveJob.RecipeId, importSlot.ActiveJob.RecipeId, $"Smelting slot {i + 1} recipe", userId, null)) == slot.ActiveJob.RecipeId ? slot.ActiveJob : importSlot.ActiveJob;
+                    }
+                }
+
+                query.Update("smelting", userId, current);
+            });
+
+            await ImportTypeSame<Solace.DB.Models.Player.RedeemedTappables>("redeemedTappables", async (userId, current, import, query) =>
+            {
+                foreach (var item in import._tappables)
+                {
+                    if (!current._tappables.TryGetValue(item.Key, out var currentValue))
+                    {
+                        current._tappables.Add(item.Key, item.Value);
+                    }
+                    else
+                    {
+                        current._tappables[item.Key] = long.Max(currentValue, item.Value);
+                    }
+                }
+
+                query.Update("redeemedTappables", userId, current);
+            });
+
+            await ImportTypeSame<Solace.DB.Models.Player.Boosts>("boosts", async (userId, current, import, query) =>
+            {
+                for (var i = 0; i < import.ActiveBoosts.Length; i++)
+                {
+                    if (current.ActiveBoosts[i] is null)
+                    {
+                        current.ActiveBoosts[i] = import.ActiveBoosts[i];
+                    }
+                    else if (import.ActiveBoosts[i] is not null)
+                    {
+                        current.ActiveBoosts[i] = await AutoMerge(current.ActiveBoosts[i]!, import.ActiveBoosts[i]!, $"Boost slot {i + 1}", userId, null);
+                    }
+                }
+
+                query.Update("boosts", userId, current);
+            });
+
+            await ImportTypeSame<Solace.DB.Models.Player.ActivityLog>("activityLog", async (userId, current, import, query) =>
+            {
+                current = await AutoMerge(current, import, "Activity log", userId, null);
+
+                query.Update("activityLog", userId, current);
+            });
+
+            await ImportType<Solace.DB.Models.Player.Buildplates, Solace.DB.Models.Player.Buildplates.Vienna>("buildplates",
+            buildplates =>
+            {
+                var result = new DB.Models.Player.Buildplates();
+
+                result._buildplates.EnsureCapacity(buildplates._buildplates.Count);
+
+                foreach (var item in buildplates._buildplates)
+                {
+                    result._buildplates.Add(item.Key, new(null, "Imported buildplate", item.Value.Size, item.Value.Offset, item.Value.Scale, item.Value.Night, item.Value.LastModified, item.Value.ServerDataObjectId, item.Value.PreviewObjectId));
+                }
+
+                return result;
+            },
+            async (userId, current, import, query) =>
+            {
+                foreach (var item in import._buildplates)
+                {
+                    current._buildplates[item.Key] = item.Value;
+                }
+
+                query.Update("buildplates", userId, current);
+            });
+        }
+        finally
+        {
+            File.Delete(importDbPath);
+        }
+
+        async Task<TValue> AutoMergeNumber<TValue>(TValue currentValue, TValue importValue, string propertyName, string userId)
+            where TValue : INumber<TValue>
+            => await AutoMerge<TValue>(currentValue, importValue, propertyName, userId, TValue.Max);
+
+        async Task<TValue> AutoMerge<TValue>(TValue currentValue, TValue importValue, string propertyName, string userId, Func<TValue, TValue, TValue>? getAuto)
+            where TValue : IEquatable<TValue>
+        {
+            if (currentValue?.Equals(importValue) ?? importValue is null)
+            {
+                return currentValue!;
+            }
+
+            var name = liveDb is null ? null : await DataUtils.GetUsername(userId, liveDb);
+
+            var mergeAction = await PromptMergeConflictAsync($"{propertyName} is different in imported data (user id: {userId}{(name is null ? "" : $", username: {name}")})", currentValue?.ToString() ?? "null", importValue?.ToString() ?? "null", getAuto is not null);
+
+            return mergeAction switch
+            {
+                MergeAction.KeepCurrent => currentValue!,
+                MergeAction.KeepIncoming => importValue!,
+                MergeAction.Auto => getAuto!(currentValue!, importValue!),
+                _ => currentValue!,
+            };
+        }
+
+        async Task ImportTypeSame<T>(string name, Action<string, T, T,
+EarthDB.Query> merge)
+            where T : class, IEquatable<T>
+            => await ImportType<T, T>(name, value => value, merge);
+
+        async Task ImportType<TSolace, TVienna>(string name, Func<TVienna, TSolace> viennaToSolace, Action<string, TSolace, TSolace,
+EarthDB.Query> merge)
+            where TSolace : class, IEquatable<TSolace>
+            where TVienna : class
+        {
+            foreach (var (id, valueString) in EnumerateObjectsByType(importDb, name))
+            {
+                TSolace importValue;
+                if (isSolace)
+                {
+                    var solaceValue = EarthDB.FromJson<TSolace>(valueString);
+                    if (solaceValue is null)
+                    {
+                        continue;
+                    }
+
+                    importValue = solaceValue;
+                }
+                else
+                {
+                    var viennaValue = EarthDB.FromJson<TVienna>(valueString);
+                    if (viennaValue is null)
+                    {
+                        continue;
+                    }
+
+                    importValue = viennaToSolace(viennaValue);
+                }
+                
+                await new EarthDB.Query(true)
+                    .Get(name, id, typeof(TSolace))
+                    .Then(results =>
+                    {
+                        var query = new EarthDB.Query(true);
+
+                        var currentValue = results.GetExisting<TSolace>(name);
+
+                        if (currentValue is null || currentValue.Equals(importValue))
+                        {
+                            query.Update(name, id, importValue);
+                        }
+                        else
+                        {
+                            merge(id, currentValue, importValue, query);
+                        }
+
+                        return query;
+                    })
+                    .ExecuteAsync(currentDb);
+            }
+        }
+
+        static IEnumerable<(string Id, string Value)> EnumerateObjectsByType(SqliteConnection connection, string
+objectType)
+        {
+            const string query = $"SELECT id, value FROM {EarthDB.ObjectsTable} WHERE type = @type";
+
+            using (var command = new SqliteCommand(query, connection))
+            {
+                command.Parameters.AddWithValue("@type", objectType);
+
+                using (var reader = command.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        yield return (
+                            Id: reader.GetString(0),
+                            Value: reader.GetString(1)
+                        );
+                    }
+                }
+            }
+        }
     }
 
     private static readonly string[] SizeUnits = ["B", "KB", "MB", "GB", "TB", "PB"];
@@ -570,11 +872,12 @@
     }
 
     private async Task<MergeAction> PromptMergeConflictAsync(string context, string currentValue, string incomingValue, bool
-allowNewest)
+allowAutomatic)
     {
+        _globalMergePreference = MergeAction.Auto;
         if (_globalMergePreference.HasValue)
         {
-            if (_globalMergePreference.Value == MergeAction.KeepNewest && !allowNewest)
+            if (_globalMergePreference.Value == MergeAction.Auto && !allowAutomatic)
             {
                 if (_globalFallbackPreference.HasValue)
                 {
@@ -590,7 +893,7 @@ allowNewest)
         _conflictContext = context;
         _currentValueDisplay = currentValue;
         _incomingValueDisplay = incomingValue;
-        _supportsNewest = allowNewest;
+        _supportsAutomatic = allowAutomatic;
         _alwaysApplyChoice = false;
         _fallbackAction = MergeAction.KeepIncoming;
 
@@ -602,7 +905,7 @@ allowNewest)
         if (_alwaysApplyChoice)
         {
             _globalMergePreference = finalAction;
-            if (finalAction == MergeAction.KeepNewest)
+            if (finalAction == MergeAction.Auto)
             {
                 _globalFallbackPreference = _fallbackAction;
             }
@@ -623,6 +926,6 @@ allowNewest)
     {
         KeepCurrent,
         KeepIncoming,
-        KeepNewest
+        Auto
     }
 }

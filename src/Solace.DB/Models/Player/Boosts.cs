@@ -1,6 +1,6 @@
 ﻿namespace Solace.DB.Models.Player;
 
-public sealed class Boosts
+public sealed class Boosts : IEquatable<Boosts>
 {
     public ActiveBoost?[] ActiveBoosts { get; init; }
 
@@ -26,6 +26,24 @@ public sealed class Boosts
         }
 
         return [.. prunedBoosts];
+    }
+
+    public bool Equals(Boosts? other)
+        => other is not null && ActiveBoosts.SequenceEqual(other.ActiveBoosts);
+
+    public override bool Equals(object? obj)
+        => Equals(obj as Boosts);
+
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+
+        foreach (var item in ActiveBoosts)
+        {
+            hash.Add(item);
+        }
+
+        return hash.ToHashCode();
     }
 
     public sealed record ActiveBoost(

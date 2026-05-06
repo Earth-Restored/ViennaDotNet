@@ -3,7 +3,7 @@ using Solace.Common.Utils;
 
 namespace Solace.DB.Models.Player;
 
-public sealed class Hotbar
+public sealed class Hotbar : IEquatable<Hotbar>
 {
     public Item?[] Items { get; set; }
 
@@ -66,6 +66,24 @@ public sealed class Hotbar
 
             Items[index] = item;
         }
+    }
+
+    public bool Equals(Hotbar? other)
+        => other is not null && Items.SequenceEqual(other.Items);
+
+    public override bool Equals(object? obj)
+        => Equals(obj as Hotbar);
+
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+
+        foreach (var item in Items)
+        {
+            hash.Add(item);
+        }
+
+        return hash.ToHashCode();
     }
 
     public sealed record Item(

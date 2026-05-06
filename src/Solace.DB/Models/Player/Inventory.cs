@@ -4,7 +4,7 @@ using Solace.DB.Models.Common;
 
 namespace Solace.DB.Models.Player;
 
-public sealed class Inventory
+public sealed class Inventory : IEquatable<Inventory>
 {
     [JsonInclude, JsonPropertyName("stackableItems")]
     public Dictionary<string, int?> _stackableItems;
@@ -41,7 +41,25 @@ public sealed class Inventory
     public sealed record NonStackableItem(
         string Id,
         NonStackableItemInstance[] Instances
-    );
+    )
+    {
+        public bool Equals(NonStackableItem? other)
+            => other is not null && Id == other.Id && Instances.SequenceEqual(other.Instances); 
+
+        public override int GetHashCode()
+        {
+            var hash = new HashCode();
+
+            hash.Add(Id);
+
+            foreach (var item in Instances)
+            {
+                hash.Add(item);
+            }
+
+            return hash.ToHashCode();
+        }
+    }
 
     public int GetItemCount(string id)
     {
@@ -130,5 +148,32 @@ public sealed class Inventory
         }
 
         return [.. instances];
+    }
+
+    public bool Equals(Inventory? other)
+        => other is not null &&
+        _stackableItems.OrderBy(static item => item.Key, StringComparer.Ordinal).Select(item => (Key: item.Key, Value: item.Value)).SequenceEqual(other._stackableItems.OrderBy(static item => item.Key, StringComparer.Ordinal).Select(item => (Key: item.Key, Value: item.Value))) &&
+        _nonStackableItems.OrderBy(static item => item.Key, StringComparer.Ordinal).Select(item => (Key: item.Key, Value: item.Value)).SequenceEqual(other._nonStackableItems.OrderBy(static item => item.Key, StringComparer.Ordinal).Select(item => (Key: item.Key, Value: item.Value)));
+
+    public override bool Equals(object? obj)
+        => Equals(obj as Inventory);
+
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+
+        foreach (var item in _stackableItems.OrderBy(static item => item.Key, StringComparer.Ordinal))
+        {
+            hash.Add(item.Key);
+            hash.Add(item.Value);
+        }
+
+        foreach (var item in _nonStackableItems.OrderBy(static item => item.Key, StringComparer.Ordinal))
+        {
+            hash.Add(item.Key);
+            hash.Add(item.Value);
+        }
+
+        return hash.ToHashCode();
     }
 }

@@ -25,6 +25,7 @@ public sealed class EarthDB : IDisposable
     private static readonly JsonSerializerOptions jsonOptions = new JsonSerializerOptions()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        AllowOutOfOrderMetadataProperties = true,
     };
 
     internal const int TRANSACTION_TIMEOUT = 60;
@@ -254,7 +255,7 @@ public sealed class EarthDB : IDisposable
                     await transaction.Connection.CloseAsync();
                 }
 
-                results.updates.AddRange(updates);
+                results.Updates.AddRange(updates);
                 return results;
             }
             catch (SqliteException ex)
@@ -387,11 +388,11 @@ public sealed class EarthDB : IDisposable
                             int version = reader.GetInt32(1);
                             object? value = FromJson(json, entry.ValueType);
                             Debug.Assert(value is not null);
-                            results.getValues[entry.Type] = new Results.Result(value, version);
+                            results.GetValues[entry.Type] = new Results.Result(value, version, false);
                         }
                         else
                         {
-                            results.getValues[entry.Type] = new Results.Result(CreateNewInstance(entry.ValueType), 1);
+                            results.GetValues[entry.Type] = new Results.Result(CreateNewInstance(entry.ValueType), 1, true);
                         }
                     }
                 }
@@ -399,7 +400,7 @@ public sealed class EarthDB : IDisposable
 
             foreach (ExtrasEntry entry in extras)
             {
-                results.extras[entry.Name] = entry.Value;
+                results.Extras[entry.Name] = entry.Value;
             }
 
             foreach (var entry in thenFunctions)
@@ -774,42 +775,51 @@ public sealed class EarthDB : IDisposable
 
     public class Results
     {
-        public Dictionary<string, Result> getValues = [];
-        public Dictionary<string, object> extras = [];
-        public Dictionary<string, int?> updates = [];
+        public Dictionary<string, Result> GetValues = [];
+        public Dictionary<string, object> Extras = [];
+        public Dictionary<string, int?> Updates = [];
 
         public Results()
         {
             // empty
         }
 
+        [Obsolete]
         public Result GetResult(string name)
-            => !getValues.TryGetValue(name, out Result? value) || value is null
+            => !GetValues.TryGetValue(name, out Result? value) || value is null
             ? throw new KeyNotFoundException($"Key '{name}' was not found.")
             : value;
 
         public Result<T> GetResult<T>(string name)
-            => !getValues.TryGetValue(name, out Result? value) || value is null
+            => !GetValues.TryGetValue(name, out Result? value) || value is null
                 ? throw new KeyNotFoundException()
-                : new Result<T>((T)value.Value, value.Version);
+                : new Result<T>((T)value.Value, value.Version, value.New);
 
+        [Obsolete]
         public object Get(string name)
             => GetResult(name).Value;
 
         public T Get<T>(string name)
             => GetResult<T>(name).Value;
 
+        public T? GetExisting<T>(string name)
+            where T : class
+        {
+            var result = GetResult<T>(name);
+            return result.New ? null : result.Value;
+        }
+
         public Dictionary<string, int?> GetUpdates()
-            => new Dictionary<string, int?>(updates);
+            => new Dictionary<string, int?>(Updates);
 
         public object GetExtra(string name)
-            => !extras.TryGetValue(name, out object? value) || value is null
+            => !Extras.TryGetValue(name, out object? value) || value is null
             ? throw new KeyNotFoundException()
             : value;
 
-        public record Result(object Value, int Version);
+        public sealed record Result(object Value, int Version, bool New);
 
-        public record struct Result<T>(T Value, int Version);
+        public readonly record struct Result<T>(T Value, int Version, bool New);
     }
 
     public sealed class ObjectResults

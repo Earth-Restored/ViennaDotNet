@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace Solace.DB.Models.Player;
 
-public sealed class Rubies
+public sealed class Rubies : IEquatable<Rubies>
 {
     public Rubies()
     {
@@ -55,4 +55,13 @@ public sealed class Rubies
 
         return true;
     }
+
+    public bool Equals(Rubies? other)
+        => other is not null && Purchased == other.Purchased && Earned == other.Earned;
+
+    public override bool Equals(object? obj)
+        => Equals(obj as Rubies);
+
+    public override int GetHashCode()
+        => HashCode.Combine(Purchased, Earned);
 }

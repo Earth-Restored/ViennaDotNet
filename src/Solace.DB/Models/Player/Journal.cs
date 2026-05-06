@@ -3,7 +3,7 @@ using Solace.Common.Utils;
 
 namespace Solace.DB.Models.Player;
 
-public sealed class Journal
+public sealed class Journal : IEquatable<Journal>
 {
     [JsonInclude, JsonPropertyName("items")]
     public Dictionary<string, ItemJournalEntry> _items;
@@ -41,6 +41,26 @@ public sealed class Journal
             _items[uuid] = new ItemJournalEntry(itemJournalEntry.FirstSeen, itemJournalEntry.LastSeen, itemJournalEntry.AmountCollected + count);
             return itemJournalEntry.AmountCollected;
         }
+    }
+
+    // KVP is not equatable
+    public bool Equals(Journal? other)
+        => other is not null && _items.Select(item => (Key: item.Key, Value: item.Value)).OrderBy(item => item.Key, StringComparer.Ordinal).SequenceEqual(other._items.Select(item => (Key: item.Key, Value: item.Value)).OrderBy(item => item.Key, StringComparer.Ordinal));
+
+    public override bool Equals(object? obj)
+        => Equals(obj as Journal);
+
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+
+        foreach (var item in _items.OrderBy(item => item.Key, StringComparer.Ordinal))
+        {
+            hash.Add(item.Key, StringComparer.Ordinal);
+            hash.Add(item.Value);
+        }
+
+        return hash.ToHashCode();
     }
 
     public sealed record ItemJournalEntry(

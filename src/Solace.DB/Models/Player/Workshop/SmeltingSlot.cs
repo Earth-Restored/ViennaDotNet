@@ -1,6 +1,6 @@
 ﻿namespace Solace.DB.Models.Player.Workshop;
 
-public sealed class SmeltingSlot
+public sealed class SmeltingSlot : IEquatable<SmeltingSlot>
 {
     public ActiveJobR? ActiveJob { get; set; }
 
@@ -14,6 +14,15 @@ public sealed class SmeltingSlot
         Burning = null;
         Locked = false;
     }
+
+    public bool Equals(SmeltingSlot? other)
+        => other is not null && ActiveJob == other.ActiveJob && Burning == other.Burning && Locked == other.Locked;
+
+    public override bool Equals(object? obj)
+        => Equals(obj as SmeltingSlot);
+
+    public override int GetHashCode()
+        => HashCode.Combine(ActiveJob, Burning, Locked);
 
     public sealed record ActiveJobR(
         string SessionId,

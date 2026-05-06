@@ -4,7 +4,7 @@ using Solace.DB.Models.Common;
 
 namespace Solace.DB.Models.Player;
 
-public sealed class Tokens
+public sealed class Tokens : IEquatable<Tokens>
 {
     [JsonInclude, JsonPropertyName("tokens")]
     public Dictionary<string, Token> _tokens;
@@ -45,10 +45,29 @@ public sealed class Tokens
         return res;
     }
 
+    public bool Equals(Tokens? other)
+        => other is not null && _tokens.OrderBy(static item => item.Key, StringComparer.Ordinal).Select(item => (Key: item.Key, Value: item.Value)).SequenceEqual(other._tokens.OrderBy(static item => item.Key, StringComparer.Ordinal).Select(item => (Key: item.Key, Value: item.Value)));
+
+    public override bool Equals(object? obj)
+        => Equals(obj as Tokens);
+
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+
+        foreach (var item in _tokens.OrderBy(static item => item.Key, StringComparer.Ordinal))
+        {
+            hash.Add(item.Key);
+            hash.Add(item.Value);
+        }
+
+        return hash.ToHashCode();
+    }
+
     [JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
     [JsonDerivedType(typeof(LevelUpToken), "LEVEL_UP")]
     [JsonDerivedType(typeof(JournalItemUnlockedToken), "JOURNAL_ITEM_UNLOCKED")]
-    public abstract class Token
+    public abstract class Token : IEquatable<Token>
     {
         [JsonIgnore]
         public TypeE Type { get; init; }
@@ -66,6 +85,13 @@ public sealed class Tokens
             JOURNAL_ITEM_UNLOCKED
 #pragma warning restore CA1707 // Identifiers should not contain underscores
         }
+
+        public abstract bool Equals(Token? other);
+
+        public override bool Equals(object? obj)
+            => Equals(obj as Token);
+
+        public abstract override int GetHashCode();
     }
 
     public sealed class LevelUpToken : Token
@@ -79,6 +105,12 @@ public sealed class Tokens
             Level = level;
             Rewards = rewards;
         }
+
+        public override bool Equals(Token? other)
+            => other is LevelUpToken levelUp && Level == levelUp.Level && Rewards.Equals(levelUp.Rewards);
+
+        public override int GetHashCode()
+            => HashCode.Combine(Level, Rewards);
     }
 
     public sealed class JournalItemUnlockedToken : Token
@@ -90,5 +122,11 @@ public sealed class Tokens
         {
             ItemId = itemId;
         }
+
+        public override bool Equals(Token? other)
+            => other is JournalItemUnlockedToken itemUnlocked && ItemId == itemUnlocked.ItemId;
+
+        public override int GetHashCode()
+            => HashCode.Combine(ItemId);
     }
 }
