@@ -215,6 +215,8 @@ first_start_checks() {
         echo "setup instructions on the"
         echo "Solace GitHub repository."
         echo ""
+        echo "Use: "earth eula" after the setup."
+        echo ""
         echo "======================================="
         echo ""
 
