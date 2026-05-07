@@ -174,11 +174,95 @@ stop_server() {
     rm -f "$PID_FILE" "$TIME_FILE" 
 }
 
+first_start_checks() {
+    RESOURCEPACK=~/Solace/staticdata/resourcepacks/vanilla.zip
+    EULA_FILE=~/Solace/staticdata/server_template_dir/eula.txt
+
+    if [ ! -f "$RESOURCEPACK" ]; then
+        clear
+        echo "======================================="
+        echo "         RESOURCE PACK REQUIRED"
+        echo "======================================="
+        echo ""
+        echo "It seems that the resource packs"
+        echo "have not been installed yet."
+        echo ""
+        echo "Please refer to the Discord server"
+        echo "for the commands needed to download"
+        echo "the required resource packs."
+        echo ""
+        echo "======================================="
+        echo ""
+
+        printf "Back\n" | fzf \
+            --height=15% \
+            --reverse \
+            --border \
+            --prompt="Resource Packs > " >/dev/null
+
+        return 1
+    fi
+
+    if [ ! -f "$EULA_FILE" ]; then
+        clear
+        echo "======================================="
+        echo "           FIRST TIME SETUP"
+        echo "======================================="
+        echo ""
+        echo "After startup, create an account"
+        echo "using the admin panel and follow"
+        echo "steps 4-6 in the manual server"
+        echo "setup instructions on the"
+        echo "Solace GitHub repository."
+        echo ""
+        echo "======================================="
+        echo ""
+
+        CHOICE=$(printf "Continue\nBack" | fzf \
+            --height=15% \
+            --reverse \
+            --border \
+            --prompt="Continue Startup > ")
+
+        [ "$CHOICE" = "Continue" ] || return 1
+
+        return 0
+    fi
+
+    if grep -q "eula=false" "$EULA_FILE"; then
+        clear
+        echo "======================================="
+        echo "            EULA REQUIRED"
+        echo "======================================="
+        echo ""
+        echo 'Please run:'
+        echo ""
+        echo 'earth eula'
+        echo ""
+        echo "to accept the Minecraft EULA"
+        echo "before starting the server."
+        echo ""
+        echo "======================================="
+        echo ""
+
+        printf "Back\n" | fzf \
+            --height=15% \
+            --reverse \
+            --border \
+            --prompt="EULA > " >/dev/null
+
+        return 1
+    fi
+
+    return 0
+}
+
 toggle_server() {
     if is_process_alive; then
         CH=$(printf "Yes\nNo" | fzf --height=20% --reverse --border --prompt="Stop server? > ")
         [ "$CH" = "Yes" ] && stop_server
     else
+        first_start_checks || return
         start_server
     fi
 }
@@ -267,7 +351,7 @@ update_solace() {
         clear
 
         echo "======================================="
-        echo "            UPDATE Solace"
+        echo "             UPDATE Solace"
         echo "======================================="
         echo ""
 
