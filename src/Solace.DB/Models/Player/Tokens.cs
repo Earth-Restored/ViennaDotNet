@@ -130,3 +130,85 @@ public sealed class Tokens : IEquatable<Tokens>
             => HashCode.Combine(ItemId);
     }
 }
+
+public sealed class TokensEF : IVersionedEntity
+{
+    public Guid Id { get; set; }
+
+    public int Version { get; set; } = 1;
+
+    public Account Account { get; set; } = null!;
+
+    public Dictionary<string, Token> Tokens { get; set; } = [];
+
+    public sealed record TokenWithId(
+        string Id,
+        Token Token
+    );
+
+    public TokenWithId[] GetTokens()
+        => [.. Tokens.Select(item => new TokenWithId(item.Key, item.Value))];
+
+    public void AddToken(string id, Token token)
+        => Tokens[id] = token;
+
+    public Token? RemoveToken(string id)
+    {
+        Token? res = null;
+        if (Tokens.TryGetValue(id, out Token? t))
+        {
+            res = t;
+        }
+
+        Tokens.Remove(id);
+
+        return res;
+    }
+
+    [JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
+    [JsonDerivedType(typeof(LevelUpToken), "LEVEL_UP")]
+    [JsonDerivedType(typeof(JournalItemUnlockedToken), "JOURNAL_ITEM_UNLOCKED")]
+    public abstract class Token
+    {
+        [JsonIgnore]
+        public TypeE Type { get; init; }
+
+        protected Token(TypeE type)
+        {
+            Type = type;
+        }
+
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public enum TypeE
+        {
+#pragma warning disable CA1707 // Identifiers should not contain underscores
+            LEVEL_UP,
+            JOURNAL_ITEM_UNLOCKED
+#pragma warning restore CA1707 // Identifiers should not contain underscores
+        }
+    }
+
+    public sealed class LevelUpToken : Token
+    {
+        public int Level { get; init; }
+        public Rewards Rewards { get; init; }
+
+        public LevelUpToken(int level, Rewards rewards)
+            : base(TypeE.LEVEL_UP)
+        {
+            Level = level;
+            Rewards = rewards;
+        }
+    }
+
+    public sealed class JournalItemUnlockedToken : Token
+    {
+        public string ItemId { get; init; }
+
+        public JournalItemUnlockedToken(string itemId)
+            : base(TypeE.JOURNAL_ITEM_UNLOCKED)
+        {
+            ItemId = itemId;
+        }
+    }
+}

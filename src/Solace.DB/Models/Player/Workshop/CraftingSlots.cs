@@ -27,3 +27,14 @@ public sealed class CraftingSlots : IEquatable<CraftingSlots>
         return hash.ToHashCode();
     }
 }
+
+public sealed class CraftingSlotsEF : IVersionedEntity
+{
+    public Guid Id { get; set; }
+
+    public int Version { get; set; } = 1;
+
+    public Account Account { get; set; } = null!;
+
+    public CraftingSlot[] Slots { get; set; } = [new CraftingSlot(), new CraftingSlot(), new CraftingSlot()];
+}

@@ -35,3 +35,16 @@ public sealed class EncounterBuildplates
         }
     }
 }
+
+public sealed class EncounterBuildplateEF
+{
+    public Guid Id { get; set; }
+
+    public required int Size { get; set; }
+
+    public required int Offset { get; set; }
+
+    public required int Scale { get; set; }
+
+    public required string ServerDataObjectId { get; set; }
+}

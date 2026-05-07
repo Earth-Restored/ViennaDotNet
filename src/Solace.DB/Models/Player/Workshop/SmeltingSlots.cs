@@ -27,3 +27,14 @@ public sealed class SmeltingSlots : IEquatable<SmeltingSlots>
         return hash.ToHashCode();
     }
 }
+
+public sealed class SmeltingSlotsEF : IVersionedEntity
+{
+    public Guid Id { get; set; }
+
+    public int Version { get; set; } = 1;
+
+    public Account Account { get; set; } = null!;
+
+    public SmeltingSlot[] Slots { get; set; } =  [new SmeltingSlot(), new SmeltingSlot(), new SmeltingSlot()];
+}

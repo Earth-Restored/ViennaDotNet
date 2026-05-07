@@ -200,3 +200,126 @@ public sealed class ActivityLog : IEquatable<ActivityLog>
             => HashCode.Combine(Timestamp, ItemId);
     }
 }
+
+public sealed class ActivityLogEF : IVersionedEntity
+{
+    public Guid Id { get; set; }
+
+    public int Version { get; set; } = 1;
+
+    public Account Account { get; set; } = null!;
+
+    public List<Entry> Entries { get; set; } = [];
+
+    public void AddEntry(Entry entry)
+        => Entries.Add(entry);
+
+    public void Prune()
+    {
+        // it is widely known that the activity log is length limited but there is only ONE person who has stated how long it was limited to and apparently it is 40 entries
+        if (Entries.Count > 40)
+        {
+            Entries.RemoveRange(0, Entries.Count - 40);
+        }
+    }
+
+    [JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
+    [JsonDerivedType(typeof(LevelUpEntry), "LEVEL_UP")]
+    [JsonDerivedType(typeof(TappableEntry), "TAPPABLE")]
+    [JsonDerivedType(typeof(JournalItemUnlockedEntry), "JOURNAL_ITEM_UNLOCKED")]
+    [JsonDerivedType(typeof(CraftingCompletedEntry), "CRAFTING_COMPLETED")]
+    [JsonDerivedType(typeof(SmeltingCompletedEntry), "SMELTING_COMPLETED")]
+    [JsonDerivedType(typeof(BoostActivatedEntry), "BOOST_ACTIVATED")]
+    public abstract class Entry
+    {
+        public long Timestamp { get; init; }
+
+        [JsonIgnore]
+        public TypeE Type { get; init; }
+
+        protected Entry(long timestamp, TypeE type)
+        {
+            Timestamp = timestamp;
+            Type = type;
+        }
+
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public enum TypeE
+        {
+#pragma warning disable CA1707 // Identifiers should not contain underscores
+            LEVEL_UP,
+            TAPPABLE,
+            JOURNAL_ITEM_UNLOCKED,
+            CRAFTING_COMPLETED,
+            SMELTING_COMPLETED,
+            BOOST_ACTIVATED,
+#pragma warning restore CA1707 // Identifiers should not contain underscores
+        }
+    }
+
+    public sealed class LevelUpEntry : Entry
+    {
+        public int Level { get; init; }
+
+        public LevelUpEntry(long timestamp, int level)
+            : base(timestamp, TypeE.LEVEL_UP)
+        {
+            Level = level;
+        }
+    }
+
+    public sealed class TappableEntry : Entry
+    {
+        public Rewards Rewards { get; init; }
+
+        public TappableEntry(long timestamp, Rewards rewards)
+            : base(timestamp, TypeE.TAPPABLE)
+        {
+            Rewards = rewards;
+        }
+    }
+
+    public sealed class JournalItemUnlockedEntry : Entry
+    {
+        public string ItemId { get; init; }
+
+        public JournalItemUnlockedEntry(long timestamp, string itemId)
+            : base(timestamp, TypeE.JOURNAL_ITEM_UNLOCKED)
+        {
+            ItemId = itemId;
+        }
+    }
+
+    public sealed class CraftingCompletedEntry : Entry
+    {
+        public Rewards Rewards { get; init; }
+
+        public CraftingCompletedEntry(long timestamp, Rewards rewards)
+            : base(timestamp, TypeE.CRAFTING_COMPLETED)
+        {
+            Rewards = rewards;
+        }
+    }
+
+    public sealed class SmeltingCompletedEntry : Entry
+    {
+        public Rewards Rewards { get; init; }
+
+        public SmeltingCompletedEntry(long timestamp, Rewards rewards)
+            : base(timestamp, TypeE.SMELTING_COMPLETED)
+        {
+            Rewards = rewards;
+        }
+    }
+
+    public sealed class BoostActivatedEntry : Entry
+    {
+        public string ItemId { get; init; }
+
+        public BoostActivatedEntry(long timestamp, string itemId)
+            : base(timestamp, TypeE.BOOST_ACTIVATED)
+        {
+            ItemId = itemId;
+        }
+    }
+}

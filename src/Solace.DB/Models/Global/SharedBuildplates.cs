@@ -61,3 +61,39 @@ public sealed class SharedBuildplates
         );
     }
 }
+
+public sealed class SharedBuildplateEF
+{
+    public Guid Id { get; set; }
+
+    public Guid AccountId { get; set; }
+
+    public Account Account { get; set; } = null!;
+
+    public required int Size { get; set; }
+
+    public required int Offset { get; set; }
+
+    public required int Scale { get; set; }
+
+    public required bool Night { get; set; }
+
+    public required long Created { get; set; }
+
+    public required long BuildplateLastModifed { get; set; }
+
+    public required long LastViewed { get; set; }
+
+    public required int NumberOfTimesViewed { get; set; }
+
+    public HotbarItem?[] Hotbar { get; set; } = new HotbarItem[7];
+
+    public required string ServerDataObjectId { get; set; }
+
+    public sealed record HotbarItem(
+        string Uuid,
+        int Count,
+        string? InstanceId,
+        int Wear
+    );
+}

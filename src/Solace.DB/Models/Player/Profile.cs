@@ -1,4 +1,6 @@
-﻿namespace Solace.DB.Models.Player;
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace Solace.DB.Models.Player;
 
 public sealed class Profile : IEquatable<Profile>
 {
@@ -23,4 +25,21 @@ public sealed class Profile : IEquatable<Profile>
 
     public override int GetHashCode()
         => HashCode.Combine(Health, Experience, Level, Rubies);
+}
+
+public sealed class ProfileEF : IVersionedEntity
+{
+    public Guid Id { get; set; }
+
+    public int Version { get; set; } = 1;
+
+    public Account Account { get; set; } = null!;
+
+    public int Health { get; set; } = 20;
+
+    public int Experience { get; set; }
+
+    public int Level { get; set; } = 1;
+
+    public Rubies Rubies { get; set; } = new Rubies();
 }

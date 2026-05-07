@@ -1,21 +1,16 @@
-﻿using System.Diagnostics;
+﻿using System.ComponentModel.DataAnnotations.Schema;
+using System.Diagnostics;
 using System.Text.Json.Serialization;
 
 namespace Solace.DB.Models.Player;
 
 public sealed class Rubies : IEquatable<Rubies>
 {
-    public Rubies()
-    {
-        Purchased = 0;
-        Earned = 0;
-    }
-
     public int Purchased { get; set; }
 
     public int Earned { get; set; }
 
-    [JsonIgnore]
+    [JsonIgnore, NotMapped]
     public int Total => Purchased + Earned;
 
     /// <summary>

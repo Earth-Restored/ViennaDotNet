@@ -41,3 +41,23 @@ public sealed class RedeemedTappables : IEquatable<RedeemedTappables>
         return hash.ToHashCode();
     }
 }
+
+public sealed class RedeemedTappablesEF : IVersionedEntity
+{
+    public Guid Id { get; set; }
+
+    public int Version { get; set; } = 1;
+
+    public Account Account { get; set; } = null!;
+
+    public Dictionary<string, long> Tappables = [];
+
+    public bool IsRedeemed(string id)
+        => Tappables.ContainsKey(id);
+
+    public void Add(string id, long expiresAt)
+        => Tappables[id] = expiresAt;
+
+    public void Prune(long currentTime)
+        => Tappables.RemoveIf(entry => entry.Value < currentTime);
+}

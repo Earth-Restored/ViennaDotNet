@@ -69,3 +69,40 @@ public sealed class Journal : IEquatable<Journal>
         int AmountCollected
     );
 }
+
+public sealed class JournalEF : IVersionedEntity
+{
+    public Guid Id { get; set; }
+
+    public int Version { get; set; } = 1;
+
+    public Account Account { get; set; } = null!;
+
+    public Dictionary<string, ItemJournalEntry> Items { get; set; } = [];
+
+    public ItemJournalEntry? GetItem(string uuid)
+        => Items.GetValueOrDefault(uuid);
+
+    public int AddCollectedItem(string uuid, long timestamp, int count)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(count);
+
+        ItemJournalEntry? itemJournalEntry = Items.GetOrDefault(uuid, null);
+        if (itemJournalEntry is null)
+        {
+            Items[uuid] = new ItemJournalEntry(timestamp, timestamp, count);
+            return 0;
+        }
+        else
+        {
+            Items[uuid] = new ItemJournalEntry(itemJournalEntry.FirstSeen, itemJournalEntry.LastSeen, itemJournalEntry.AmountCollected + count);
+            return itemJournalEntry.AmountCollected;
+        }
+    }
+
+    public sealed record ItemJournalEntry(
+        long FirstSeen,
+        long LastSeen,
+        int AmountCollected
+    );
+}
