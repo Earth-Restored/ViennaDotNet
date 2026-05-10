@@ -230,7 +230,7 @@ public sealed class ActivityLogEF : IVersionedEntity
     [JsonDerivedType(typeof(CraftingCompletedEntry), "CRAFTING_COMPLETED")]
     [JsonDerivedType(typeof(SmeltingCompletedEntry), "SMELTING_COMPLETED")]
     [JsonDerivedType(typeof(BoostActivatedEntry), "BOOST_ACTIVATED")]
-    public abstract class Entry
+    public abstract class Entry : IEquatable<Entry>
     {
         public long Timestamp { get; init; }
 
@@ -255,6 +255,13 @@ public sealed class ActivityLogEF : IVersionedEntity
             BOOST_ACTIVATED,
 #pragma warning restore CA1707 // Identifiers should not contain underscores
         }
+
+        public abstract bool Equals(Entry? other);
+
+        public override bool Equals(object? obj)
+            => Equals(obj as Entry);
+
+        public abstract override int GetHashCode();
     }
 
     public sealed class LevelUpEntry : Entry
@@ -266,6 +273,12 @@ public sealed class ActivityLogEF : IVersionedEntity
         {
             Level = level;
         }
+
+        public override bool Equals(Entry? other)
+            => other is LevelUpEntry levelUp && Timestamp == levelUp.Timestamp && Level == levelUp.Level;
+
+        public override int GetHashCode()
+            => HashCode.Combine(Timestamp, Level);
     }
 
     public sealed class TappableEntry : Entry
@@ -277,6 +290,12 @@ public sealed class ActivityLogEF : IVersionedEntity
         {
             Rewards = rewards;
         }
+
+        public override bool Equals(Entry? other)
+            => other is TappableEntry tappable && Timestamp == tappable.Timestamp && Rewards.Equals(tappable.Rewards);
+
+        public override int GetHashCode()
+            => HashCode.Combine(Timestamp, Rewards);
     }
 
     public sealed class JournalItemUnlockedEntry : Entry
@@ -288,6 +307,12 @@ public sealed class ActivityLogEF : IVersionedEntity
         {
             ItemId = itemId;
         }
+
+        public override bool Equals(Entry? other)
+            => other is JournalItemUnlockedEntry journalUnlock && Timestamp == journalUnlock.Timestamp && ItemId == journalUnlock.ItemId;
+
+        public override int GetHashCode()
+            => HashCode.Combine(Timestamp, ItemId);
     }
 
     public sealed class CraftingCompletedEntry : Entry
@@ -299,6 +324,12 @@ public sealed class ActivityLogEF : IVersionedEntity
         {
             Rewards = rewards;
         }
+
+        public override bool Equals(Entry? other)
+            => other is CraftingCompletedEntry crafting && Timestamp == crafting.Timestamp && Rewards.Equals(crafting.Rewards);
+
+        public override int GetHashCode()
+            => HashCode.Combine(Timestamp, Rewards);
     }
 
     public sealed class SmeltingCompletedEntry : Entry
@@ -310,6 +341,12 @@ public sealed class ActivityLogEF : IVersionedEntity
         {
             Rewards = rewards;
         }
+
+        public override bool Equals(Entry? other)
+            => other is SmeltingCompletedEntry smelting && Timestamp == smelting.Timestamp && Rewards.Equals(smelting.Rewards);
+
+        public override int GetHashCode()
+            => HashCode.Combine(Timestamp, Rewards);
     }
 
     public sealed class BoostActivatedEntry : Entry
@@ -321,5 +358,11 @@ public sealed class ActivityLogEF : IVersionedEntity
         {
             ItemId = itemId;
         }
+
+        public override bool Equals(Entry? other)
+            => other is BoostActivatedEntry boost && Timestamp == boost.Timestamp && ItemId == boost.ItemId;
+
+        public override int GetHashCode()
+            => HashCode.Combine(Timestamp, ItemId);
     }
 }

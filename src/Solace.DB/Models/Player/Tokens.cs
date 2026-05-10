@@ -168,7 +168,7 @@ public sealed class TokensEF : IVersionedEntity
     [JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
     [JsonDerivedType(typeof(LevelUpToken), "LEVEL_UP")]
     [JsonDerivedType(typeof(JournalItemUnlockedToken), "JOURNAL_ITEM_UNLOCKED")]
-    public abstract class Token
+    public abstract class Token : IEquatable<Token>
     {
         [JsonIgnore]
         public TypeE Type { get; init; }
@@ -186,6 +186,13 @@ public sealed class TokensEF : IVersionedEntity
             JOURNAL_ITEM_UNLOCKED
 #pragma warning restore CA1707 // Identifiers should not contain underscores
         }
+
+        public abstract bool Equals(Token? other);
+
+        public override bool Equals(object? obj)
+            => Equals(obj as Token);
+
+        public abstract override int GetHashCode();
     }
 
     public sealed class LevelUpToken : Token
@@ -199,6 +206,12 @@ public sealed class TokensEF : IVersionedEntity
             Level = level;
             Rewards = rewards;
         }
+
+        public override bool Equals(Token? other)
+            => other is LevelUpToken levelUp && Level == levelUp.Level && Rewards.Equals(levelUp.Rewards);
+
+        public override int GetHashCode()
+            => HashCode.Combine(Level, Rewards);
     }
 
     public sealed class JournalItemUnlockedToken : Token
@@ -210,5 +223,11 @@ public sealed class TokensEF : IVersionedEntity
         {
             ItemId = itemId;
         }
+
+        public override bool Equals(Token? other)
+            => other is JournalItemUnlockedToken itemUnlocked && ItemId == itemUnlocked.ItemId;
+
+        public override int GetHashCode()
+            => HashCode.Combine(ItemId);
     }
 }
