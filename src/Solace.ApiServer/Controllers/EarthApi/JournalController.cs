@@ -9,76 +9,74 @@ using Solace.Common;
 using Solace.Common.Utils;
 using Solace.DB;
 using Solace.DB.Models.Player;
+using System.Diagnostics;
+using Microsoft.EntityFrameworkCore;
+using Solace.DB.Utils;
 
 namespace Solace.ApiServer.Controllers.EarthApi;
 
 [Authorize]
 [ApiVersion("1.1")]
 [Route("1/api/v{version:apiVersion}/player/journal")]
-internal sealed class JournalController : ControllerBase
+internal sealed class JournalController : SolaceControllerBase
 {
-    private static EarthDB earthDB => Program.DB;
+    private readonly EarthDbContext _earthDB;
+
+    public JournalController(EarthDbContext earthDB)
+    {
+        _earthDB = earthDB;
+    }
 
     [HttpGet]
     public async Task<Results<ContentHttpResult, BadRequest>> Get(CancellationToken cancellationToken)
     {
-        string? playerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrEmpty(playerId))
+        if (!TryGetAccountId(out var accountId))
         {
             return TypedResults.BadRequest();
         }
 
-        Journal journalModel;
-        ActivityLog activityLogModel;
-        try
-        {
-            EarthDB.Results results = await new EarthDB.Query(false)
-                .Get("journal", playerId, typeof(Journal))
-                .Get("activityLog", playerId, typeof(ActivityLog))
-                .ExecuteAsync(earthDB, cancellationToken);
+        var journal = await _earthDB.Journals
+            .AsNoTracking()
+            .FirstOrNewAsync(journal => journal.Id == accountId, trackNew: false, cancellationToken: cancellationToken);
 
-            journalModel = results.Get<Journal>("journal");
-            activityLogModel = results.Get<ActivityLog>("activityLog");
-        }
-        catch (EarthDB.DatabaseException exception)
-        {
-            throw new ServerErrorException(exception);
-        }
+        var activityLogs = await _earthDB.ActivityLogs
+            .AsNoTracking()
+            .FirstOrNewAsync(activityLogs => activityLogs.Id == accountId, trackNew: false, cancellationToken: cancellationToken);
 
         Dictionary<string, Types.Journal.JournalRecord.InventoryJournalEntry> inventoryJournal = [];
-        journalModel.Items.ForEach((uuid, itemJournalEntry) => inventoryJournal[uuid] = new Types.Journal.JournalRecord.InventoryJournalEntry(
-            TimeFormatter.FormatTime(itemJournalEntry.FirstSeen),
-            TimeFormatter.FormatTime(itemJournalEntry.LastSeen),
-            itemJournalEntry.AmountCollected
-        ));
+        foreach (var (uuid, itemJournalEntry) in journal.Items)
+        {
+            inventoryJournal[uuid] = new Types.Journal.JournalRecord.InventoryJournalEntry(
+                TimeFormatter.FormatTime(itemJournalEntry.FirstSeen),
+                TimeFormatter.FormatTime(itemJournalEntry.LastSeen),
+                itemJournalEntry.AmountCollected
+            );
+        }
 
-        LinkedList<Types.Journal.JournalRecord.ActivityLogEntry> _activityLogList = new(activityLogModel.Entries
-            .Select(ActivityLogEntryToApiResponse));
-
-        var activityLogList = _activityLogList.Reverse().ToArray();
-        Types.Journal.JournalRecord.ActivityLogEntry[] activityLog = activityLogList;
+        Types.Journal.JournalRecord.ActivityLogEntry[] activityLog = [.. activityLogs.Entries.Select(ActivityLogEntryToApiResponse)];
+        Array.Reverse(activityLog);
 
         string resp = Json.Serialize(new EarthApiResponse(new Types.Journal.JournalRecord(inventoryJournal, activityLog)));
         return TypedResults.Content(resp, "application/json");
     }
 
-    private static Types.Journal.JournalRecord.ActivityLogEntry ActivityLogEntryToApiResponse(ActivityLog.Entry entry)
+    private static Types.Journal.JournalRecord.ActivityLogEntry ActivityLogEntryToApiResponse(ActivityLogEF.Entry entry)
     {
         Rewards rewards = entry switch
         {
-            ActivityLog.LevelUpEntry levelUp => new Rewards().SetLevel(levelUp.Level),
-            ActivityLog.TappableEntry tappable => Rewards.FromDBRewardsModel(tappable.Rewards),
-            ActivityLog.JournalItemUnlockedEntry journalItemUnlocked => new Rewards().AddItem(journalItemUnlocked.ItemId, 0),
-            ActivityLog.CraftingCompletedEntry craftingCompleted => Rewards.FromDBRewardsModel(craftingCompleted.Rewards),
-            ActivityLog.SmeltingCompletedEntry smeltingCompleted => Rewards.FromDBRewardsModel(smeltingCompleted.Rewards),
-            ActivityLog.BoostActivatedEntry => new Rewards(),
+            ActivityLogEF.LevelUpEntry levelUp => new Rewards().SetLevel(levelUp.Level),
+            ActivityLogEF.TappableEntry tappable => Rewards.FromDBRewardsModel(tappable.Rewards),
+            ActivityLogEF.JournalItemUnlockedEntry journalItemUnlocked => new Rewards().AddItem(journalItemUnlocked.ItemId, 0),
+            ActivityLogEF.CraftingCompletedEntry craftingCompleted => Rewards.FromDBRewardsModel(craftingCompleted.Rewards),
+            ActivityLogEF.SmeltingCompletedEntry smeltingCompleted => Rewards.FromDBRewardsModel(smeltingCompleted.Rewards),
+            ActivityLogEF.BoostActivatedEntry => new Rewards(),
             _ => throw new InvalidDataException($"Unknown ActivityLog.Entry '{entry?.GetType()?.ToString() ?? "null"}'"),
         };
 
         Dictionary<string, string> properties = [];
         switch (entry)
         {
-            case ActivityLog.BoostActivatedEntry boostActivated:
+            case ActivityLogEF.BoostActivatedEntry boostActivated:
                 {
                     properties["boostId"] = boostActivated.ItemId;
                 }
@@ -87,7 +85,16 @@ internal sealed class JournalController : ControllerBase
         }
 
         return new Types.Journal.JournalRecord.ActivityLogEntry(
-            Enum.Parse<Types.Journal.JournalRecord.ActivityLogEntry.Type>(entry.Type.ToString()),
+            entry.Type switch
+            {
+                ActivityLogEF.Entry.TypeE.LEVEL_UP => Types.Journal.JournalRecord.ActivityLogEntry.Type.LEVEL_UP,
+                ActivityLogEF.Entry.TypeE.TAPPABLE => Types.Journal.JournalRecord.ActivityLogEntry.Type.TAPPABLE,
+                ActivityLogEF.Entry.TypeE.JOURNAL_ITEM_UNLOCKED => Types.Journal.JournalRecord.ActivityLogEntry.Type.JOURNAL_ITEM_UNLOCKED,
+                ActivityLogEF.Entry.TypeE.CRAFTING_COMPLETED => Types.Journal.JournalRecord.ActivityLogEntry.Type.CRAFTING_COMPLETED,
+                ActivityLogEF.Entry.TypeE.SMELTING_COMPLETED => Types.Journal.JournalRecord.ActivityLogEntry.Type.SMELTING_COMPLETED,
+                ActivityLogEF.Entry.TypeE.BOOST_ACTIVATED => Types.Journal.JournalRecord.ActivityLogEntry.Type.BOOST_ACTIVATED,
+                _ => throw new UnreachableException(),
+            },
             TimeFormatter.FormatTime(entry.Timestamp),
             rewards.ToApiResponse(),
             properties
