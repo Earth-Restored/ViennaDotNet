@@ -18,7 +18,7 @@ public class DataStore
 
     public async Task<string> StoreAsync(byte[] data)
     {
-        string id = U.RandomUuid().ToString();
+        string id = Guid.NewGuid().ToString();
 
         var dir = new DirectoryInfo(Path.Combine(_rootDirectory.FullName, id[..2]));
         if (!dir.Exists)

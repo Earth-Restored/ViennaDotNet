@@ -141,9 +141,9 @@ internal sealed partial class ProfileController : SolaceControllerBase
         => new Dictionary<string, string>()
         {
             ["AppDisplayName"] = account.Username,
-            ["AppDisplayPicRaw"] = $"{(Request.IsHttps ? "https://" : "http://")}{Request.Host.Value}/{account.ProfilePictureUrl}",
+            ["AppDisplayPicRaw"] = $"{(Request.IsHttps ? "https://" : "http://")}{Request.Host.Value}/{account.ProfilePictureUrl ?? Account.DefaultPictureUrl}",
             ["GameDisplayName"] = account.Username,
-            ["GameDisplayPicRaw"] = $"{(Request.IsHttps ? "https://" : "http://")}{Request.Host.Value}/{account.ProfilePictureUrl}",
+            ["GameDisplayPicRaw"] = $"{(Request.IsHttps ? "https://" : "http://")}{Request.Host.Value}/{account.ProfilePictureUrl ?? Account.DefaultPictureUrl}",
             ["Gamertag"] = account.Username,
             ["Gamerscore"] = "69",
             ["FirstName"] = account.FirstName ?? account.Username,

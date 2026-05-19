@@ -23,11 +23,13 @@ internal sealed class DatabaseMigrator
     private readonly EarthDbContext _earthDb;
     private readonly SqliteConnection _legacyEarthDb;
 #pragma warning disable CS0618 // Type or member is obsolete - needed for migration
-    private readonly LiveDbContext _liveDb;
+    private readonly LiveDbContext? _liveDb;
 #pragma warning restore CS0618 // Type or member is obsolete
 
+    private readonly Dictionary<string, Guid> _oldToNewId = [];
+
 #pragma warning disable CS0618 // Type or member is obsolete - needed for migration
-    public DatabaseMigrator(EarthDbContext earthDb, SqliteConnection legacyEarthDb, LiveDbContext liveDb)
+    public DatabaseMigrator(EarthDbContext earthDb, SqliteConnection legacyEarthDb, LiveDbContext? liveDb)
 #pragma warning restore CS0618 // Type or member is obsolete
     {
         _earthDb = earthDb;
@@ -37,6 +39,8 @@ internal sealed class DatabaseMigrator
 
     public async Task MigrateAsync()
     {
+        _oldToNewId.Clear();
+
         int saveCounter = 0;
 
         // objects
@@ -56,7 +60,7 @@ internal sealed class DatabaseMigrator
                     {
                         await MigrateObject(type, id, value);
 
-                        await SaveChanges();
+                        await SaveEarthChanges();
                     }
                     catch (Exception ex)
                     {
@@ -84,7 +88,7 @@ internal sealed class DatabaseMigrator
                         ObjectStoreId = value,
                     });
 
-                    await SaveChanges();
+                    await SaveEarthChanges();
                 }
             }
         }
@@ -115,30 +119,33 @@ internal sealed class DatabaseMigrator
                         PreviewObjectId = template.PreviewObjectId,
                     });
 
-                    await SaveChanges();
+                    await SaveEarthChanges();
                 }
             }
         }
 
-        // live
-        foreach (var oldAccount in _liveDb.Accounts)
-        {
-            var account = await _earthDb.GetOrCreateAccount(Guid.Parse(oldAccount.Id), query => query.AsNoTracking());
-
-            account.CreatedDate = oldAccount.CreatedDate;
-            account.Username = oldAccount.Username;
-            account.ProfilePictureUrl = oldAccount.ProfilePictureUrl;
-            account.FirstName = oldAccount.FirstName;
-            account.LastName = oldAccount.LastName;
-            account.PasswordSalt = oldAccount.PasswordSalt;
-            account.PasswordHash = oldAccount.PasswordHash;
-
-            await SaveChanges();
-        }
-
         await _earthDb.SaveChangesAsync();
 
-        async Task SaveChanges()
+        // live
+        if (_liveDb is not null)
+        {
+            foreach (var oldAccount in _liveDb.Accounts)
+            {
+                var account = await _earthDb.GetOrCreateAccount(GetId(oldAccount.Id), query => query.AsNoTracking());
+
+                account.CreatedDate = oldAccount.CreatedDate;
+                account.Username = oldAccount.Username;
+                account.ProfilePictureUrl = oldAccount.ProfilePictureUrl;
+                account.FirstName = oldAccount.FirstName;
+                account.LastName = oldAccount.LastName;
+                account.PasswordSalt = oldAccount.PasswordSalt;
+                account.PasswordHash = oldAccount.PasswordHash;
+            }
+
+            await _liveDb.SaveChangesAsync();
+        }
+
+        async Task SaveEarthChanges()
         {
             saveCounter++;
 
@@ -164,7 +171,7 @@ internal sealed class DatabaseMigrator
                 {
                     var value = ReadLegacyDbJson<ProfileEF.Legacy>(valueString);
 
-                    var id = Guid.Parse(idString);
+                    var id = GetId(idString);
 
                     var profile = (await _earthDb.GetOrCreateAccount(id, query => query.Include(account => account.Profile)))
                         .Profile!;
@@ -181,7 +188,7 @@ internal sealed class DatabaseMigrator
                 {
                     var value = ReadLegacyDbJson<JournalEF.Legacy>(valueString);
 
-                    var id = Guid.Parse(idString);
+                    var id = GetId(idString);
 
                     var journal = (await _earthDb.GetOrCreateAccount(id, query => query.Include(account => account.Journal)))
                         .Journal!;
@@ -194,7 +201,7 @@ internal sealed class DatabaseMigrator
                 {
                     var value = ReadLegacyDbJson<HotbarEF.Legacy>(valueString);
 
-                    var id = Guid.Parse(idString);
+                    var id = GetId(idString);
 
                     var hotbar = (await _earthDb.GetOrCreateAccount(id, query => query.Include(account => account.Hotbar)))
                         .Hotbar!;
@@ -212,7 +219,7 @@ internal sealed class DatabaseMigrator
                 {
                     var value = ReadLegacyDbJson<InventoryEF.Legacy>(valueString);
 
-                    var id = Guid.Parse(idString);
+                    var id = GetId(idString);
 
                     var inventory = (await _earthDb.GetOrCreateAccount(id, query => query.Include(account => account.Inventory)))
                         .Inventory!;
@@ -233,7 +240,7 @@ internal sealed class DatabaseMigrator
                 {
                     var value = ReadLegacyDbJson<TokensEF.Legacy>(valueString);
 
-                    var id = Guid.Parse(idString);
+                    var id = GetId(idString);
 
                     var tokens = (await _earthDb.GetOrCreateAccount(id, query => query.Include(account => account.Tokens)))
                         .Tokens!;
@@ -256,7 +263,7 @@ internal sealed class DatabaseMigrator
                 {
                     var value = ReadLegacyDbJson<CraftingSlotsEF.Legacy>(valueString);
 
-                    var id = Guid.Parse(idString);
+                    var id = GetId(idString);
 
                     var craftingSlots = (await _earthDb.GetOrCreateAccount(id, query => query.Include(account => account.CraftingSlots)))
                         .CraftingSlots!;
@@ -293,7 +300,7 @@ internal sealed class DatabaseMigrator
                 {
                     var value = ReadLegacyDbJson<SmeltingSlotsEF.Legacy>(valueString);
 
-                    var id = Guid.Parse(idString);
+                    var id = GetId(idString);
 
                     var smeltingSlots = (await _earthDb.GetOrCreateAccount(id, query => query.Include(account => account.SmeltingSlots)))
                         .SmeltingSlots!;
@@ -333,7 +340,7 @@ internal sealed class DatabaseMigrator
                 {
                     var value = ReadLegacyDbJson<RedeemedTappablesEF.Legacy>(valueString);
 
-                    var id = Guid.Parse(idString);
+                    var id = GetId(idString);
 
                     var redeemedTappables = (await _earthDb.GetOrCreateAccount(id, query => query.Include(account => account.RedeemedTappables)))
                         .RedeemedTappables!;
@@ -356,7 +363,7 @@ internal sealed class DatabaseMigrator
                 {
                     var value = ReadLegacyDbJson<BoostsEF.Legacy>(valueString);
 
-                    var id = Guid.Parse(idString);
+                    var id = GetId(idString);
 
                     var boosts = (await _earthDb.GetOrCreateAccount(id, query => query.Include(account => account.Boosts)))
                         .Boosts!;
@@ -376,7 +383,7 @@ internal sealed class DatabaseMigrator
                 {
                     var value = ReadLegacyDbJson<ActivityLogEF.Legacy>(valueString);
 
-                    var id = Guid.Parse(idString);
+                    var id = GetId(idString);
 
                     var activityLog = (await _earthDb.GetOrCreateAccount(id, query => query.Include(account => account.ActivityLog)))
                         .ActivityLog!;
@@ -401,7 +408,7 @@ internal sealed class DatabaseMigrator
                 {
                     var value = ReadLegacyDbJson<LegacyBuildplates>(valueString);
 
-                    var id = Guid.Parse(idString);
+                    var id = GetId(idString);
 
                     var buildplates = (await _earthDb.GetOrCreateAccount(id, query => query.Include(account => account.Buildplates)))
                         .Buildplates!;
@@ -413,7 +420,7 @@ internal sealed class DatabaseMigrator
                             Id = Guid.Parse(buildplateId),
                             AccountId = id,
                             TemplateId = buildplate.TemplateId is null ? null : Guid.Parse(buildplate.TemplateId),
-                            Name = buildplate.Name,
+                            Name = buildplate.Name ?? "buildplate",
                             Size = buildplate.Size,
                             Offset = buildplate.Offset,
                             Scale = buildplate.Scale,
@@ -434,7 +441,7 @@ internal sealed class DatabaseMigrator
 
                     foreach (var (buildplateId, buildplate) in value.SharedBuildplates)
                     {
-                        var accountId = Guid.Parse(buildplate.PlayerId);
+                        var accountId = GetId(buildplate.PlayerId);
 
                         var sharedBuildplates = (await _earthDb.GetOrCreateAccount(accountId, query => query.Include(account => account.SharedBuildplates)))
                             .SharedBuildplates!;
@@ -489,5 +496,19 @@ internal sealed class DatabaseMigrator
 
                 break;
         }
+    }
+
+    private Guid GetId(string idString)
+    {
+        if (Guid.TryParse(idString, out var id) || _oldToNewId.TryGetValue(idString, out id))
+        {
+            return id;
+        }
+
+        id = Guid.CreateVersion7();
+
+        _oldToNewId.Add(idString, id);
+
+        return id;
     }
 }

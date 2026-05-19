@@ -209,7 +209,7 @@ internal sealed class InventoryController : SolaceControllerBase
             }
             else
             {
-                inventory.AddItems(returnItemId, [new NonStackableItemInstance(U.RandomUuid().ToString(), 0)]);
+                inventory.AddItems(returnItemId, [new NonStackableItemInstance(Guid.NewGuid().ToString(), 0)]);
             }
 
             if (journal.AddCollectedItem(returnItemId, requestStartedOn, 1) == 0)

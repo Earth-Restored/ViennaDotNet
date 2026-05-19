@@ -236,7 +236,7 @@ public sealed class Importer : IAsyncDisposable
             preview = await GeneratePreview(new WorldData(serverData, template.Size, template.Offset, template.Night));
         }
 
-        var buidplateId = Guid.NewGuid();
+        var buidplateId = Guid.CreateVersion7();
 
         if (!await StoreBuildplate(templateId, playerId, buidplateId, template, serverData, preview, cancellationToken))
         {

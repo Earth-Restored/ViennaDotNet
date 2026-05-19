@@ -65,8 +65,8 @@ internal sealed class XstsController : SolaceControllerBase
                             ["xui"] = [
                                 new()
                                 {
-                                    ["xid"] = userToken.Xid,
-                                    ["uhs"] = userToken.Uhs,
+                                    ["xid"] = userToken.Xid.ToString(),
+                                    ["uhs"] = userToken.Uhs.ToString(),
 
                                     ["gtg"] = userToken.Username,
                                     ["agg"] = "Adult",
@@ -93,7 +93,7 @@ internal sealed class XstsController : SolaceControllerBase
                            ["xui"] = [
                                 new()
                                 {
-                                    ["uhs"] = userToken.Uhs,
+                                    ["uhs"] = userToken.Uhs.ToString(),
                                 },
                            ]
                        }
@@ -114,7 +114,7 @@ internal sealed class XstsController : SolaceControllerBase
                            ["xui"] = [
                                 new()
                                 {
-                                    ["uhs"] = userToken.Uhs,
+                                    ["uhs"] = userToken.Uhs.ToString(),
                                 },
                            ]
                        }

@@ -10,13 +10,11 @@ using Solace.LauncherUI;
 internal sealed class DataExportController : ControllerBase
 {
     private readonly FileInfo _earthDB;
-    private readonly FileInfo _liveDB;
     private readonly DirectoryInfo _objectStore;
 
     public DataExportController()
     {
         _earthDB = new FileInfo(Settings.Instance.EarthDatabaseConnectionString!);
-        _liveDB = new FileInfo(Settings.Instance.LiveDatabaseConnectionString!);
         _objectStore = new DirectoryInfo(Path.Combine(Program.DataDirRelative, Program.ObjectStoreDirName));
     }
 
@@ -27,13 +25,18 @@ internal sealed class DataExportController : ControllerBase
 
         using (var archive = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
         {
-            await archive.CreateEntryFromFileAsync(_earthDB.FullName, "earth.db");
-            await archive.CreateEntryFromFileAsync(_liveDB.FullName, "live.db");
-
-            foreach (var objFile in _objectStore.EnumerateFiles("*", SearchOption.AllDirectories))
+            if (_earthDB.Exists)
             {
-                var objFileName = Path.GetRelativePath(_objectStore.FullName, objFile.FullName);
-                await archive.CreateEntryFromFileAsync(objFile.FullName, $"object_store/{objFileName}");
+                await archive.CreateEntryFromFileAsync(_earthDB.FullName, "earth.db");
+            }
+
+            if (_objectStore.Exists)
+            {
+                foreach (var objFile in _objectStore.EnumerateFiles("*", SearchOption.AllDirectories))
+                {
+                    var objFileName = Path.GetRelativePath(_objectStore.FullName, objFile.FullName);
+                    await archive.CreateEntryFromFileAsync(objFile.FullName, $"object_store/{objFileName}");
+                }
             }
         }
 

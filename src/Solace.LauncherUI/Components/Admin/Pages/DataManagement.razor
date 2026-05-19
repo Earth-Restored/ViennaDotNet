@@ -16,7 +16,7 @@
 @inject NavigationManager NavigationManager
 @inject ServerManager ServerManager
 @inject IJSRuntime JS
-@inject LiveDbContext LiveDb
+@inject EarthDbContext EarthDb
 
 <PageTitle>Data - Solace</PageTitle>
 
@@ -39,10 +39,6 @@
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             <span><i class="bi bi-globe"></i> earth.db</span>
                             <span class="badge bg-secondary rounded-pill">@FormatBytes(_earthDbB)</span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <span><i class="bi bi-activity"></i> live.db</span>
-                            <span class="badge bg-secondary rounded-pill">@FormatBytes(_liveDbB)</span>
                         </li>
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             <span><i class="bi bi-folder"></i> object_store</span>
@@ -80,7 +76,7 @@
                     <h6><i class="bi bi-file-earmark-zip"></i> Import Data</h6>
                     <p class="small text-muted">
                         Merge an existing dataset. Supported structures (zip these files/folders): <br />
-                        <strong>Solace:</strong> <code>earth.db</code>, <code>live.db</code>, <code>object_store/</code> |
+                        <strong>Solace:</strong> <code>earth.db</code>, <code>object_store/</code> |
                         <strong>Vienna:</strong> <code>db/</code>, <code>objects/</code>
                     </p>
 
@@ -260,7 +256,6 @@
     private ClaimsPrincipal? _user;
 
     private FileInfo _earthDB = null!;
-    private FileInfo _liveDB = null!;
     private DirectoryInfo _objectStore = null!;
 
     // View states - Delete
@@ -294,9 +289,8 @@
     private MergeAction? _globalFallbackPreference = null;
 
     // Size
-    private long _totalSpaceB => long.Max(_earthDbB + _liveDbB + _objectStoreB, -1);
+    private long _totalSpaceB => long.Max(_earthDbB + _objectStoreB, -1);
     private long _earthDbB = -1;
-    private long _liveDbB = -1;
     private long _objectStoreB = -1;
 
     protected override async Task OnInitializedAsync()
@@ -305,7 +299,6 @@
         _user = authState.User;
 
         _earthDB = new FileInfo(Settings.Instance.EarthDatabaseConnectionString!);
-        _liveDB = new FileInfo(Settings.Instance.LiveDatabaseConnectionString!);
         _objectStore = new DirectoryInfo(Path.Combine(Program.DataDirRelative, Program.ObjectStoreDirName));
 
         LoadSizes();
@@ -314,11 +307,9 @@
     private void LoadSizes()
     {
         _earthDB.Refresh();
-        _liveDB.Refresh();
         _objectStore.Refresh();
 
         _earthDbB = _earthDB.SafeLength;
-        _liveDbB = _liveDB.SafeLength;
         _objectStoreB = _objectStore.SafeLength;
     }
 
@@ -432,7 +423,6 @@
     private async Task ExecuteDelete()
     {
         _earthDB.SafeDelete();
-        _liveDB.SafeDelete();
         _objectStore.SafeDelete(recursive: true);
 
         LoadSizes();
@@ -469,7 +459,7 @@
             bool isSolace = false;
             bool isVienna = false;
 
-            // Detect Structure
+            // Detect structure
             if (archive.Entries.Any(e => e.FullName.Equals("earth.db", StringComparison.OrdinalIgnoreCase)))
             {
                 isSolace = true;
@@ -489,19 +479,12 @@
             StateHasChanged();
 
             string earthDbFile = isSolace ? "earth.db" : "db/earth.db";
-            string? liveDbFile = isSolace ? "live.db" : null;
             string objectsDir = isSolace ? "object_store" : "objects";
 
             var earthDbEntry = archive.GetEntry(earthDbFile);
             if (earthDbEntry is not null)
             {
-                await ImportEarthDb(earthDbEntry, isSolace);
-            }
-
-            var liveDbEntry = liveDbFile is null ? null : archive.GetEntry(liveDbFile);
-            if (liveDbEntry is not null)
-            {
-                await ImportLiveDb(liveDbEntry);
+                await ImportEarthDbAsync(earthDbEntry, isSolace);
             }
 
             foreach (var entry in archive.Entries)
@@ -523,401 +506,147 @@
         }
     }
 
-    private async Task ImportEarthDb(ZipArchiveEntry earthDbEntry, bool isSolace)
+    private async Task ImportEarthDbAsync(ZipArchiveEntry earthDbEntry, bool isSolace)
     {
         if (isSolace && !_earthDB.Exists)
         {
             await earthDbEntry.ExtractToFileAsync(_earthDB.FullName, overwrite: false);
+
+            var optionsBuilder = new DbContextOptionsBuilder<EarthDbContext>();
+            optionsBuilder.UseSqlite("Data Source=" + _earthDB.FullName);
+
+            await using var importDb = new EarthDbContext(optionsBuilder.Options);
+
+            await importDb.Database.MigrateAsync();
+
+            return;
         }
 
-        using var currentDb = EarthDB.Open(Settings.Instance.EarthDatabaseConnectionString!);
-        using var liveDb = DataUtils.OpenLiveDB(Settings.Instance);
-
         var importDbPath = Path.GetTempFileName();
-        await earthDbEntry.ExtractToFileAsync(importDbPath, overwrite: true);
-        using var importDb = new SqliteConnection("Data Source=" + importDbPath);
-        await importDb.OpenAsync();
 
         try
         {
-            // todo: sharedBuildplates SharedBuildplates id: "", encounterBuildplates EncounterBuildplates id: ""
-            // reset preference after each one?
-            await ImportTypeSame<Solace.DB.Models.Player.ProfileEF.Legacy>("profile", async (userId, current, import, query) =>
-            {
-                current.Health = await AutoMergeNumber(current.Health, import.Health, nameof(current.Health), userId);
-                current.Experience = await AutoMergeNumber(current.Experience, import.Experience, nameof(current.Experience), userId);
-                current.Level = await AutoMergeNumber(current.Level, import.Level, nameof(current.Level), userId);
-                current.Rubies.Purchased = await AutoMergeNumber(current.Rubies.Purchased, import.Rubies.Purchased, "Purchased rubies", userId);
-                current.Rubies.Earned = await AutoMergeNumber(current.Rubies.Earned, import.Rubies.Earned, "Earned rubies", userId);
-
-                query.Update("profile", userId, current);
-            });
-
-            await ImportTypeSame<Solace.DB.Models.Player.JournalEF.Legacy>("journal", async (userId, current, import, query) =>
-            {
-                foreach (var item in import.Items)
-                {
-                    if (!current.Items.TryGetValue(item.Key, out var currentValue))
-                    {
-                        current.Items.Add(item.Key, item.Value);
-                    }
-                    else
-                    {
-                        currentValue = currentValue with
-                        {
-                            FirstSeen = await AutoMerge(currentValue.FirstSeen, item.Value.FirstSeen, $"Journal item first seen '{item.Key}'", userId, long.Min),
-                            LastSeen = await AutoMergeNumber(currentValue.LastSeen, item.Value.LastSeen, $"Journal item last seen '{item.Key}'", userId),
-                            AmountCollected = await AutoMergeNumber(currentValue.AmountCollected, item.Value.AmountCollected, $"Journal item amount collected '{item.Key}'", userId),
-                        };
-                        current.Items[item.Key] = currentValue;
-                    }
-                }
-                
-                query.Update("journal", userId, current);
-            });
-
-            await ImportTypeSame<Solace.DB.Models.Player.HotbarEF.Legacy>("hotbar", async (userId, current, import, query) =>
-            {
-                for (var i = 0; i < current.Items.Length; i++)
-                {
-                    current.Items[i] = await AutoMerge(current.Items[i], import.Items[i], $"Hotbar slot {i + 1}", userId, null);
-                }
-
-                query.Update("hotbar", userId, current);
-            });
-
-            await ImportTypeSame<Solace.DB.Models.Player.InventoryEF.Legacy>("inventory", async (userId, current, import, query) =>
-            {
-                foreach (var item in import.StackableItems)
-                {
-                    if (!current.StackableItems.TryGetValue(item.Key, out var currentValue))
-                    {
-                        current.StackableItems.Add(item.Key, item.Value);
-                    }
-                    else
-                    {
-                        // todo: resolve name
-                        current.StackableItems[item.Key] = await AutoMergeNumber(currentValue ?? 0, item.Value ?? 0, $"Inventory item '{item.Key}'", userId);
-                    }
-                }
-
-                foreach (var item in import.NonStackableItems)
-                {
-                    if (!current.NonStackableItems.TryGetValue(item.Key, out var currentValue))
-                    {
-                        current.NonStackableItems.Add(item.Key, item.Value);
-                    }
-                    else
-                    {
-                        foreach (var item2 in item.Value)
-                        {
-                            currentValue[item2.Key] = item2.Value;
-                        }
-                    }
-                }
-
-                query.Update("inventory", userId, current);
-            });
+            await earthDbEntry.ExtractToFileAsync(importDbPath, overwrite: true);
         
-            await ImportTypeSame<Solace.DB.Models.Player.TokensEF.Legacy>("tokens", async (userId, current, import, query) =>
+            if (isSolace)
             {
-                foreach (var item in import.Tokens)
-                {
-                    current.Tokens[item.Key] = item.Value;
-                }
+                var optionsBuilder = new DbContextOptionsBuilder<EarthDbContext>();
+                optionsBuilder.UseSqlite("Data Source=" + importDbPath);
 
-                query.Update("tokens", userId, current);
-            });
+                await using var importDb = new EarthDbContext(optionsBuilder.Options);
 
-            await ImportTypeSame<Solace.DB.Models.Player.Workshop.CraftingSlotsEF.Legacy>("crafting", async (userId, current, import, query) =>
+                await importDb.Database.MigrateAsync();
+
+                await ImportSolaceEarthDbAsync(importDb);
+            }
+            else
             {
-                for (var i = 0; i < import.Slots.Length; i++)
-                {
-                    var importSlot = import.Slots[i];
-                    var slot = current.Slots[i];
+                await using var importDb = new SqliteConnection("Data Source=" + importDbPath);
+                await importDb.OpenAsync();
 
-                    slot.Locked = await AutoMerge(slot.Locked, importSlot.Locked, $"Crafting slot {i + 1} unlocked", userId, null);
-
-                    if (slot.ActiveJob is null)
-                    {
-                        slot.ActiveJob = importSlot.ActiveJob;
-                    }
-                    else if (importSlot.ActiveJob is not null)
-                    {
-                        slot.ActiveJob = (await AutoMerge(slot.ActiveJob.RecipeId, importSlot.ActiveJob.RecipeId, $"Crafting slot {i + 1} recipe", userId, null)) == slot.ActiveJob.RecipeId ? slot.ActiveJob : importSlot.ActiveJob;
-                    }
-                }
-
-                query.Update("crafting", userId, current);
-            });
-
-            await ImportTypeSame<Solace.DB.Models.Player.Workshop.SmeltingSlotsEF.Legacy>("smelting", async (userId, current, import, query) =>
-            {
-                for (var i = 0; i < import.Slots.Length; i++)
-                {
-                    var importSlot = import.Slots[i];
-                    var slot = current.Slots[i];
-
-                    slot.Locked = await AutoMerge(slot.Locked, importSlot.Locked, $"Smelting slot {i + 1} unlocked", userId, null);
-
-                    if (slot.ActiveJob is null)
-                    {
-                        slot.ActiveJob = importSlot.ActiveJob;
-                    }
-                    else if (importSlot.ActiveJob is not null)
-                    {
-                        slot.ActiveJob = (await AutoMerge(slot.ActiveJob.RecipeId, importSlot.ActiveJob.RecipeId, $"Smelting slot {i + 1} recipe", userId, null)) == slot.ActiveJob.RecipeId ? slot.ActiveJob : importSlot.ActiveJob;
-                    }
-                }
-
-                query.Update("smelting", userId, current);
-            });
-
-            await ImportTypeSame<Solace.DB.Models.Player.RedeemedTappablesEF.Legacy>("redeemedTappables", async (userId, current, import, query) =>
-            {
-                foreach (var item in import.Tappables)
-                {
-                    if (!current.Tappables.TryGetValue(item.Key, out var currentValue))
-                    {
-                        current.Tappables.Add(item.Key, item.Value);
-                    }
-                    else
-                    {
-                        current.Tappables[item.Key] = long.Max(currentValue, item.Value);
-                    }
-                }
-
-                query.Update("redeemedTappables", userId, current);
-            });
-
-            await ImportTypeSame<Solace.DB.Models.Player.BoostsEF.Legacy>("boosts", async (userId, current, import, query) =>
-            {
-                for (var i = 0; i < import.ActiveBoosts.Length; i++)
-                {
-                    if (current.ActiveBoosts[i] is null)
-                    {
-                        current.ActiveBoosts[i] = import.ActiveBoosts[i];
-                    }
-                    else if (import.ActiveBoosts[i] is not null)
-                    {
-                        current.ActiveBoosts[i] = await AutoMerge(current.ActiveBoosts[i]!, import.ActiveBoosts[i]!, $"Boost slot {i + 1}", userId, null);
-                    }
-                }
-
-                query.Update("boosts", userId, current);
-            });
-
-            await ImportTypeSame<Solace.DB.Models.Player.ActivityLogEF.Legacy>("activityLog", async (userId, current, import, query) =>
-            {
-                current = await AutoMerge(current, import, "Activity log", userId, null);
-
-                query.Update("activityLog", userId, current);
-            });
-
-            await ImportType<Solace.DB.Models.Player.LegacyBuildplates, Solace.DB.Models.Player.LegacyBuildplates.Vienna>("buildplates",
-            buildplates =>
-            {
-                var result = new DB.Models.Player.LegacyBuildplates();
-
-                result.Buildplates.EnsureCapacity(buildplates._buildplates.Count);
-
-                foreach (var item in buildplates._buildplates)
-                {
-                    result.Buildplates.Add(item.Key, new(null, "Imported buildplate", item.Value.Size, item.Value.Offset, item.Value.Scale, item.Value.Night, item.Value.LastModified, item.Value.ServerDataObjectId, item.Value.PreviewObjectId));
-                }
-
-                return result;
-            },
-            async (userId, current, import, query) =>
-            {
-                foreach (var item in import.Buildplates)
-                {
-                    current.Buildplates[item.Key] = item.Value;
-                }
-
-                query.Update("buildplates", userId, current);
-            });
+                await ImportViennaEarthDbAsync(importDb);
+            }
         }
         finally
         {
-            File.Delete(importDbPath);
-        }
-
-        async Task<TValue> AutoMergeNumber<TValue>(TValue currentValue, TValue importValue, string propertyName, string userId)
-            where TValue : INumber<TValue>
-            => await AutoMerge<TValue>(currentValue, importValue, propertyName, userId, TValue.Max);
-
-        async Task<TValue> AutoMerge<TValue>(TValue currentValue, TValue importValue, string propertyName, string userId, Func<TValue, TValue, TValue>? getAuto)
-            where TValue : IEquatable<TValue>
-        {
-            if (currentValue?.Equals(importValue) ?? importValue is null)
+            try
             {
-                return currentValue!;
+                File.Delete(importDbPath);
             }
-
-            var name = liveDb is null ? null : await DataUtils.GetUsername(userId, liveDb);
-
-            var mergeAction = await PromptMergeConflictAsync($"{propertyName} (user id: {userId}{(name is null ? "" : $", username: {name}")})", currentValue?.ToString() ?? "null", importValue?.ToString() ?? "null", getAuto is not null);
-
-            return mergeAction switch
+            catch (Exception ex)
             {
-                MergeAction.KeepCurrent => currentValue!,
-                MergeAction.KeepIncoming => importValue!,
-                MergeAction.Auto => getAuto!(currentValue!, importValue!),
-                _ => currentValue!,
-            };
-        }
-
-        async Task ImportTypeSame<T>(string name, Action<string, T, T,
-EarthDB.Query> merge)
-            where T : class, IEquatable<T>
-            => await ImportType<T, T>(name, value => value, merge);
-
-        async Task ImportType<TSolace, TVienna>(string name, Func<TVienna, TSolace> viennaToSolace, Action<string, TSolace, TSolace,
-EarthDB.Query> merge)
-            where TSolace : class, IEquatable<TSolace>
-            where TVienna : class
-        {
-            foreach (var (id, valueString) in EnumerateObjectsByType(importDb, name))
-            {
-                TSolace importValue;
-                if (isSolace)
-                {
-                    var solaceValue = EarthDB.FromJson<TSolace>(valueString);
-                    if (solaceValue is null)
-                    {
-                        continue;
-                    }
-
-                    importValue = solaceValue;
-                }
-                else
-                {
-                    var viennaValue = EarthDB.FromJson<TVienna>(valueString);
-                    if (viennaValue is null)
-                    {
-                        continue;
-                    }
-
-                    importValue = viennaToSolace(viennaValue);
-                }
-                
-                await new EarthDB.Query(true)
-                    .Get(name, id, typeof(TSolace))
-                    .Then(results =>
-                    {
-                        var query = new EarthDB.Query(true);
-
-                        var currentValue = results.GetExisting<TSolace>(name);
-
-                        if (currentValue is null || currentValue.Equals(importValue))
-                        {
-                            query.Update(name, id, importValue);
-                        }
-                        else
-                        {
-                            merge(id, currentValue, importValue, query);
-                        }
-
-                        return query;
-                    })
-                    .ExecuteAsync(currentDb);
-            }
-        }
-
-        static IEnumerable<(string Id, string Value)> EnumerateObjectsByType(SqliteConnection connection, string
-objectType)
-        {
-            const string query = $"SELECT id, value FROM {EarthDB.ObjectsTable} WHERE type = @type";
-
-            using (var command = new SqliteCommand(query, connection))
-            {
-                command.Parameters.AddWithValue("@type", objectType);
-
-                using (var reader = command.ExecuteReader())
-                {
-                    while (reader.Read())
-                    {
-                        yield return (
-                            Id: reader.GetString(0),
-                            Value: reader.GetString(1)
-                        );
-                    }
-                }
+                Log.Warning(ex, $"Failed to detele import db file '{importDbPath}': {ex.Message}");
             }
         }
     }
 
-    private async Task ImportLiveDb(ZipArchiveEntry liveDbEntry)
+    private async Task ImportSolaceEarthDbAsync(EarthDbContext importDb)
     {
-        if (!_liveDB.Exists)
+        var merger = new DelegateValueMerger(PromptMergeConflictAsync);
+
+        await MigrateEntity<DB.Models.Account, Guid>(EarthDb.Accounts, importDb.Accounts, query => query);
+        await MigrateEntity<DB.Models.Player.ProfileEF, Guid>(EarthDb.Profiles, importDb.Profiles, query => query.Include(item => item.Account));
+        await MigrateEntity<DB.Models.Player.ActivityLogEF, Guid>(EarthDb.ActivityLogs, importDb.ActivityLogs, query => query.Include(item => item.Account));
+        await MigrateEntity<DB.Models.Player.BoostsEF, Guid>(EarthDb.Boosts, importDb.Boosts, query => query.Include(item => item.Account));
+        await MigrateEntity<DB.Models.Player.BuildplateEF, Guid>(EarthDb.PlayerBuildplates, importDb.PlayerBuildplates, query => query.Include(item => item.Account));
+        await MigrateEntity<DB.Models.Player.HotbarEF, Guid>(EarthDb.Hotbars, importDb.Hotbars, query => query.Include(item => item.Account));
+        await MigrateEntity<DB.Models.Player.InventoryEF, Guid>(EarthDb.Inventories, importDb.Inventories, query => query.Include(item => item.Account));
+        await MigrateEntity<DB.Models.Player.JournalEF, Guid>(EarthDb.Journals, importDb.Journals, query => query.Include(item => item.Account));
+        await MigrateEntity<DB.Models.Player.RedeemedTappablesEF, Guid>(EarthDb.RedeemedTappables, importDb.RedeemedTappables, query => query.Include(item => item.Account));
+        await MigrateEntity<DB.Models.Player.TokensEF, Guid>(EarthDb.Tokens, importDb.Tokens, query => query.Include(item => item.Account));
+        await MigrateEntity<DB.Models.Player.Workshop.CraftingSlotsEF, Guid>(EarthDb.CraftingSlots, importDb.CraftingSlots, query => query.Include(item => item.Account));
+        await MigrateEntity<DB.Models.Player.Workshop.SmeltingSlotsEF, Guid>(EarthDb.SmeltingSlots, importDb.SmeltingSlots, query => query.Include(item => item.Account));
+        await MigrateEntity<DB.Models.Global.EncounterBuildplateEF, Guid>(EarthDb.EncounterBuildplates, importDb.EncounterBuildplates, query => query);
+        await MigrateEntity<DB.Models.Global.SharedBuildplateEF, Guid>(EarthDb.SharedBuildplates, importDb.SharedBuildplates, query => query.Include(item => item.Account));
+        await MigrateEntity<DB.Models.Global.TemplateBuildplateEF, Guid>(EarthDb.TemplateBuildplates, importDb.TemplateBuildplates, query => query);
+        await MigrateEntity<DB.Models.Global.Tile, ulong>(EarthDb.Tiles, importDb.Tiles, query => query);
+
+        async Task MigrateEntity<TEntity, TId>(DbSet<TEntity> currentSet, DbSet<TEntity> importSet, Func<IQueryable<TEntity>, IQueryable<TEntity>> processQuery)
+            where TEntity : class, IEntityWithId<TId>, IMergeable<TEntity>
+            where TId : notnull
         {
-            await liveDbEntry.ExtractToFileAsync(_liveDB.FullName, overwrite: false);
+            List<TEntity>? importedEntities = await processQuery(importSet).ToListAsync();
+
+            if (!importedEntities.Any())
+            {
+                return;
+            }
+
+            var importIds = importedEntities
+                .Select(e => e.Id)
+                .ToList();
+
+            var existingEntities = await processQuery(currentSet.AsTracking())
+                .Where(e => importIds.Contains(e.Id))
+                .ToDictionaryAsync(e => e.Id);
+
+            foreach (var importEntity in importedEntities)
+            {
+                if (existingEntities.TryGetValue(importEntity.Id, out var currentEntity))
+                {
+                    await currentEntity.MergeWith(importEntity, merger);
+                }
+                else
+                {
+                    currentSet.Add(importEntity);
+                }
+            }
+            
+            await EarthDb.SaveChangesAsync();
         }
+    }
 
-        using var liveDb = DataUtils.OpenLiveDB(Settings.Instance);
+    private async Task ImportViennaEarthDbAsync(SqliteConnection importDb)
+    {
+        var tempDbPath = Path.GetTempFileName();
 
-        var importDbPath = Path.GetTempFileName();
-        await liveDbEntry.ExtractToFileAsync(importDbPath, overwrite: true);
-
-        var optionsBuilder = new DbContextOptionsBuilder<LiveDbContext>();
-        optionsBuilder.UseSqlite("Data Source=" + importDbPath);
-
-        using var importDb = new LiveDbContext(optionsBuilder.Options);
+        File.Delete(tempDbPath);
 
         try
         {
-            foreach (var importValue in importDb.Accounts.AsNoTracking())
-            {
-                var currentValue = await LiveDb.Accounts.FirstOrDefaultAsync(account => account.Id == importValue.Id);
+            var optionsBuilder = new DbContextOptionsBuilder<EarthDbContext>();
+            optionsBuilder.UseSqlite("Data Source=" + tempDbPath);
 
-                if (currentValue is null)
-                {
-                    LiveDb.Accounts.Add(importValue);
-                    continue;
-                }
+            await using var tempDb = new EarthDbContext(optionsBuilder.Options);
 
-                currentValue.CreatedDate = await AutoMerge(currentValue.CreatedDate, importValue.CreatedDate, "Created date", importValue.Id, long.Min);
-                currentValue.Username = await AutoMerge(currentValue.Username, importValue.Username, "Username", importValue.Id, null);
-                currentValue.FirstName = await AutoMerge(currentValue.FirstName!, importValue.FirstName!, "First name", importValue.Id, null);
-                currentValue.LastName = await AutoMerge(currentValue.LastName!, importValue.LastName!, "Last name", importValue.Id, null);
+            await tempDb.Database.MigrateAsync();
 
-                if (!currentValue.PasswordSalt.SequenceEqual(importValue.PasswordSalt) || !currentValue.PasswordHash.SequenceEqual(importValue.PasswordHash))
-                {
-                    if (await AutoMerge("?current?", "?import?", "Password", importValue.Id, null) == "?import?")
-                    {
-                        currentValue.PasswordSalt = importValue.PasswordSalt;
-                        currentValue.PasswordHash = importValue.PasswordHash;
-                    }
-                }
-            }
+            var migrator = new DatabaseMigrator(tempDb, importDb, null);
 
-            await LiveDb.SaveChangesAsync();
+            await migrator.MigrateAsync();
+
+            await ImportSolaceEarthDbAsync(tempDb);
         }
         finally
         {
-            File.Delete(importDbPath);
-        }
-
-        async Task<TValue> AutoMerge<TValue>(TValue currentValue, TValue importValue, string propertyName, string userId, Func<TValue, TValue, TValue>? getAuto)
-            where TValue : IEquatable<TValue>
-        {
-            if (currentValue?.Equals(importValue) ?? importValue is null)
+            try
             {
-                return currentValue!;
+                File.Delete(tempDbPath);
             }
-
-            var name = liveDb is null ? null : await DataUtils.GetUsername(userId, liveDb);
-
-            var mergeAction = await PromptMergeConflictAsync($"{propertyName} (user id: {userId}{(name is null ? "" : $", username: {name}")})", currentValue?.ToString() ?? "null", importValue?.ToString() ?? "null", getAuto is not null);
-
-            return mergeAction switch
+            catch (Exception ex)
             {
-                MergeAction.KeepCurrent => currentValue!,
-                MergeAction.KeepIncoming => importValue!,
-                MergeAction.Auto => getAuto!(currentValue!, importValue!),
-                _ => currentValue!,
-            };
+                Log.Warning(ex, $"Failed to detele temp db file '{tempDbPath}': {ex.Message}");
+            }
         }
     }
 
@@ -996,12 +725,5 @@ allowAutomatic)
     private void ResolveConflict(MergeAction actionSelected)
     {
         _mergeConflictTcs?.SetResult(actionSelected);
-    }
-
-    public enum MergeAction
-    {
-        KeepCurrent,
-        KeepIncoming,
-        Auto
     }
 }

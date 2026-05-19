@@ -1,10 +1,12 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Diagnostics;
+using System.Text;
+using System.Text.Json.Serialization;
 using Solace.Common.Utils;
 using Solace.DB.Models.Common;
 
 namespace Solace.DB.Models.Player;
 
-public sealed class ActivityLogEF : IVersionedEntity
+public sealed class ActivityLogEF : IEntityWithId<Guid>, IVersionedEntity, IMergeable<ActivityLogEF>
 {
     public Guid Id { get; set; }
 
@@ -17,6 +19,31 @@ public sealed class ActivityLogEF : IVersionedEntity
     public void AddEntry(Entry entry)
         => Entries.Add(entry);
 
+    public async Task MergeWith(ActivityLogEF other, ValueMerger merger)
+    {
+        if (Entries.SequenceEqual(other.Entries))
+        {
+            return;
+        }
+
+        merger.CurrentUserId = Id.ToString();
+        merger.CurrentUsername = Account?.Username;
+
+        var mergeResult = await merger.PromptMergeConflictAsync(merger.CreateContextForPropertyName("Activity log"), GetInfoString(), other.GetInfoString(), false);
+
+        switch (mergeResult)
+        {
+            case MergeAction.KeepCurrent:
+                break;
+            case MergeAction.KeepIncoming:
+                Entries = [.. other.Entries];
+                break;
+            default:
+                Debug.Fail($"Unexpected value: {mergeResult}");
+                break;
+        }
+    }
+
     public void Prune()
     {
         // it is widely known that the activity log is length limited but there is only ONE person who has stated how long it was limited to and apparently it is 40 entries
@@ -24,6 +51,24 @@ public sealed class ActivityLogEF : IVersionedEntity
         {
             Entries.RemoveRange(0, Entries.Count - 40);
         }
+    }
+
+    private string GetInfoString()
+    {
+        var sb = new StringBuilder();
+
+        sb.Append("Entry count: ");
+        sb.Append(Entries.Count);
+
+        if (Entries.Count > 0)
+        {
+            sb.Append(", timeframe: ");
+            sb.Append(DateTimeOffset.FromUnixTimeMilliseconds(Entries[0].Timestamp).UtcDateTime.ToString("s"));
+            sb.Append(" - ");
+            sb.Append(DateTimeOffset.FromUnixTimeMilliseconds(Entries[^1].Timestamp).UtcDateTime.ToString("s"));
+        }
+
+        return sb.ToString();
     }
 
     [JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]

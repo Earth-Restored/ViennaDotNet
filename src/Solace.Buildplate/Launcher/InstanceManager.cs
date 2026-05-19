@@ -156,7 +156,7 @@ public sealed class InstanceManager
                         return null;
                     }
 
-                    var instanceId = Guid.NewGuid();
+                    var instanceId = Guid.CreateVersion7();
 
                     Log.Information($"Starting buildplate instance {instanceId}");
 

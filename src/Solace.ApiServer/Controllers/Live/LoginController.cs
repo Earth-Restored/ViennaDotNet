@@ -158,7 +158,7 @@ internal sealed partial class LoginController : SolaceControllerBase
             Id = userId,
             CreatedDate = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             Username = username,
-            ProfilePictureUrl = $"images/default_pfp.png", // TODO
+            ProfilePictureUrl = Account.DefaultPictureUrl, // TODO
             FirstName = firstName,
             LastName = lastName,
             PasswordSalt = passwordSalt,

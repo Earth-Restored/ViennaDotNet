@@ -241,7 +241,7 @@ internal sealed class BoostsController : SolaceControllerBase
         }
         else
         {
-            boosts.ActiveBoosts[newIndex] = new BoostsEF.ActiveBoost(U.RandomUuid().ToString(), itemId, requestStartedOn, item.BoostInfo.Duration);
+            boosts.ActiveBoosts[newIndex] = new BoostsEF.ActiveBoost(Guid.NewGuid().ToString(), itemId, requestStartedOn, item.BoostInfo.Duration);
             if (item.BoostInfo.Effects.Any(effect => effect.Type is Catalog.ItemsCatalogR.Item.BoostInfoR.Effect.TypeE.HEALTH))
             {
                 // TODO: determine if we should add new player health straight away

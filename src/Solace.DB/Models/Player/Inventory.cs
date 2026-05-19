@@ -5,7 +5,7 @@ using Solace.DB.Models.Common;
 
 namespace Solace.DB.Models.Player;
 
-public sealed class InventoryEF : IVersionedEntity
+public sealed class InventoryEF : IEntityWithId<Guid>, IVersionedEntity, IMergeable<InventoryEF>
 {
     public Guid Id { get; set; }
 
@@ -120,6 +120,40 @@ public sealed class InventoryEF : IVersionedEntity
         }
 
         return [.. instances];
+    }
+
+    public async Task MergeWith(InventoryEF other, ValueMerger merger)
+    {
+        merger.CurrentUserId = Id.ToString();
+        merger.CurrentUsername = Account?.Username;
+
+        foreach (var item in other.StackableItemsData)
+        {
+            if (!StackableItemsData.TryGetValue(item.Key, out var currentValue))
+            {
+                StackableItemsData.Add(item.Key, item.Value);
+            }
+            else
+            {
+                // todo: resolve name
+                StackableItemsData[item.Key] = await merger.AutoMergeMax(currentValue ?? 0, item.Value ?? 0, $"Inventory item '{item.Key}'");
+            }
+        }
+
+        foreach (var item in other.NonStackableItemsData)
+        {
+            if (!NonStackableItemsData.TryGetValue(item.Key, out var currentValue))
+            {
+                NonStackableItemsData.Add(item.Key, item.Value);
+            }
+            else
+            {
+                foreach (var item2 in item.Value)
+                {
+                    currentValue[item2.Key] = item2.Value;
+                }
+            }
+        }
     }
 
     public sealed class Legacy : IEquatable<Legacy>

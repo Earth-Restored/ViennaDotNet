@@ -357,11 +357,11 @@ BuildplateLauncher.ExeName))
                         }
 
                         zipStream.Position = 0;
-                        await importer.ImportTemplateAsync(Guid.NewGuid(), displayName, zipStream);
+                        await importer.ImportTemplateAsync(Guid.CreateVersion7(), displayName, zipStream);
                     }
                     else
                     {
-                        await importer.ImportTemplateAsync(Guid.NewGuid(), displayName, memoryStream);
+                        await importer.ImportTemplateAsync(Guid.CreateVersion7(), displayName, memoryStream);
                     }
 
                     fileState.IsComplete = true;

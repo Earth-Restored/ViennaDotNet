@@ -1,6 +1,8 @@
-﻿namespace Solace.DB.Models.Player;
+﻿using Solace.Common.Utils;
 
-public sealed class BoostsEF : IVersionedEntity
+namespace Solace.DB.Models.Player;
+
+public sealed class BoostsEF : IEntityWithId<Guid>, IVersionedEntity, IMergeable<BoostsEF>
 {
     public Guid Id { get; set; }
 
@@ -27,6 +29,24 @@ public sealed class BoostsEF : IVersionedEntity
         }
 
         return [.. prunedBoosts];
+    }
+
+    public async Task MergeWith(BoostsEF other, ValueMerger merger)
+    {
+        merger.CurrentUserId = Id.ToString();
+        merger.CurrentUsername = Account?.Username;
+
+        for (var i = 0; i < other.ActiveBoosts.Length; i++)
+        {
+            if (ActiveBoosts[i] is null)
+            {
+                ActiveBoosts[i] = other.ActiveBoosts[i];
+            }
+            else if (other.ActiveBoosts[i] is not null)
+            {
+                ActiveBoosts[i] = await merger.AutoMerge(ActiveBoosts[i]!, other.ActiveBoosts[i]!, $"Boost slot {i + 1}", null);
+            }
+        }
     }
 
     public sealed record ActiveBoost(

@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Diagnostics;
+using System.Text.Json.Serialization;
 using Solace.Common.Utils;
 
 namespace Solace.DB.Models.Player;
@@ -66,7 +67,7 @@ public sealed class LegacyBuildplates : IEquatable<LegacyBuildplates>
 
     public sealed record Buildplate(
         string? TemplateId,
-        string Name,
+        string? Name,
         int Size,
         int Offset,
         int Scale,
@@ -88,7 +89,7 @@ public sealed class LegacyBuildplates : IEquatable<LegacyBuildplates>
     }
 }
 
-public sealed class BuildplateEF : IVersionedEntity
+public sealed class BuildplateEF : IEntityWithId<Guid>, IVersionedEntity, IMergeable<BuildplateEF>
 {
     public Guid Id { get; set; }
 
@@ -115,4 +116,51 @@ public sealed class BuildplateEF : IVersionedEntity
     public required string ServerDataObjectId { get; set; }
 
     public required string PreviewObjectId { get; set; }
+
+    public async Task MergeWith(BuildplateEF other, ValueMerger merger)
+    {
+        merger.CurrentUserId = Id.ToString();
+        merger.CurrentUsername = Account?.Username;
+
+        // same buildplate
+        if (AccountId == other.AccountId && TemplateId == other.TemplateId && Size == other.Size && Offset == other.Offset)
+        {
+            switch (await merger.PromptMergeConflictAsync(merger.CreateContextForPropertyName($"Buildplate '{Id}'"), GetInfoString(), other.GetInfoString(), false))
+            {
+                case MergeAction.KeepCurrent:
+                    break;
+                case MergeAction.KeepIncoming:
+                    {
+                        Name = other.Name;
+                        Scale = other.Scale;
+                        Night = other.Night;
+                        LastModified = other.LastModified;
+                        ServerDataObjectId = other.ServerDataObjectId;
+                        PreviewObjectId = other.PreviewObjectId;
+                    }
+
+                    break;
+                default:
+                    Debug.Fail($"Unexpected value");
+                    break;
+            }
+
+            return;
+        }
+
+        // different buildplate, override
+        AccountId = other.AccountId;
+        TemplateId = other.TemplateId;
+        Name = other.Name;
+        Size = other.Size;
+        Offset = other.Offset;
+        Scale = other.Scale;
+        Night = other.Night;
+        LastModified = other.LastModified;
+        ServerDataObjectId = other.ServerDataObjectId;
+        PreviewObjectId = other.PreviewObjectId;
+    }
+
+    private string GetInfoString()
+        => $"Name: {Name}, Scale: {Scale}, Night: {Night}, Last modified: {DateTimeOffset.FromUnixTimeMilliseconds(LastModified).UtcDateTime:s}";
 }

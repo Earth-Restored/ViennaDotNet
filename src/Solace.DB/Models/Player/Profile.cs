@@ -1,8 +1,9 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Solace.Common.Utils;
 
 namespace Solace.DB.Models.Player;
 
-public sealed class ProfileEF : IVersionedEntity
+public sealed class ProfileEF : IEntityWithId<Guid>, IVersionedEntity, IMergeable<ProfileEF>
 {
     public Guid Id { get; set; }
 
@@ -17,6 +18,30 @@ public sealed class ProfileEF : IVersionedEntity
     public int Level { get; set; } = 1;
 
     public Rubies Rubies { get; set; } = new Rubies();
+
+    public async Task MergeWith(ProfileEF other, ValueMerger merger)
+    {
+        merger.CurrentUserId = Id.ToString();
+        merger.CurrentUsername = Account?.Username;
+
+        Health = await merger.AutoMergeMax(Health, other.Health, nameof(Health));
+        if (Level == other.Level)
+        {
+            Experience = await merger.AutoMergeMax(Experience, other.Experience, nameof(Experience));
+        }
+        else
+        {
+            Level = await merger.AutoMergeMax(Level, other.Level, nameof(Level));
+
+            if (Level == other.Level)
+            {
+                Experience = other.Experience;
+            }
+        }
+
+        Rubies.Purchased = await merger.AutoMergeMax(Rubies.Purchased, other.Rubies.Purchased, "Purchased rubies");
+        Rubies.Earned = await merger.AutoMergeMax(Rubies.Earned, other.Rubies.Earned, "Earned rubies");
+    }
 
     public sealed class Legacy : IEquatable<Legacy>
     {

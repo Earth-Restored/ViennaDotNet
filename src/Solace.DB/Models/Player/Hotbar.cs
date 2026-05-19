@@ -3,7 +3,7 @@ using Solace.Common.Utils;
 
 namespace Solace.DB.Models.Player;
 
-public sealed class HotbarEF : IVersionedEntity
+public sealed class HotbarEF : IEntityWithId<Guid>, IVersionedEntity, IMergeable<HotbarEF>
 {
     public Guid Id { get; set; }
 
@@ -66,6 +66,17 @@ public sealed class HotbarEF : IVersionedEntity
             }
 
             Items[index] = item;
+        }
+    }
+
+    public async Task MergeWith(HotbarEF other, ValueMerger merger)
+    {
+        merger.CurrentUserId = Id.ToString();
+        merger.CurrentUsername = Account?.Username;
+
+        for (var i = 0; i < Items.Length; i++)
+        {
+            Items[i] = await merger.AutoMerge(Items[i], other.Items[i], $"Hotbar slot {i + 1}", null);
         }
     }
 

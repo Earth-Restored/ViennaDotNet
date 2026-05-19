@@ -3,7 +3,7 @@ using Solace.Common.Utils;
 
 namespace Solace.DB.Models.Player;
 
-public sealed class JournalEF : IVersionedEntity
+public sealed class JournalEF : IEntityWithId<Guid>, IVersionedEntity, IMergeable<JournalEF>
 {
     public Guid Id { get; set; }
 
@@ -30,6 +30,31 @@ public sealed class JournalEF : IVersionedEntity
         {
             Items[uuid] = new ItemJournalEntry(itemJournalEntry.FirstSeen, itemJournalEntry.LastSeen, itemJournalEntry.AmountCollected + count);
             return itemJournalEntry.AmountCollected;
+        }
+    }
+
+    public async Task MergeWith(JournalEF other, ValueMerger merger)
+    {
+        merger.CurrentUserId = Id.ToString();
+        merger.CurrentUsername = Account?.Username;
+
+        foreach (var item in other.Items)
+        {
+            if (!Items.TryGetValue(item.Key, out var currentValue))
+            {
+                Items.Add(item.Key, item.Value);
+            }
+            else
+            {
+                currentValue = currentValue with
+                {
+                    FirstSeen = await merger.AutoMergeMin(currentValue.FirstSeen, item.Value.FirstSeen, $"Journal item first seen '{item.Key}'"),
+                    LastSeen = await merger.AutoMergeMax(currentValue.LastSeen, item.Value.LastSeen, $"Journal item last seen '{item.Key}'"),
+                    AmountCollected = await merger.AutoMergeMax(currentValue.AmountCollected, item.Value.AmountCollected, $"Journal item amount collected '{item.Key}'"),
+                };
+
+                Items[item.Key] = currentValue;
+            }
         }
     }
 

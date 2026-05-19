@@ -14,7 +14,7 @@ public static class TokenUtils
             .AsTracking()
             .FirstOrNewAsync(tokens => tokens.Id == accountId);
 
-        string id = U.RandomUuid().ToString();
+        string id = Guid.NewGuid().ToString();
         tokens.AddToken(id, token);
 
         await results.EarthDb.SaveChangesAsync();

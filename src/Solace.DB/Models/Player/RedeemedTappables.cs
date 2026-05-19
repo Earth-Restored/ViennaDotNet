@@ -3,7 +3,7 @@ using Solace.Common.Utils;
 
 namespace Solace.DB.Models.Player;
 
-public sealed class RedeemedTappablesEF : IVersionedEntity
+public sealed class RedeemedTappablesEF : IEntityWithId<Guid>, IVersionedEntity, IMergeable<RedeemedTappablesEF>
 {
     public Guid Id { get; set; }
 
@@ -21,6 +21,24 @@ public sealed class RedeemedTappablesEF : IVersionedEntity
 
     public void Prune(long currentTime)
         => Tappables.RemoveIf(entry => entry.Value < currentTime);
+
+    public async Task MergeWith(RedeemedTappablesEF other, ValueMerger merger)
+    {
+        merger.CurrentUserId = Id.ToString();
+        merger.CurrentUsername = Account?.Username;
+
+        foreach (var item in other.Tappables)
+        {
+            if (!Tappables.TryGetValue(item.Key, out var currentValue))
+            {
+                Tappables.Add(item.Key, item.Value);
+            }
+            else
+            {
+                Tappables[item.Key] = long.Max(currentValue, item.Value);
+            }
+        }
+    }
 
     public sealed class Legacy : IEquatable<Legacy>
     {

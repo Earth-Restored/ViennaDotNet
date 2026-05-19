@@ -56,13 +56,6 @@ public static class Program
 
     public static async Task<int> Main(string[] args)
     {
-        // when ran from a tool, don't try to parse args as Options
-        if (args.Any(a => a.StartsWith("--applicationName", StringComparison.Ordinal)))
-        {
-            CreateHostBuilder(args, 8080, "").Build();
-            return 0;
-        }
-
         TypeDescriptor.AddAttributes(typeof(Uuid), new TypeConverterAttribute(typeof(StringToUuidConv)));
 
         Environment.CurrentDirectory = AppDomain.CurrentDomain.BaseDirectory;
@@ -208,54 +201,40 @@ public static class Program
 
         using (var earthDbContext = new EarthDbContext(earthDbOptionsBuilder.Options))
         {
-            EarthDB.ObjectResults? currentShopBuildplates = null;
-            try
-            {
-                currentShopBuildplates = await new EarthDB.ObjectQuery(true)
-                    .GetBuildplates(staticData.Buildplates.ShopBuildplates.Select(buildplate => buildplate.Id))
-                    .ExecuteAsync(DB);
-            }
-            catch (EarthDB.DatabaseException ex)
-            {
-                Log.Error($"Failed to get current shop buildplates: {ex}");
-            }
+            var currentShopBuildplates = await earthDbContext.TemplateBuildplates
+                .AsNoTracking()
+                .ToListAsync();
 
-            importer = new Importer(DB, eventBus, objectStore, Log.Logger);
-            if (currentShopBuildplates is not null)
+            var importer = new Importer(earthDbContext, eventBus, objectStore, Log.Logger);
+            foreach (var buidplate in staticData.Buildplates.ShopBuildplates)
             {
-                foreach (var buidplate in staticData.Buildplates.ShopBuildplates)
+                if (earthDbContext.TemplateBuildplates.Any(bp => bp.Id == buidplate.Id))
                 {
-                    if (currentShopBuildplates.GetBuildplate(buidplate.Id) is not null)
+                    Log.Debug($"Shop buildplate {buidplate.Id} already exists");
+                    continue;
+                }
+
+                try
+                {
+                    Log.Information($"Importing shop buildplate {buidplate.Id}");
+
+                    string name = "unknown buildplate";
+                    var bpPlayfabItem = staticData.Playfab.Items.Values.FirstOrDefault(item => item.Data is Playfab.Item.BuildplateData bpData && bpData.Id == buidplate.Id);
+                    if (bpPlayfabItem is not null)
                     {
-                        Log.Debug($"Shop buildplate {buidplate.Id} already exists");
-                        continue;
+                        name = bpPlayfabItem.Title;
                     }
 
-                    try
+                    using (var buidplateData = buidplate.OpenRead())
                     {
-                        Log.Information($"Importing shop buildplate {buidplate.Id}");
-
-                        string name = buidplate.Id;
-                        if (Guid.TryParse(buidplate.Id, out var buidplateGuid))
-                        {
-                            var bpPlayfabItem = staticData.Playfab.Items.Values.FirstOrDefault(item => item.Data is Playfab.Item.BuildplateData bpData && bpData.Id == buidplateGuid);
-                            if (bpPlayfabItem is not null)
-                            {
-                                name = bpPlayfabItem.Title;
-                            }
-                        }
-
-                        using (var buidplateData = buidplate.OpenRead())
-                        {
-                            await importer.ImportTemplateAsync(buidplate.Id, $"[SHOP] {name}", buidplateData);
-                        }
+                        await importer.ImportTemplateAsync(buidplate.Id, $"[SHOP] {name}", buidplateData);
                     }
-                    catch (Exception ex)
-                    {
-                        Log.Fatal($"Failed to import shop buidplate {buidplate.Id}: {ex}");
-                        Log.CloseAndFlush();
-                        return 1;
-                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.Fatal($"Failed to import shop buidplate {buidplate.Id}: {ex}");
+                    Log.CloseAndFlush();
+                    return 1;
                 }
             }
         }
@@ -265,13 +244,20 @@ public static class Program
         var tappablesManager = await TappablesManager.CreateAsync(eventBus);
         var buildplateInstancesManager = await BuildplateInstancesManager.CreateAsync(eventBus);
 
-        BuildplateInstanceRequestHandler.Start(DB, eventBus, objectStore, staticData.Catalog);
+        using var birhEarthDb = new EarthDbContext(earthDbOptionsBuilder.Options);
+        BuildplateInstanceRequestHandler.Start(birhEarthDb, eventBus, objectStore, staticData.Catalog, buildplateInstancesManager);
 
         var builder = WebApplication.CreateBuilder(args);
 
         builder.Host.UseSerilog();
 
         builder.WebHost.UseUrls($"http://*:{options.HttpPort}/");
+
+        builder.Services.AddSingleton(eventBus);
+        builder.Services.AddSingleton(objectStore);
+        builder.Services.AddSingleton(staticData);
+        builder.Services.AddSingleton(tappablesManager);
+        builder.Services.AddSingleton(buildplateInstancesManager);
 
         builder.Services.AddControllers()
            .ConfigureApplicationPartManager(manager =>

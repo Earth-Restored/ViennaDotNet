@@ -1,12 +1,15 @@
 using System.ComponentModel.DataAnnotations;
+using Solace.Common.Utils;
 using Solace.DB.Models.Global;
 using Solace.DB.Models.Player;
 using Solace.DB.Models.Player.Workshop;
 
 namespace Solace.DB.Models;
 
-public sealed class Account
+public sealed class Account : IEntityWithId<Guid>, IMergeable<Account>
 {
+    public const string DefaultPictureUrl = "images/default_pfp.png";
+
     public required Guid Id { get; set; }
 
     public required long CreatedDate { get; set; }
@@ -48,6 +51,26 @@ public sealed class Account
     public SmeltingSlotsEF? SmeltingSlots { get; set; }
 
     public ICollection<SharedBuildplateEF> SharedBuildplates { get; set; } = [];
+
+    public async Task MergeWith(Account other, ValueMerger merger)
+    {
+        merger.CurrentUserId = Id.ToString();
+        merger.CurrentUsername = Username;
+
+        CreatedDate = await merger.AutoMergeMin(CreatedDate, other.CreatedDate, "Created date");
+        Username = await merger.AutoMerge(Username, other.Username, nameof(Username), null);
+        FirstName = await merger.AutoMerge(FirstName!, other.FirstName!, "First name", null);
+        LastName = await merger.AutoMerge(LastName!, other.LastName!, "Last name", null);
+
+        if (!PasswordSalt.SequenceEqual(other.PasswordSalt) || !PasswordHash.SequenceEqual(other.PasswordHash))
+        {
+            if (await merger.AutoMerge("?current?", "?import?", "Password", null) == "?import?")
+            {
+                PasswordSalt = other.PasswordSalt;
+                PasswordHash = other.PasswordHash;
+            }
+        }
+    }
 
     public sealed class Legacy
     {

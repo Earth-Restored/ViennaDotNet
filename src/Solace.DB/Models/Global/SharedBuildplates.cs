@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Diagnostics;
+using System.Text.Json.Serialization;
 using Solace.Common.Utils;
 
 namespace Solace.DB.Models.Global;
@@ -56,7 +57,7 @@ public sealed class LegacySharedBuildplates
     }
 }
 
-public sealed class SharedBuildplateEF
+public sealed class SharedBuildplateEF : IEntityWithId<Guid>, IMergeable<SharedBuildplateEF>
 {
     public Guid Id { get; set; }
 
@@ -83,6 +84,55 @@ public sealed class SharedBuildplateEF
     public HotbarItem?[] Hotbar { get; set; } = new HotbarItem[7];
 
     public required string ServerDataObjectId { get; set; }
+
+    public async Task MergeWith(SharedBuildplateEF other, ValueMerger merger)
+    {
+        merger.CurrentUserId = Id.ToString();
+        merger.CurrentUsername = Account?.Username;
+
+        // same buildplate
+        if (AccountId == other.AccountId && Size == other.Size && Offset == other.Offset && Created == other.Created)
+        {
+            switch (await merger.PromptMergeConflictAsync(merger.CreateContextForPropertyName($"Shared buildplate '{Id}'"), GetInfoString(), other.GetInfoString(), false))
+            {
+                case MergeAction.KeepCurrent:
+                    break;
+                case MergeAction.KeepIncoming:
+                    {
+                        Scale = other.Scale;
+                        Night = other.Night;
+                        BuildplateLastModifed = other.BuildplateLastModifed;
+                        LastViewed = other.LastViewed;
+                        NumberOfTimesViewed = other.NumberOfTimesViewed;
+                        Hotbar = other.Hotbar;
+                        ServerDataObjectId = other.ServerDataObjectId;
+                    }
+
+                    break;
+                default:
+                    Debug.Fail($"Unexpected value");
+                    break;
+            }
+
+            return;
+        }
+
+        // different buildplate, override
+        AccountId = other.AccountId;
+        Size = other.Size;
+        Offset = other.Offset;
+        Scale = other.Scale;
+        Night = other.Night;
+        Created = other.Created;
+        BuildplateLastModifed = other.BuildplateLastModifed;
+        LastViewed = other.LastViewed;
+        NumberOfTimesViewed = other.NumberOfTimesViewed;
+        Hotbar = other.Hotbar;
+        ServerDataObjectId = other.ServerDataObjectId;
+    }
+    
+    private string GetInfoString()
+        => $"Scale: {Scale}, Night: {Night}, Last modified: {DateTimeOffset.FromUnixTimeMilliseconds(BuildplateLastModifed).UtcDateTime:s}";
 
     public sealed record HotbarItem(
         string Uuid,
